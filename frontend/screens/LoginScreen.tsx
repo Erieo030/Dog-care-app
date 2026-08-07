@@ -1,3 +1,4 @@
+/** 用途：登入畫面，驗證必填欄位並提交帳密。 */
 import React, { useState } from 'react';
 import {
   StyleSheet,

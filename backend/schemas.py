@@ -1,19 +1,15 @@
-from pydantic import BaseModel
+"""舊匯入路徑的相容層；新程式請從 app.schemas 匯入。"""
 
+from app.schemas import (
+    LoginRequest,
+    PetCreateRequest,
+    PetUpdateRequest,
+    RegisterRequest,
+)
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-
-
-class PetCreateRequest(BaseModel):
-    userId: int
-    name: str
-    gender: str
-    breed: str
-    birthday: str
+__all__ = [
+    "LoginRequest",
+    "RegisterRequest",
+    "PetCreateRequest",
+    "PetUpdateRequest",
+]

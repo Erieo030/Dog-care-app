@@ -1,7 +1,12 @@
 {
   "expo": {
-    "name": "my-app",
+    "name": "PawLog",
     "slug": "my-app",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-notifications",
+      ["expo-image-picker", {"photosPermission": "允許 PawLog 選擇健康紀錄照片", "cameraPermission": "允許 PawLog 拍攝健康紀錄照片", "microphonePermission": false}]
+    ]
   }
 }

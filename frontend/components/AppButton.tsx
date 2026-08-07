@@ -1,3 +1,4 @@
+/** 用途：提供全應用程式共用按鈕元件與按壓效果。 */
 import React from 'react';
 import { 
   Text, 

@@ -1,14 +1,7 @@
-import os
-import psycopg
-from dotenv import load_dotenv
+"""用途：舊資料庫匯入路徑的相容入口。"""
 
-load_dotenv()
+"""Backward-compatible database import; new code uses ``app.db``."""
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+from app.db import db
 
-
-def get_connection():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set in .env")
-
-    return psycopg.connect(DATABASE_URL)
+__all__ = ["db"]

@@ -1,3 +1,4 @@
+/** 用途：註冊畫面，驗證帳密與確認密碼。 */
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -30,6 +31,11 @@ export default function RegisterScreen({
   const handleRegisterPress = () => {
     if (!email || !password || !confirmPassword) {
       Alert.alert('提示', '請完整填寫註冊資料 🐾');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('提示', '密碼至少需要 8 個字元');
       return;
     }
 

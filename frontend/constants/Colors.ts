@@ -1,3 +1,4 @@
+/** 用途：集中定義 PawLog 的共用色彩設計 token。 */
 // d:/my-app/constants/Colors.ts
 
 export const Colors = {

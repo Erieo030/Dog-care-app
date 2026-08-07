@@ -1,3 +1,4 @@
+/** 用途：註冊 Expo 根元件並啟動 React Native 應用程式。 */
 import { registerRootComponent } from 'expo';
 
 import App from './App';
