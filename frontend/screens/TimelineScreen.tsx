@@ -233,7 +233,7 @@ function Center({
 }
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   flex: { flex: 1 },
   title: { color: Colors.text, fontSize: 25, fontWeight: '800', marginBottom: 14 },
   filters: { gap: 8, paddingBottom: 16 },
@@ -242,7 +242,8 @@ const s = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 16,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 11,
+    minHeight: 44,
     backgroundColor: Colors.surface,
   },
   filterActive: { backgroundColor: Colors.text, borderColor: Colors.text },

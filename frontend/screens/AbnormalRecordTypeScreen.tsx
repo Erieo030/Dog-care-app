@@ -54,7 +54,7 @@ export default function AbnormalRecordTypeScreen({ navigation }: Props) {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   title: { color: Colors.text, fontSize: 27, fontWeight: '800' },
   subtitle: { color: Colors.subtext, lineHeight: 21, marginTop: 7, marginBottom: 20 },
   item: {

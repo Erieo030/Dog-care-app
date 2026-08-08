@@ -33,8 +33,8 @@ export const AppButton = ({ title, onPress, style }: AppButtonProps) => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.primary,
-    height: 56,
-    borderRadius: 18,
+    height: 52,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
@@ -43,17 +43,17 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
+        shadowOpacity: 0.18,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 5,
+        elevation: 2,
       },
     }),
   },
   text: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
 });

@@ -168,7 +168,7 @@ export default function DailyLogScreen() {
             [3, '3 正常'],
             [4, '4 偏軟'],
             [5, '5 水狀'],
-          ] as [boolean, string][]
+          ] as [number, string][]
         }
         value={draft.stoolLevel}
         onPick={(v) => set('stoolLevel', v)}
@@ -229,26 +229,41 @@ function Options({
   );
 }
 const s = StyleSheet.create({
-  page: { padding: 20, paddingBottom: 40 },
+  page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 14 },
   label: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 8 },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingVertical: 10, paddingHorizontal: 13, borderRadius: 20, backgroundColor: '#eee' },
+  chip: {
+    paddingHorizontal: 14,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#eee',
+  },
   selected: { backgroundColor: '#b9e5d0' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginTop: 8 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 14,
+    minHeight: 52,
+    marginTop: 8,
+  },
   notes: { minHeight: 80, textAlignVertical: 'top' },
   save: {
     marginTop: 22,
     backgroundColor: '#3f8064',
-    padding: 15,
-    borderRadius: 12,
+    padding: 14,
+    minHeight: 52,
+    borderRadius: 14,
     alignItems: 'center',
   },
   saveText: { color: '#fff', fontWeight: '700' },
   error: { color: '#b42318', marginBottom: 8 },
   delete: { color: '#b42318', textAlign: 'center', margin: 18 },
   row: {
+    minHeight: 52,
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',

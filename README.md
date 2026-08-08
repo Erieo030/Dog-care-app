@@ -206,3 +206,9 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 cd frontend && npm run typecheck
 cd .. && PYTHONPATH=backend dog-care/bin/python -m unittest discover -s backend/tests
 ```
+
+## 介面與工程品質現況
+
+目前主要畫面已統一成溫暖、簡潔、容易點選的風格，包含首頁、健康紀錄、提醒、時間軸、搜尋、匯出、設定與協尋流程。表單欄位及主要按鈕已加大，方便手機操作。
+
+前端目前可執行 TypeScript、ESLint、Prettier 與 Jest；後端可執行 Python smoke test 與 pytest。實機上的小螢幕、長文字、深色模式及通知行為仍需依平台個別驗證。

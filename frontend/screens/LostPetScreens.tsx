@@ -174,12 +174,19 @@ export function LostPetQrScreen() {
   );
 }
 const s = StyleSheet.create({
-  page: { padding: 24, gap: 14 },
+  page: { padding: 18, gap: 14 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   title: { fontSize: 24, fontWeight: '800' },
   note: { color: '#666', lineHeight: 22 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12 },
-  primary: { backgroundColor: '#3f8064', padding: 14, borderRadius: 10, alignItems: 'center' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 14, minHeight: 52 },
+  primary: {
+    backgroundColor: '#3f8064',
+    padding: 14,
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   primaryText: { color: '#fff', fontWeight: '700' },
   danger: { color: '#b42318', textAlign: 'center', padding: 18 },
   url: { color: '#555' },

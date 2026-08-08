@@ -339,7 +339,7 @@ function WeightLineChart({ items }: { items: WeightRecord[] }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -357,7 +357,14 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   retryText: { color: '#FFF', fontWeight: '800' },
-  primary: { backgroundColor: Colors.primary, padding: 15, borderRadius: 15, alignItems: 'center' },
+  primary: {
+    backgroundColor: Colors.primary,
+    padding: 14,
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   primaryText: { color: '#FFF', fontWeight: '800' },
   summary: {
     backgroundColor: Colors.surface,
@@ -381,7 +388,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 11,
+    minHeight: 44,
   },
   filterActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   filterText: { color: Colors.text, fontSize: 12, fontWeight: '600' },

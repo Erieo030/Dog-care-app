@@ -231,7 +231,7 @@ function Chip({ text, active, onPress }: { text: string; active: boolean; onPres
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 16,
     paddingHorizontal: 13,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   chipText: { color: Colors.text },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     borderRadius: 13,
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   retryText: { color: Colors.text, fontWeight: '700' },
 });

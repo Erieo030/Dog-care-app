@@ -61,10 +61,11 @@ function Entry({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 22 },
+  content: { padding: 18 },
   title: { color: Colors.text, fontSize: 28, fontWeight: '800' },
   subtitle: { color: Colors.subtext, marginTop: 6, marginBottom: 22 },
   card: {
+    minHeight: 76,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,

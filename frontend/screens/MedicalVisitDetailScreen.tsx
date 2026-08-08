@@ -213,7 +213,7 @@ function Center({
 }
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   center: {
     flex: 1,
     alignItems: 'center',

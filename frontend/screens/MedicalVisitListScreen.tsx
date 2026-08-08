@@ -122,7 +122,7 @@ function Center({
 }
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -132,8 +132,9 @@ const s = StyleSheet.create({
   },
   primary: {
     backgroundColor: Colors.primary,
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 14,
+    padding: 14,
+    minHeight: 52,
     alignItems: 'center',
     marginBottom: 16,
   },
@@ -144,7 +145,7 @@ const s = StyleSheet.create({
     borderColor: Colors.primary,
     borderRadius: 13,
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   retryText: { color: Colors.text, fontWeight: '700' },
   card: {

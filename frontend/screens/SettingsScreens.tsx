@@ -34,12 +34,12 @@ import { clearPawLogCache, getStorageUsage } from '../services/storageService';
 import { shareFeedbackInfo } from '../services/feedbackService';
 import { ThemePreference } from '../services/settingsService';
 const palette = {
-  bg: '#FCFAF1',
+  bg: '#F7F4EE',
   surface: '#FFFFFF',
-  text: '#6A4D3E',
-  sub: '#887A6D',
-  border: '#E8E0D4',
-  primary: '#C98742',
+  text: '#2F2925',
+  sub: '#746B63',
+  border: '#E4DDD4',
+  primary: '#B7653B',
   danger: '#C94C4C',
 };
 const ageText = (birthDate?: string) => {
@@ -434,7 +434,7 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: palette.bg },
   content: { padding: 18, paddingBottom: 42 },
   row: {
-    minHeight: 58,
+    minHeight: 64,
     paddingVertical: 13,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
@@ -463,7 +463,9 @@ const s = StyleSheet.create({
   avatarText: { color: palette.text, fontWeight: '800' },
   primary: {
     marginTop: 18,
-    padding: 15,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     backgroundColor: palette.primary,

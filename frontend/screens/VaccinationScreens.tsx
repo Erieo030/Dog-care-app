@@ -100,10 +100,9 @@ export function VaccinationFormScreen() {
   const route = useRoute<RouteProp<HomeStackParamList, 'VaccinationForm'>>();
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const existing = route.params?.record as Vaccination | undefined;
-  const [d, setD] = useState<Partial<Vaccination>>(existing || empty());
+  const [d, setD] = useState<any>(existing || empty());
   const [saving, setSaving] = useState(false);
-  const set = (k: keyof Vaccination, v: Partial<Vaccination>[keyof Partial<Vaccination>]) =>
-    setD((x) => ({ ...x, [k]: v }));
+  const set = (k: string, v: any) => setD((x: any) => ({ ...x, [k]: v }));
   const save = async () => {
     if (!session?.userId || !selectedPet || saving) return;
     if (!d.vaccineName.trim()) {
@@ -212,29 +211,37 @@ export function VaccinationDetailScreen() {
   );
 }
 const s = StyleSheet.create({
-  page: { padding: 20, paddingBottom: 40 },
+  page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
   card: {
     padding: 16,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
+    borderRadius: 16,
     marginTop: 12,
     gap: 5,
   },
   name: { fontSize: 18, fontWeight: '700' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginBottom: 10 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 14,
+    minHeight: 52,
+    marginBottom: 10,
+  },
   primary: {
     backgroundColor: '#3f8064',
     padding: 14,
-    borderRadius: 10,
+    minHeight: 52,
+    borderRadius: 14,
     alignItems: 'center',
     marginVertical: 10,
   },
   primaryText: { color: '#fff', fontWeight: '700' },
   empty: { padding: 24, textAlign: 'center' },
   error: { color: '#b42318' },
-  check: { padding: 12 },
+  check: { padding: 12, minHeight: 44, justifyContent: 'center' },
   delete: { color: '#b42318', textAlign: 'center', margin: 20 },
 });

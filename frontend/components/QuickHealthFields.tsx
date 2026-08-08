@@ -66,12 +66,12 @@ export function HealthSafetyNotice({ message }: { message: string }) {
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   chip: {
-    minHeight: 48,
+    minHeight: 52,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 17,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 11,
   },
@@ -79,13 +79,13 @@ const styles = StyleSheet.create({
   text: { color: Colors.text },
   activeText: { color: '#FFF', fontWeight: '700' },
   safety: {
-    backgroundColor: '#FFF3E4',
+    backgroundColor: '#FFF6EC',
     borderWidth: 1,
-    borderColor: '#F0C58A',
+    borderColor: '#E9B98A',
     borderRadius: 16,
     padding: 15,
     marginTop: 20,
   },
-  safetyTitle: { color: '#8A5420', fontWeight: '800' },
-  safetyText: { color: '#70451D', lineHeight: 21, marginTop: 5 },
+  safetyTitle: { color: '#8A4F2C', fontWeight: '800' },
+  safetyText: { color: '#6B4533', lineHeight: 21, marginTop: 5 },
 });

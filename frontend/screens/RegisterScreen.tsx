@@ -106,26 +106,26 @@ export default function RegisterScreen({ onRegisterSuccess, onGoToLogin }: Regis
 const styles = StyleSheet.create({
   innerContainer: {
     flex: 1,
-    paddingHorizontal: 35,
+    paddingHorizontal: 24,
     justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 36,
   },
   logoContainer: {
-    width: 90,
-    height: 90,
+    width: 76,
+    height: 76,
     backgroundColor: Colors.surface,
-    borderRadius: 25,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   logoEmoji: {
-    fontSize: 45,
+    fontSize: 36,
   },
   title: {
     fontSize: 32,
@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.surface,
-    height: 60,
-    borderRadius: 18,
-    paddingHorizontal: 20,
+    minHeight: 52,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 15,
     borderWidth: 1,
@@ -153,15 +153,15 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     backgroundColor: Colors.primary,
-    height: 60,
-    borderRadius: 18,
+    minHeight: 52,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 20,
   },
   registerButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   loginLinkButton: {

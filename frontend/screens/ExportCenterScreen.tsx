@@ -231,7 +231,7 @@ export default function ExportCenterScreen() {
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 18, paddingBottom: 40 },
   lead: { fontSize: 16, color: Colors.subtext, lineHeight: 23 },
   label: { fontSize: 16, fontWeight: '800', color: Colors.text, marginTop: 22, marginBottom: 9 },
   labelInline: { fontSize: 16, fontWeight: '800', color: Colors.text },
@@ -260,8 +260,9 @@ const styles = StyleSheet.create({
   muted: { color: Colors.subtext, fontSize: 12, lineHeight: 18 },
   primary: {
     backgroundColor: Colors.primary,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
+    minHeight: 52,
     alignItems: 'center',
     marginTop: 26,
   },

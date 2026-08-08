@@ -152,8 +152,10 @@ const s = StyleSheet.create({
   title: { fontWeight: '700', color: Colors.text, marginBottom: 8 },
   actions: { flexDirection: 'row', gap: 10 },
   button: {
-    padding: 13,
-    borderRadius: 12,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 10,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,

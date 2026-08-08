@@ -126,7 +126,7 @@ export default function HealthEventListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 50 },
   center: { flex: 1, justifyContent: 'center', backgroundColor: Colors.background },
   state: { alignItems: 'center', padding: 30 },
   empty: { color: Colors.subtext, textAlign: 'center', padding: 40 },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     borderRadius: 13,
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   retryText: { color: Colors.text, fontWeight: '700' },
   card: {
