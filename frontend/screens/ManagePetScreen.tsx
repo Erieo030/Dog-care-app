@@ -15,6 +15,7 @@ const toFormData = (data: PetData) => ({
   name: data.name,
   gender: data.gender,
   breed: data.breed,
+  breedType: data.breedType,
   birthDate: data.birthday,
   adoptionDate: data.arrivalDate,
   avatarUrl: data.avatarUri,
@@ -49,6 +50,7 @@ export function EditPetScreen({ navigation }: EditProps) {
   const initialData: PetData = {
     name: selectedPet.name,
     gender: selectedPet.gender,
+    breedType: selectedPet.breedType ?? 'unknown',
     breed: selectedPet.breed ?? '',
     birthday: selectedPet.birthDate ?? '',
     arrivalDate: selectedPet.adoptionDate ?? '',

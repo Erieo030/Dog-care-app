@@ -4,8 +4,9 @@ export interface Pet {
   userId: string;
   name: string;
   species: 'dog' | 'cat' | 'other';
-  gender: string;
+  gender: 'male' | 'female';
   breed?: string;
+  breedType?: 'purebred' | 'mixed' | 'unknown';
   birthDate?: string;
   adoptionDate?: string;
   avatarUrl?: string;
@@ -18,15 +19,16 @@ export interface Pet {
   coatColor?: string;
   distinctiveFeatures?: string;
 }
-export type PetFormData = Omit<Pet, 'id' | 'userId' | 'species'>;
+export type PetFormData = Omit<Pet, 'id' | 'userId' | 'species' | 'gender'> & { gender: 'male' | 'female' | '' };
 
 /** 建立與編輯毛孩表單的相容型別；欄位名稱保留後端 API convention。 */
 export interface PetData {
   _id?: string;
   userId?: string;
   name: string;
-  gender: string;
+  gender: 'male' | 'female' | '';
   breed: string;
+  breedType: 'purebred' | 'mixed' | 'unknown';
   avatarUri: string;
   birthday: string;
   arrivalDate: string;
@@ -42,6 +44,7 @@ export const emptyPetData: PetData = {
   name: '',
   gender: '',
   breed: '',
+  breedType: 'unknown',
   avatarUri: '',
   birthday: '',
   arrivalDate: '',
@@ -183,7 +186,7 @@ export interface Attachment {
   petId: string;
   sourceType?: AttachmentSourceType;
   sourceId?: string;
-  storageProvider: 'local' | 'legacy_local' | string;
+  storageProvider: 'local' | string;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -200,7 +203,6 @@ export interface HealthEventInput {
   summary: string;
   details?: Record<string, unknown>;
   notes?: string;
-  imageUrls?: string[];
   attachmentIds?: string[];
 }
 export interface HealthEvent extends HealthEventInput {
@@ -230,19 +232,6 @@ export interface WeightSummary {
   change: WeightChange;
 }
 export type WeightInput = Pick<WeightRecord, 'weightKg' | 'measuredAt' | 'notes' | 'attachmentIds'>;
-export type MedicalAttachmentType =
-  | 'medication_bag'
-  | 'receipt'
-  | 'lab_report'
-  | 'diagnosis_certificate'
-  | 'medical_summary'
-  | 'imaging_report'
-  | 'other';
-export interface MedicalAttachment {
-  type: MedicalAttachmentType;
-  fileUrl: string;
-  fileName?: string;
-}
 export interface Medication {
   name: string;
   instructions: string;
@@ -264,7 +253,6 @@ export interface MedicalVisitInput {
   followUpAt?: string | null;
   cost?: number | null;
   notes?: string;
-  attachments?: MedicalAttachment[];
   attachmentIds?: string[];
   medications?: Medication[];
   createFollowUpReminder?: boolean;

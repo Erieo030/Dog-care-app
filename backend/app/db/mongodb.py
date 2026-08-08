@@ -22,6 +22,14 @@ def _ensure_index(collection, keys, name):
         if error.code not in {85, 86}:
             raise
 
+# Ownership 與各模組列表查詢的共同索引；不建立高風險唯一索引，避免舊資料阻塞啟動。
+_ensure_index(db.pets, [("userId", 1), ("_id", 1)], "pets_user_owner")
+for collection in (
+    db.daily_logs, db.weight_records, db.health_events, db.medical_visits,
+    db.vaccinations, db.dewormings, db.medications, db.reminders, db.timeline,
+):
+    _ensure_index(collection, [("petId", 1)], "pet_owner_lookup")
+
 for collection, field, name in (
     (db.weight_records, "measuredAt", "dashboard_weight_date"),
     (db.health_events, "occurredAt", "dashboard_health_date"),

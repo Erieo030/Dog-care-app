@@ -82,9 +82,8 @@ export default function AttachmentPicker({
     ]);
   return (
     <View style={s.wrap}>
-      <Text style={s.title}>
-        照片（{value.length}/{limit}）
-      </Text>
+      <Text style={s.title}>照片（{value.length}/{limit}）</Text>
+      {value.length > 0 ? <Text style={s.uploaded}>已上傳照片，可新增或移除</Text> : null}
       <View style={s.actions}>
         <TouchableOpacity
           disabled={busy || disabled || value.length >= limit}
@@ -139,7 +138,7 @@ export default function AttachmentPicker({
               style={s.remove}
               onPress={() => remove(item)}
             >
-              <Text style={s.removeText}>×</Text>
+              <Text style={s.removeText}>移除</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -174,15 +173,17 @@ const s = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
   },
+  uploaded: { color: Colors.subtext, fontSize: 13, marginBottom: 6 },
   remove: {
     position: 'absolute',
     right: 4,
     top: 4,
-    width: 28,
+    minWidth: 48,
     height: 28,
+    paddingHorizontal: 8,
     borderRadius: 14,
     backgroundColor: '#0009',
     alignItems: 'center',
   },
-  removeText: { color: '#fff', fontSize: 20, lineHeight: 25 },
+  removeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });

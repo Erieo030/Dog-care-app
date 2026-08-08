@@ -62,32 +62,14 @@ export const shouldShowStoolSafety = (details: StoolDetails, severity: Severity)
 export const STOOL_SAFETY_MESSAGE =
   '如果毛孩持續腹瀉、精神明顯下降、無法飲水、反覆排出黑色或紅色糞便、疑似大量出血、誤食異物或症狀持續惡化，請儘快聯絡動物醫院。';
 
-export const normalizeStoolDetails = (value: Record<string, unknown>): StoolDetails => {
-  const consistencyMap: Record<string, StoolConsistency> = {
-    偏軟: 'soft',
-    水狀: 'watery',
-    很硬: 'hard',
-    其他: 'other',
-  };
-  const colorMap: Record<string, StoolColor> = {
-    一般: 'normal',
-    黃色: 'yellow',
-    綠色: 'green',
-    黑色: 'black',
-    紅色: 'red',
-    其他: 'other',
-  };
-  const legacyOther = String(value.other ?? '');
-  return {
-    stoolConsistency:
-      (value.stoolConsistency as StoolConsistency) ?? consistencyMap[String(value.shape)],
-    stoolColor: (value.stoolColor as StoolColor) ?? colorMap[String(value.color)],
-    hasMucus: Boolean(value.hasMucus) || legacyOther === '黏液',
-    suspectedBlood: Boolean(value.suspectedBlood) || legacyOther === '疑似血液',
-    hasForeignObject: Boolean(value.hasForeignObject) || legacyOther === '異物',
-    suspectedParasite: Boolean(value.suspectedParasite) || legacyOther === '疑似蟲體',
-  };
-};
+export const normalizeStoolDetails = (value: Record<string, unknown>): StoolDetails => ({
+  stoolConsistency: value.stoolConsistency as StoolConsistency,
+  stoolColor: value.stoolColor as StoolColor,
+  hasMucus: Boolean(value.hasMucus),
+  suspectedBlood: Boolean(value.suspectedBlood),
+  hasForeignObject: Boolean(value.hasForeignObject),
+  suspectedParasite: Boolean(value.suspectedParasite),
+});
 
 export const stoolDetailRows = (details: StoolDetails): Array<[string, string]> => [
   ['形狀', labelFor(STOOL_CONSISTENCY_OPTIONS, details.stoolConsistency)],

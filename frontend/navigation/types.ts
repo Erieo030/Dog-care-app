@@ -16,7 +16,7 @@ export type AuthStackParamList = { Login: undefined; Register: undefined };
 export type PetSetupStackParamList = { CreatePet: undefined };
 export type HomeStackParamList = {
   HomeOverview: undefined;
-  DailyLog: { record?: DailyLog } | undefined;
+  DailyLog: { record?: DailyLog; recordId?: string; recordDate?: string } | undefined;
   VaccinationList: undefined;
   VaccinationForm: { record?: Vaccination } | undefined;
   VaccinationDetail: { recordId: string };
@@ -46,13 +46,11 @@ export type HomeStackParamList = {
   MedicalVisitForm: { visit?: MedicalVisit };
   MedicalVisitDetail: { visitId: string };
   GlobalSearch: undefined;
-  FeaturePreview: { title: string; description: string };
 };
 export type ProfileStackParamList = {
   ProfileOverview: undefined;
   AccountInfo: undefined;
   PetManagement: undefined;
-  AppearanceSettings: undefined;
   NotificationSettings: undefined;
   ReminderPreferences: undefined;
   ExportCenter: undefined;

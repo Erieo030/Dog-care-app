@@ -19,6 +19,7 @@ export default function PetSetupStack() {
         name: data.name,
         gender: data.gender,
         breed: data.breed,
+        breedType: data.breedType,
         birthDate: data.birthday,
         adoptionDate: data.arrivalDate,
         avatarUrl: data.avatarUri,

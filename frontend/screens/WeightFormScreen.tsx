@@ -4,7 +4,6 @@ import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import {
   Alert,
-  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -12,10 +11,10 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
@@ -31,7 +30,6 @@ export default function WeightFormScreen({ route, navigation }: Props) {
   const [weight, setWeight] = useState(record ? String(record.weightKg) : '');
   const [date, setDate] = useState(Number.isNaN(initialDate.getTime()) ? new Date() : initialDate);
   const [notes, setNotes] = useState(record?.notes || '');
-  const [show, setShow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [attachments, setAttachments] = useState(record?.attachments ?? []);
 
@@ -64,7 +62,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
         measuredAt: date.toISOString(),
         notes: notes.trim(),
         attachmentIds: attachments
-          .filter((item) => item.storageProvider !== 'legacy_local')
+
           .map((item) => item.id),
       };
       if (record) {
@@ -84,7 +82,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.label}>體重（kg）*</Text>
+        <Text style={styles.label}>體重（kg）（必填）</Text>
         <TextInput
           style={styles.input}
           value={weight}
@@ -94,23 +92,15 @@ export default function WeightFormScreen({ route, navigation }: Props) {
           editable={!submitting}
         />
 
-        <Text style={styles.label}>測量日期 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShow(true)} disabled={submitting}>
-          <Text>{date.toLocaleDateString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {show && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShow(Platform.OS === 'ios');
-              if (value) setDate(value);
-            }}
-          />
-        )}
+        <DatePickerField
+          label="測量日期（必填）"
+          value={date}
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setDate}
+        />
 
-        <Text style={styles.label}>備註（選填）</Text>
+        <Text style={styles.label}>備註</Text>
         <TextInput
           style={[styles.input, styles.notes]}
           value={notes}

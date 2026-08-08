@@ -1,28 +1,23 @@
 /** 用途：集中建立、輪詢、取消、下載及分享匯出檔案。 */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { API_BASE_URL, apiRequest } from './api';
+import { API_BASE_URL, apiData } from './api';
 import { ExportJob, ExportRequest } from '../types';
-type Envelope<T> = { success: boolean; message: string; data: T };
 const query = (userId: string) => `userId=${encodeURIComponent(userId)}`;
 export async function createExport(userId: string, request: ExportRequest) {
-  return (
-    await apiRequest<Envelope<ExportJob>>(
-      `/api/exports?${query(userId)}`,
-      { method: 'POST', body: JSON.stringify(request) },
-      30000,
-    )
-  ).data;
+  return await apiData<ExportJob>(
+    `/api/exports?${query(userId)}`,
+    { method: 'POST', body: JSON.stringify(request) },
+    30000,
+  );
 }
 export async function getExport(userId: string, id: string) {
-  return (await apiRequest<Envelope<ExportJob>>(`/api/exports/${id}?${query(userId)}`)).data;
+  return await apiData<ExportJob>(`/api/exports/${id}?${query(userId)}`);
 }
 export async function cancelExport(userId: string, id: string) {
-  return (
-    await apiRequest<Envelope<ExportJob>>(`/api/exports/${id}?${query(userId)}`, {
-      method: 'DELETE',
-    })
-  ).data;
+  return await apiData<ExportJob>(`/api/exports/${id}?${query(userId)}`, {
+    method: 'DELETE',
+  });
 }
 export async function downloadAndShareExport(userId: string, job: ExportJob) {
   if (!job.fileName) throw new Error('匯出檔案尚未完成');

@@ -13,4 +13,4 @@ def get_timeline(
     skip: int = Query(default=0, ge=0),
     item_type: Literal["reminder_completed", "health_event", "weight", "medical_visit", "daily_log", "vaccination", "deworming", "medication"] | None = Query(default=None, alias="type"),
 ):
-    return {"success": True, **list_timeline(pet_id, user_id, limit, skip, item_type)}
+    return {"success": True, "message": "取得時間軸成功", "data": list_timeline(pet_id, user_id, limit, skip, item_type)}

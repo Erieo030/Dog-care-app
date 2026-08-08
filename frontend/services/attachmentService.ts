@@ -60,7 +60,7 @@ export async function pickAndUploadAttachments(input: {
   await ensurePermission(input.source);
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],
-    quality: 1,
+    quality: 0.85,
     allowsMultipleSelection: input.source === 'library',
     selectionLimit: input.remaining,
   };
@@ -103,13 +103,12 @@ export async function pickAndUploadAttachments(input: {
 }
 
 export const attachmentUri = (item: Attachment, userId: string, retry = 0) => {
-  if (item.storageProvider === 'legacy_local' || /^file:|^content:|^https?:/.test(item.contentPath))
+  if (/^file:|^content:|^https?:/.test(item.contentPath))
     return item.contentPath;
   return `${API_BASE_URL}${item.contentPath}?userId=${encodeURIComponent(userId)}&retry=${retry}`;
 };
 
 export async function deleteAttachment(userId: string, item: Attachment) {
-  if (item.storageProvider === 'legacy_local') return;
   const response = await fetch(
     `${API_BASE_URL}/api/attachments/${item.id}?userId=${encodeURIComponent(userId)}`,
     { method: 'DELETE' },

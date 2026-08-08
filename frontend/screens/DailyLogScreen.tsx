@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { HomeStackParamList } from "../navigation/types";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -9,12 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import {
   createDailyLog,
   deleteDailyLog,
   getDailyLogs,
+  getDailyLog,
   getTodayDailyLog,
   updateDailyLog,
 } from '../services/dailyLogService';
@@ -42,7 +45,8 @@ const physical: [DailyPhysicalStatus, string][] = [
   ['other', '其他'],
 ];
 const dateKey = () => new Date().toISOString().slice(0, 10);
-export default function DailyLogScreen() {
+type Props = NativeStackScreenProps<HomeStackParamList, 'DailyLog'>;
+export default function DailyLogScreen({ route }: Props) {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const [record, setRecord] = useState<DailyLog | null>(null);
@@ -62,18 +66,26 @@ export default function DailyLogScreen() {
     setLoading(true);
     try {
       const [today, list] = await Promise.all([
-        getTodayDailyLog(session.userId, selectedPet.id),
+        route.params?.recordId
+          ? getDailyLog(session.userId, route.params.recordId)
+          : getTodayDailyLog(session.userId, selectedPet.id),
         getDailyLogs(session.userId, selectedPet.id),
       ]);
-      setRecord(today.record);
-      setDraft(today.record || { localDate: dateKey(), loggedAt: new Date().toISOString() });
+      const selectedRecord = route.params?.recordId
+        ? list.records.find((item) => item.id === route.params?.recordId) ??
+          (route.params.recordDate
+            ? list.records.find((item) => item.localDate === route.params?.recordDate?.slice(0, 10)) ?? null
+            : null)
+        : today.record;
+      setRecord(selectedRecord);
+      setDraft(selectedRecord || { localDate: dateKey(), loggedAt: new Date().toISOString() });
       setHistory(list.records);
     } catch (e) {
       setError((e as Error).message || '載入失敗');
     } finally {
       setLoading(false);
     }
-  }, [session?.userId, selectedPet]);
+  }, [session?.userId, selectedPet, route.params?.recordId, route.params?.recordDate]);
   useEffect(() => {
     load();
   }, [load]);
@@ -114,12 +126,7 @@ export default function DailyLogScreen() {
       },
     ]);
   };
-  if (loading)
-    return (
-      <View style={s.center}>
-        <ActivityIndicator />
-      </View>
-    );
+  if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Text style={s.title}>今日紀錄</Text>
@@ -146,20 +153,20 @@ export default function DailyLogScreen() {
       {draft.snack ? (
         <TextInput
           style={s.input}
-          placeholder="零食名稱（選填）"
+          placeholder="零食名稱"
           value={draft.snackName || ''}
           onChangeText={(v) => set('snackName', v)}
         />
       ) : null}
       <Text style={s.label}>精神狀態</Text>
       <Options values={energy} value={draft.energyLevel} onPick={(v) => set('energyLevel', v)} />
-      <Text style={s.label}>生理狀態（選填）</Text>
+      <Text style={s.label}>生理狀態</Text>
       <Options
         values={physical}
         value={draft.physicalStatus}
         onPick={(v) => set('physicalStatus', v)}
       />
-      <Text style={s.label}>大便狀況（選填）</Text>
+      <Text style={s.label}>大便狀況</Text>
       <Options
         values={
           [
@@ -176,7 +183,7 @@ export default function DailyLogScreen() {
       <TextInput
         style={[s.input, s.notes]}
         multiline
-        placeholder="備註（選填）"
+        placeholder="備註"
         value={draft.notes || ''}
         onChangeText={(v) => set('notes', v)}
       />

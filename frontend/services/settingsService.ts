@@ -1,14 +1,11 @@
 /** 用途：持久化非敏感 App 偏好；不保存帳密或秘密。 */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export type ThemePreference = 'system' | 'light' | 'dark';
 export interface AppSettings {
-  theme: ThemePreference;
   localNotificationsEnabled: boolean;
   defaultReminderTime: string;
   tonightTime: string;
 }
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'system',
   localNotificationsEnabled: true,
   defaultReminderTime: '09:00',
   tonightTime: '20:00',
@@ -21,10 +18,6 @@ export async function loadSettings(): Promise<AppSettings> {
     const value = JSON.parse((await AsyncStorage.getItem(KEY)) || '{}');
     return {
       ...DEFAULT_SETTINGS,
-      ...value,
-      theme: ['system', 'light', 'dark'].includes(value.theme)
-        ? value.theme
-        : DEFAULT_SETTINGS.theme,
       localNotificationsEnabled:
         typeof value.localNotificationsEnabled === 'boolean'
           ? value.localNotificationsEnabled

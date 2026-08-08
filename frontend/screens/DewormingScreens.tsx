@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -64,12 +65,7 @@ export function DewormingListScreen() {
   useEffect(() => {
     load();
   }, [load]);
-  if (loading)
-    return (
-      <View style={s.center}>
-        <ActivityIndicator />
-      </View>
-    );
+  if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <ScrollView contentContainerStyle={s.page} onScrollBeginDrag={() => undefined}>
       <Text style={s.title}>驅蟲紀錄</Text>
@@ -103,15 +99,33 @@ export function DewormingListScreen() {
     </ScrollView>
   );
 }
+type DewormingDraft = {
+  type: DewormingType;
+  productName: string;
+  administeredAt: string;
+  nextDueAt: string;
+  notes: string;
+  manufacturer: string;
+  dosageText: string;
+  administrationMethod: string;
+  hospitalName: string;
+  veterinarianName: string;
+  createReminder: boolean;
+  [key: string]: string | boolean | DewormingType;
+};
+
 export function DewormingFormScreen() {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const route = useRoute<RouteProp<HomeStackParamList, 'DewormingForm'>>();
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const existing = route.params?.record as Deworming | undefined;
-  const [d, setD] = useState<any>(existing || blank());
+  const [d, setD] = useState<DewormingDraft>(
+    (existing ? { ...blank(), ...existing } : blank()) as DewormingDraft,
+  );
   const [saving, setSaving] = useState(false);
-  const set = (k: string, v: any) => setD((x: any) => ({ ...x, [k]: v }));
+  const set = <K extends keyof DewormingDraft>(key: K, value: DewormingDraft[K]) =>
+    setD((current) => ({ ...current, [key]: value }));
   const save = async () => {
     if (!session?.userId || !selectedPet || saving) return;
     if (!d.productName.trim()) {
@@ -120,15 +134,10 @@ export function DewormingFormScreen() {
     }
     setSaving(true);
     try {
+      const payload = { type: d.type, productName: d.productName.trim(), administeredAt: d.administeredAt, nextDueAt: d.nextDueAt || null, notes: d.notes.trim(), manufacturer: d.manufacturer.trim(), dosageText: d.dosageText.trim(), administrationMethod: d.administrationMethod.trim(), hospitalName: d.hospitalName.trim(), veterinarianName: d.veterinarianName.trim(), attachmentIds: Array.isArray(d.attachmentIds) ? d.attachmentIds : [], createReminder: d.createReminder };
       const r = existing
-        ? await updateDeworming(session.userId, existing.id, {
-            ...d,
-            nextDueAt: d.nextDueAt || null,
-          })
-        : await createDeworming(session.userId, selectedPet.id, {
-            ...d,
-            nextDueAt: d.nextDueAt || null,
-          });
+        ? await updateDeworming(session.userId, existing.id, payload)
+        : await createDeworming(session.userId, selectedPet.id, payload);
       Alert.alert('已儲存', '驅蟲紀錄已更新');
       nav.replace('DewormingDetail', { recordId: r.record.id });
     } catch (e) {
@@ -155,18 +164,18 @@ export function DewormingFormScreen() {
         ['productName', '產品／藥品名稱（必填）'],
         ['administeredAt', '使用日期 ISO（必填）'],
         ['nextDueAt', '下次日期 ISO'],
-        ['manufacturer', '廠牌（選填）'],
-        ['dosageText', '劑量文字（選填）'],
-        ['administrationMethod', '使用方式（選填）'],
-        ['hospitalName', '醫院（選填）'],
-        ['veterinarianName', '獸醫（選填）'],
-        ['notes', '備註（選填）'],
+        ['manufacturer', '廠牌'],
+        ['dosageText', '劑量文字'],
+        ['administrationMethod', '使用方式'],
+        ['hospitalName', '醫院'],
+        ['veterinarianName', '獸醫'],
+        ['notes', '備註'],
       ].map(([k, l]) => (
         <TextInput
           key={k}
           style={s.input}
           placeholder={l}
-          value={d[k] || ''}
+          value={typeof d[k] === 'string' ? d[k] : ''}
           onChangeText={(v) => set(k, v)}
         />
       ))}

@@ -62,7 +62,6 @@ class HealthEventCreateRequest(BaseModel):
     summary: str = Field(min_length=1, max_length=200)
     details: dict[str, Any] = Field(default_factory=dict)
     notes: str = Field(default="", max_length=2000)
-    imageUrls: list[str] = Field(default_factory=list, max_length=5)
     attachmentIds: list[str] = Field(default_factory=list, max_length=5)
 
     @model_validator(mode="after")

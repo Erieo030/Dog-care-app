@@ -30,12 +30,14 @@ export default function OrdinalTrendChart({
     right = 10,
     top = 12,
     bottom = 28;
-  const vals = points.map((x) => Number(x[field])),
-    min = Math.min(...vals) - 0.4,
-    max = Math.max(...vals) + 0.4;
+  const labelKeys = Object.keys(labels);
+  const vals = points.map((x) => Number.isFinite(Number(x[field])) ? Number(x[field]) : labelKeys.indexOf(String(x[field])) + 1);
+  if (vals.some((value) => !Number.isFinite(value))) return <Text style={s.empty}>目前資料格式無法顯示趨勢</Text>;
+  const min = Math.min(...vals) - 0.4;
+  const max = Math.max(...vals) + 0.4;
   const coords = points.map((x, i) => ({
     x: left + (i / (points.length - 1)) * (width - left - right),
-    y: top + ((max - Number(x[field])) / (max - min || 1)) * (height - top - bottom),
+    y: top + ((max - (Number.isFinite(Number(x[field])) ? Number(x[field]) : labelKeys.indexOf(String(x[field])) + 1)) / (max - min || 1)) * (height - top - bottom),
   }));
   return (
     <View>

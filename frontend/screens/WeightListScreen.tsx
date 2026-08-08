@@ -1,7 +1,6 @@
 /** 用途：顯示全量體重摘要、期間篩選、折線趨勢與可管理的歷史紀錄。 */
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   LayoutChangeEvent,
   RefreshControl,
@@ -16,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
@@ -131,14 +131,7 @@ export default function WeightListScreen({ navigation, route }: Props) {
       },
     ]);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.stateText}>正在載入體重紀錄…</Text>
-      </View>
-    );
-  }
+  if (loading) return <ScreenState loading text="正在載入體重紀錄…" />;
 
   if (error) {
     return (

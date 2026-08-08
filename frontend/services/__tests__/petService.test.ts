@@ -1,7 +1,7 @@
-jest.mock('../api', () => ({ apiRequest: jest.fn() }));
+jest.mock('../api', () => ({ apiData: jest.fn() }));
 import { normalizePets } from '../petService';
 
-test('normalizes legacy pet fields into the shared Pet type', () => {
+test('maps backend pet fields into the shared Pet type', () => {
   const [pet] = normalizePets([
     {
       _id: 'p1',

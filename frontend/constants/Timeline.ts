@@ -36,7 +36,7 @@ export const openTimelineSource = (
       navigation.navigate('MedicalVisitDetail', { visitId: item.sourceId });
       break;
     case 'daily_log':
-      navigation.navigate('DailyLog');
+      navigation.navigate('DailyLog', { recordId: item.sourceId, recordDate: item.occurredAt });
       break;
     case 'vaccination':
       navigation.navigate('VaccinationDetail', { recordId: item.sourceId });

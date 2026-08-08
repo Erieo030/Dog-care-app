@@ -1,4 +1,4 @@
-import { apiRequest } from './api';
+import { apiData } from './api';
 export interface LostProfile {
   id?: string;
   enabled: boolean;
@@ -21,15 +21,34 @@ export interface LostProfile {
 }
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
 export const getLostProfile = (u: string, p: string) =>
-  apiRequest<{ profile: LostProfile | null }>(`/api/pets/${p}/lost-profile?${q(u)}`);
-export const saveLostProfile = (u: string, p: string, d: Partial<LostProfile>) =>
-  apiRequest<{ profile: LostProfile }>(`/api/pets/${p}/lost-profile?${q(u)}`, {
+  apiData<{ profile: LostProfile | null }>(`/api/pets/${p}/lost-profile?${q(u)}`);
+export const saveLostProfile = (u: string, p: string, d: Partial<LostProfile>) => {
+  // 後端 schema 僅接受可編輯欄位；token 與資料庫 ID 只能由後端管理。
+  const payload = {
+    enabled: d.enabled ?? false,
+    contactName: d.contactName ?? '',
+    contactPhone: d.contactPhone ?? '',
+    alternatePhone: d.alternatePhone ?? '',
+    contactMessage: d.contactMessage ?? '',
+    showBreed: d.showBreed ?? true,
+    showSex: d.showSex ?? true,
+    showNeutered: d.showNeutered ?? false,
+    showCoatColor: d.showCoatColor ?? true,
+    showDistinctiveFeatures: d.showDistinctiveFeatures ?? true,
+    showAvatar: d.showAvatar ?? true,
+    lostMode: d.lostMode ?? false,
+    lostSince: d.lostSince ?? null,
+    lostLocationText: d.lostLocationText ?? '',
+    lostMessage: d.lostMessage ?? '',
+  };
+  return apiData<{ profile: LostProfile }>(`/api/pets/${p}/lost-profile?${q(u)}`, {
     method: 'PUT',
-    body: JSON.stringify(d),
+    body: JSON.stringify(payload),
   });
+};
 export const rotateLostToken = (u: string, p: string) =>
-  apiRequest<{ publicToken: string }>(`/api/pets/${p}/lost-profile/rotate-token?${q(u)}`, {
+  apiData<{ publicToken: string }>(`/api/pets/${p}/lost-profile/rotate-token?${q(u)}`, {
     method: 'POST',
   });
 export const disableLostProfile = (u: string, p: string) =>
-  apiRequest(`/api/pets/${p}/lost-profile?${q(u)}`, { method: 'DELETE' });
+  apiData(`/api/pets/${p}/lost-profile?${q(u)}`, { method: 'DELETE' });

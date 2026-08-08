@@ -10,7 +10,7 @@ router = APIRouter(tags=["weights"])
 @router.get("/pets/{pet_id}/weights")
 def list_weights(pet_id: str, user_id: str = Query(alias="userId")):
     result = weight_service.list_records(pet_id, user_id)
-    return {"success": True, **result}
+    return {"success": True, "message": "取得體重資料成功", "data": result}
 
 
 @router.post("/pets/{pet_id}/weights", status_code=status.HTTP_201_CREATED)
@@ -19,10 +19,7 @@ def create_weight(
     data: WeightRecordRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {
-        "success": True,
-        "record": weight_service.create_record(pet_id, user_id, data),
-    }
+    return {"success": True, "message": "體重紀錄已建立", "data": {"record": weight_service.create_record(pet_id, user_id, data)}}
 
 
 @router.patch("/weights/{record_id}")
@@ -31,10 +28,7 @@ def update_weight(
     data: WeightRecordRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {
-        "success": True,
-        "record": weight_service.update_record(record_id, user_id, data),
-    }
+    return {"success": True, "message": "體重紀錄已更新", "data": {"record": weight_service.update_record(record_id, user_id, data)}}
 
 
 @router.delete("/weights/{record_id}", status_code=status.HTTP_204_NO_CONTENT)

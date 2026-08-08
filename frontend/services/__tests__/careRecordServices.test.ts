@@ -1,10 +1,10 @@
-import { apiRequest } from '../api';
+import { apiData } from '../api';
 import { createVaccination, getVaccinations } from '../vaccinationService';
 import { createDeworming, updateDeworming } from '../dewormingService';
 import { completeMedication, getMedications, stopMedication } from '../medicationService';
 
-jest.mock('../api', () => ({ apiRequest: jest.fn() }));
-const request = apiRequest as jest.MockedFunction<typeof apiRequest>;
+jest.mock('../api', () => ({ apiData: jest.fn() }));
+const request = apiData as jest.MockedFunction<typeof apiData>;
 beforeEach(() => jest.clearAllMocks());
 
 test('vaccination service uses records endpoint and reminder fields', async () => {

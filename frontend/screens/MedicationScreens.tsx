@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -64,12 +65,7 @@ export function MedicationListScreen() {
   useEffect(() => {
     load();
   }, [load]);
-  if (loading)
-    return (
-      <View style={s.center}>
-        <ActivityIndicator />
-      </View>
-    );
+  if (loading) return <ScreenState loading text="載入中…" />;
   const active = data.filter((x) => x.status === 'active'),
     history = data.filter((x) => x.status !== 'active');
   const group = (title: string, items: MedicationCourse[]) => (
@@ -111,15 +107,33 @@ export function MedicationListScreen() {
     </ScrollView>
   );
 }
+type MedicationDraft = {
+  name: string;
+  instructions: string;
+  timesPerDay: number;
+  startDate: string;
+  endDate: string;
+  mealTiming: MedicationMealTiming;
+  notes: string;
+  status: MedicationCourse['status'];
+  reminderEnabled: boolean;
+  reminderTimes: string[];
+  reminderTimeDraft: string;
+  [key: string]: string | number | boolean | string[] | MedicationCourse['status'];
+};
+
 export function MedicationFormScreen() {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const route = useRoute<RouteProp<HomeStackParamList, 'MedicationForm'>>();
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const existing = route.params?.record as MedicationCourse | undefined;
-  const [d, setD] = useState<any>(existing || blank());
+  const [d, setD] = useState<MedicationDraft>(
+    (existing ? { ...blank(), ...existing } : blank()) as MedicationDraft,
+  );
   const [saving, setSaving] = useState(false);
-  const set = (k: string, v: any) => setD((x: any) => ({ ...x, [k]: v }));
+  const set = <K extends keyof MedicationDraft>(key: K, value: MedicationDraft[K]) =>
+    setD((current) => ({ ...current, [key]: value }));
   const save = async () => {
     if (!session?.userId || !selectedPet || saving) return;
     if (!d.name?.trim()) {
@@ -128,12 +142,10 @@ export function MedicationFormScreen() {
     }
     setSaving(true);
     try {
+      const payload = { name: d.name.trim(), instructions: d.instructions.trim(), timesPerDay: d.timesPerDay, startDate: d.startDate, endDate: d.endDate || '', mealTiming: d.mealTiming, notes: d.notes.trim(), status: d.status, reminderTimes: d.reminderTimes, reminderEnabled: d.reminderEnabled, medicalVisitId: typeof d.medicalVisitId === 'string' ? d.medicalVisitId : undefined };
       const r = existing
-        ? await updateMedication(session.userId, existing.id, { ...d, endDate: d.endDate || '' })
-        : await createMedication(session.userId, selectedPet.id, {
-            ...d,
-            endDate: d.endDate || '',
-          });
+        ? await updateMedication(session.userId, existing.id, payload)
+        : await createMedication(session.userId, selectedPet.id, payload);
       Alert.alert('已儲存', '用藥紀錄已更新');
       nav.replace('MedicationDetail', { recordId: r.record.id });
     } catch (e) {

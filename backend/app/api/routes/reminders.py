@@ -9,27 +9,27 @@ router = APIRouter(tags=["reminders"])
 
 @router.get("/pets/{pet_id}/reminders")
 def get_reminders(pet_id: str, user_id: str = Query(alias="userId")):
-    return {"success": True, "reminders": reminder_service.list_reminders(pet_id, user_id)}
+    return {"success": True, "message": "取得提醒成功", "data": {"reminders": reminder_service.list_reminders(pet_id, user_id)}}
 
 
 @router.get("/pets/{pet_id}/reminders/today")
 def get_today_reminders(pet_id: str, user_id: str = Query(alias="userId")):
-    return {"success": True, "reminders": reminder_service.list_reminders(pet_id, user_id, today=True)}
+    return {"success": True, "message": "取得今日提醒成功", "data": {"reminders": reminder_service.list_reminders(pet_id, user_id, today=True)}}
 
 
 @router.post("/pets/{pet_id}/reminders", status_code=status.HTTP_201_CREATED)
 def create_reminder(pet_id: str, data: ReminderCreateRequest, user_id: str = Query(alias="userId")):
-    return {"success": True, "reminder": reminder_service.create_reminder(pet_id, user_id, data)}
+    return {"success": True, "message": "提醒已建立", "data": {"reminder": reminder_service.create_reminder(pet_id, user_id, data)}}
 
 
 @router.patch("/reminders/{reminder_id}")
 def update_reminder(reminder_id: str, data: ReminderUpdateRequest, user_id: str = Query(alias="userId")):
-    return {"success": True, "reminder": reminder_service.update_reminder(reminder_id, user_id, data)}
+    return {"success": True, "message": "提醒已更新", "data": {"reminder": reminder_service.update_reminder(reminder_id, user_id, data)}}
 
 
 def _action_response(result: tuple[dict, dict | None, bool]) -> dict:
     reminder, next_reminder, changed = result
-    return {"success": True, "reminder": reminder, "nextReminder": next_reminder, "changed": changed}
+    return {"success": True, "message": "提醒狀態已更新", "data": {"reminder": reminder, "nextReminder": next_reminder, "changed": changed}}
 
 
 @router.post("/reminders/{reminder_id}/complete")
@@ -44,7 +44,7 @@ def skip_reminder(reminder_id: str, user_id: str = Query(alias="userId")):
 
 @router.post("/reminders/{reminder_id}/snooze")
 def snooze_reminder(reminder_id: str, data: ReminderSnoozeRequest, user_id: str = Query(alias="userId")):
-    return {"success": True, "reminder": reminder_service.snooze_reminder(reminder_id, user_id, data)}
+    return {"success": True, "message": "提醒已延後", "data": {"reminder": reminder_service.snooze_reminder(reminder_id, user_id, data)}}
 
 
 @router.delete("/reminders/{reminder_id}", status_code=status.HTTP_204_NO_CONTENT)

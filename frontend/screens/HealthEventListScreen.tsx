@@ -1,7 +1,6 @@
 /** 用途：列出目前毛孩的健康異常紀錄，並連結至詳細頁。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -14,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import ScreenState from '../components/ScreenState';
 import { HEALTH_EVENT_LABELS, SEVERITY_LABELS } from '../constants/HealthEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -63,12 +63,7 @@ export default function HealthEventListScreen({ navigation }: Props) {
     }, [load]),
   );
 
-  if (loading)
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
-      </View>
-    );
+  if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView

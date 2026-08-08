@@ -138,25 +138,18 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
           <TouchableOpacity
             disabled={submitting}
             style={styles.edit}
-            onPress={() =>
-              (
-                navigation.navigate as unknown as (
-                  screen: string,
-                  params: Record<string, unknown>,
-                ) => void
-              )(
-                item.type === 'vomiting'
-                  ? 'VomitingHealthEvent'
-                  : item.type === 'abnormal_stool'
-                    ? 'StoolHealthEvent'
-                    : isObservationType(item.type)
-                      ? 'ObservationHealthEvent'
-                      : 'HealthEventEdit',
-                isObservationType(item.type)
-                  ? { eventId: item.id, type: item.type }
-                  : { eventId: item.id },
-              )
-            }
+            onPress={() => {
+              if (item.type === 'vomiting')
+                navigation.navigate('VomitingHealthEvent', { eventId: item.id });
+              else if (item.type === 'abnormal_stool')
+                navigation.navigate('StoolHealthEvent', { eventId: item.id });
+              else if (isObservationType(item.type))
+                navigation.navigate('ObservationHealthEvent', {
+                  eventId: item.id,
+                  type: item.type,
+                });
+              else navigation.navigate('HealthEventEdit', { eventId: item.id });
+            }}
           >
             <Text style={styles.editText}>編輯紀錄</Text>
           </TouchableOpacity>

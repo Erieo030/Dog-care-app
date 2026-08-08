@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../constants/Colors';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
@@ -54,7 +55,7 @@ export default function MedicalVisitListScreen({ navigation }: Props) {
       load();
     }, [load]),
   );
-  if (loading) return <Center loading text="正在載入就醫紀錄…" />;
+  if (loading) return <ScreenState loading text="正在載入就醫紀錄…" />;
   return (
     <SafeAreaView style={s.container}>
       <ScrollView

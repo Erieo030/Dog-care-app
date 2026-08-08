@@ -1,8 +1,8 @@
-import { apiRequest } from '../api';
+import { apiData } from '../api';
 import { createWeight, deleteWeight, getWeights, updateWeight } from '../weightService';
 
-jest.mock('../api', () => ({ apiRequest: jest.fn() }));
-const request = apiRequest as jest.MockedFunction<typeof apiRequest>;
+jest.mock('../api', () => ({ apiData: jest.fn() }));
+const request = apiData as jest.MockedFunction<typeof apiData>;
 beforeEach(() => jest.clearAllMocks());
 
 const record = (id: string, measuredAt: string) => ({

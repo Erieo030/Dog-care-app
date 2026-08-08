@@ -25,6 +25,10 @@ def summary(x):
 def sync(x):upsert_timeline_item(x["petId"],"daily_log",x["loggedAt"],"今日健康紀錄已更新",str(x["_id"]),summary(x))
 def list_records(pid,uid,limit=50):
  pet(pid,uid);return {"records":[ser(x) for x in db.daily_logs.find({"petId":pid,"userId":uid}).sort([("loggedAt",-1),("_id",-1)]).limit(limit)]}
+def get_record(rid,uid):
+ x=db.daily_logs.find_one({"_id":oid(rid),"userId":uid})
+ if not x: raise HTTPException(404,"找不到日常紀錄")
+ pet(x["petId"],uid); return ser(x)
 def get_today(pid,uid,date):
  pet(pid,uid);x=db.daily_logs.find_one({"petId":pid,"userId":uid,"localDate":date});return {"record":ser(x) if x else None}
 def create(pid,uid,d:DailyLogCreateRequest):

@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../constants/Colors';
+import ScreenState from '../components/ScreenState';
 import { openTimelineSource, TIMELINE_META } from '../constants/Timeline';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -43,6 +44,8 @@ export default function TimelineScreen({ navigation }: Props) {
   const [hasMore, setHasMore] = useState(false);
   const [nextSkip, setNextSkip] = useState(0);
   const requestId = useRef(0);
+  const hasLoaded = useRef(false);
+  const lastPetId = useRef<string | null>(null);
   const load = useCallback(
     async (reset = true, nextFilter: Filter = filter) => {
       if (!selectedPet || !session?.userId) {
@@ -82,6 +85,7 @@ export default function TimelineScreen({ navigation }: Props) {
       } finally {
         if (current === requestId.current) {
           setLoading(false);
+          hasLoaded.current = true;
           setRefreshing(false);
           setLoadingMore(false);
           setFilterChanging(false);
@@ -90,20 +94,29 @@ export default function TimelineScreen({ navigation }: Props) {
     },
     [filter, loadingMore, nextSkip, selectedPet, session?.userId],
   );
+  // 載入函式會隨分頁狀態更新；聚焦效果只應在毛孩或篩選改變時重設，避免畫面反覆閃爍。
+  const loadRef = useRef(load);
+  loadRef.current = load;
   useFocusEffect(
     useCallback(() => {
-      setItems([]);
-      setLoading(true);
+      if (!selectedPet?.id || !session?.userId) return;
+      const petChanged = lastPetId.current !== selectedPet.id;
+      const firstLoad = !hasLoaded.current;
+      lastPetId.current = selectedPet.id;
+      if (petChanged || firstLoad) {
+        setItems([]);
+        setLoading(true);
+      }
       setNextSkip(0);
-      load(true, filter);
-    }, [load, filter]),
+      loadRef.current(true, filter);
+    }, [filter, selectedPet?.id, session?.userId]),
   );
   const changeFilter = (value: Filter) => {
     if (value === filter || filterChanging) return;
     setFilterChanging(true);
     setFilter(value);
   };
-  if (loading) return <Center loading text="正在載入時間軸…" />;
+  if (loading) return <ScreenState loading text="正在載入時間軸…" />;
   return (
     <SafeAreaView style={s.container}>
       <ScrollView

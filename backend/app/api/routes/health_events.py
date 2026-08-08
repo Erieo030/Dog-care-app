@@ -18,7 +18,7 @@ def create_observation_event(
     pet_id: str, data: ObservationHealthEventRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {"success": True, "event": health_event_service.create_event(pet_id, user_id, data)}
+    return {"success": True, "message": "健康紀錄已建立", "data": {"event": health_event_service.create_event(pet_id, user_id, data)}}
 
 
 @router.patch("/observation-events/{event_id}")
@@ -26,7 +26,7 @@ def update_observation_event(
     event_id: str, data: ObservationHealthEventRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {"success": True, "event": health_event_service.update_observation_event(event_id, user_id, data)}
+    return {"success": True, "message": "健康紀錄已更新", "data": {"event": health_event_service.update_observation_event(event_id, user_id, data)}}
 
 
 @router.post("/pets/{pet_id}/vomiting-events", status_code=status.HTTP_201_CREATED)
@@ -47,12 +47,7 @@ def update_vomiting_event(
     data: VomitingHealthEventRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {
-        "success": True,
-        "event": health_event_service.update_vomiting_event(
-            event_id, user_id, data
-        ),
-    }
+    return {"success": True, "message": "健康紀錄已更新", "data": {"event": health_event_service.update_vomiting_event(event_id, user_id, data)}}
 
 
 @router.post("/pets/{pet_id}/stool-events", status_code=status.HTTP_201_CREATED)
@@ -73,20 +68,12 @@ def update_stool_event(
     data: StoolHealthEventRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {
-        "success": True,
-        "event": health_event_service.update_stool_event(
-            event_id, user_id, data
-        ),
-    }
+    return {"success": True, "message": "健康紀錄已更新", "data": {"event": health_event_service.update_stool_event(event_id, user_id, data)}}
 
 
 @router.get("/pets/{pet_id}/health-events")
 def list_health_events(pet_id: str, user_id: str = Query(alias="userId")):
-    return {
-        "success": True,
-        "events": health_event_service.list_events(pet_id, user_id),
-    }
+    return {"success": True, "message": "取得健康紀錄成功", "data": {"events": health_event_service.list_events(pet_id, user_id)}}
 
 
 @router.post("/pets/{pet_id}/health-events", status_code=status.HTTP_201_CREATED)
@@ -103,10 +90,7 @@ def create_health_event(
 
 @router.get("/health-events/{event_id}")
 def get_health_event(event_id: str, user_id: str = Query(alias="userId")):
-    return {
-        "success": True,
-        "event": health_event_service.get_event(event_id, user_id),
-    }
+    return {"success": True, "message": "取得健康紀錄成功", "data": {"event": health_event_service.get_event(event_id, user_id)}}
 
 
 @router.patch("/health-events/{event_id}")
@@ -115,10 +99,7 @@ def update_health_event(
     data: HealthEventUpdateRequest,
     user_id: str = Query(alias="userId"),
 ):
-    return {
-        "success": True,
-        "event": health_event_service.update_event(event_id, user_id, data),
-    }
+    return {"success": True, "message": "健康紀錄已更新", "data": {"event": health_event_service.update_event(event_id, user_id, data)}}
 
 
 @router.delete("/health-events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)

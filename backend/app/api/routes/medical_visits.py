@@ -7,19 +7,19 @@ router = APIRouter(tags=["medical-visits"])
 
 @router.get("/pets/{pet_id}/medical-visits")
 def list_medical_visits(pet_id: str, user_id: str = Query(alias="userId")):
-    return {"success": True, "visits": medical_visit_service.list_visits(pet_id, user_id)}
+    return {"success": True, "message": "取得就醫紀錄成功", "data": {"visits": medical_visit_service.list_visits(pet_id, user_id)}}
 
 @router.post("/pets/{pet_id}/medical-visits", status_code=status.HTTP_201_CREATED)
 def create_medical_visit(pet_id: str, data: MedicalVisitRequest, user_id: str = Query(alias="userId")):
-    return {"success": True, "visit": medical_visit_service.create_visit(pet_id, user_id, data)}
+    return {"success": True, "message": "就醫紀錄已建立", "data": {"visit": medical_visit_service.create_visit(pet_id, user_id, data)}}
 
 @router.get("/medical-visits/{visit_id}")
 def get_medical_visit(visit_id: str, user_id: str = Query(alias="userId")):
-    return {"success": True, "visit": medical_visit_service.get_visit(visit_id, user_id)}
+    return {"success": True, "message": "取得就醫紀錄成功", "data": {"visit": medical_visit_service.get_visit(visit_id, user_id)}}
 
 @router.patch("/medical-visits/{visit_id}")
 def update_medical_visit(visit_id: str, data: MedicalVisitRequest, user_id: str = Query(alias="userId")):
-    return {"success": True, "visit": medical_visit_service.update_visit(visit_id, user_id, data)}
+    return {"success": True, "message": "就醫紀錄已更新", "data": {"visit": medical_visit_service.update_visit(visit_id, user_id, data)}}
 
 @router.delete("/medical-visits/{visit_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_medical_visit(visit_id: str, user_id: str = Query(alias="userId")):

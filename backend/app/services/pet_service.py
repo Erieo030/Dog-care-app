@@ -31,6 +31,7 @@ def serialize_pet(pet: dict) -> dict:
         "name": pet.get("name", ""),
         "gender": pet.get("gender", ""),
         "breed": pet.get("breed", ""),
+        "breedType": pet.get("breedType", "unknown"),
         "avatarUri": pet.get("avatarUri", ""),
         "birthday": pet.get("birthday", ""),
         "arrivalDate": pet.get("arrivalDate", ""),

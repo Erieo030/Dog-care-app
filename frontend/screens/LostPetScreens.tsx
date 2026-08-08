@@ -70,7 +70,9 @@ export function LostPetSettingsScreen({ navigation }: Props) {
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Text style={s.title}>走失協尋 QR</Text>
-      <Text style={s.note}>啟用後，掃描 QR Code 的人可以查看你選擇公開的協尋資訊與電話。</Text>
+      <Text style={s.note}>
+        啟用後，這個 QR Code 就代表毛孩正在協尋；掃描者可以查看你選擇公開的資訊與電話。
+      </Text>
       {(
         [
           'contactName',
@@ -98,9 +100,6 @@ export function LostPetSettingsScreen({ navigation }: Props) {
           onChangeText={(v) => setP({ ...d, [k]: v })}
         />
       ))}
-      <TouchableOpacity onPress={() => setP({ ...d, lostMode: !d.lostMode })}>
-        <Text>□ 走失模式：{d.lostMode ? '開啟' : '關閉'}</Text>
-      </TouchableOpacity>
       <TouchableOpacity style={s.primary} disabled={saving} onPress={save}>
         <Text style={s.primaryText}>
           {saving ? '儲存中…' : d.enabled ? '更新公開資料' : '啟用走失協尋'}

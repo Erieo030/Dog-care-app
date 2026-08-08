@@ -20,7 +20,7 @@ PawLog 是照護紀錄工具，不是獸醫診斷系統，也不提供藥物或�
 - 上傳健康照片附件，並在詳細頁與時間軸查看。
 - 搜尋與篩選體重、健康事件、就醫及提醒資料。
 - 匯出 PDF 健康報告、CSV、JSON，或包含照片的 ZIP。
-- 在設定中心管理毛孩入口、外觀、通知、提醒時間、儲存空間、匯出、隱私說明及登出。
+- 在設定中心管理毛孩入口、通知、提醒時間、儲存空間、匯出、隱私說明及登出。
 
 ## 專案由什麼組成
 
@@ -175,7 +175,7 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 ### 通知沒有出現
 
 - 確認系統通知權限已開啟。
-- 到「我的／設定」確認「PawLog 手機提醒」已開啟。
+- 到「設定」確認「PawLog 手機提醒」已開啟。
 - Local Notification 需要 Android／iOS 實機環境驗證。
 - 關閉手機提醒不會刪除 App 內的 Reminder。
 
@@ -187,7 +187,7 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 
 - 現行 `userId` 仍由前端傳入，不等於完整安全認證。
 - 正式密碼雜湊、JWT／Session、忘記密碼及 Email 驗證尚未完成。
-- Settings 與 Navigation 已支援外觀偏好，但既有畫面尚未全部完成 Dark Mode。
+- 目前固定使用淺色介面，外觀設定功能已移除。
 - Local Notification、分享、檔案下載及小螢幕版面仍需實機完整驗收。
 - 匯出工作狀態目前保存在單一 FastAPI process 記憶體。
 - 沒有 Cloud Backup、Push Notification Server、AI、OCR 或醫療判讀。
@@ -211,4 +211,31 @@ cd .. && PYTHONPATH=backend dog-care/bin/python -m unittest discover -s backend/
 
 目前主要畫面已統一成溫暖、簡潔、容易點選的風格，包含首頁、健康紀錄、提醒、時間軸、搜尋、匯出、設定與協尋流程。表單欄位及主要按鈕已加大，方便手機操作。
 
-前端目前可執行 TypeScript、ESLint、Prettier 與 Jest；後端可執行 Python smoke test 與 pytest。實機上的小螢幕、長文字、深色模式及通知行為仍需依平台個別驗證。
+
+> 目前版本先固定使用淺色介面；設定中的外觀設定功能目前已移除，避免主題切換造成不一致的畫面體驗。
+
+## 後端穩定性補充
+
+FastAPI 現在會統一處理 HTTP 錯誤、輸入驗證錯誤與未預期例外；對外只回傳可理解訊息，不回傳 stack trace。MongoDB 啟動時會建立毛孩 ownership、子資料與日期查詢索引。毛孩刪除時會同步清理目前已支援的 Daily Log、體重、健康異常、就醫、疫苗、驅蟲、用藥、提醒、時間軸、附件與協尋設定。
+
+## API 格式
+
+前端 service 已集中處理新的 `{ success, message, data }` 回應，也能相容目前部分舊格式。新增或修改 API 時請同步更新後端 schema、前端 service 與測試；既有模組會依批次逐步遷移。
+
+目前 Auth、Pet、Weight、Daily Log 已採用新的 API `data` envelope；其他模組會分批遷移，期間前端仍支援舊格式。
+
+Health Event、Medical Visit、Reminder 的主要 API 也已完成 `data` envelope 遷移；刪除操作維持 204 回應。
+
+Vaccination、Deworming、Medication API 已完成新的 `data` response envelope，前端仍由 service layer 負責相容解包。
+
+Timeline 與 Lost Pet 私有管理 API 已完成 `data` envelope；檔案下載、圖片內容與公開 HTML 仍維持檔案／HTML 回應，不套用 JSON envelope。
+
+## App 大小與效能優化
+
+目前已明確啟用 Hermes，圖片選取時先以較低品質進入後續壓縮流程，減少高解析原圖的記憶體壓力。`dist/`、build、Pods 與 `node_modules/` 已排除，不會納入 Git；未引用的 placeholder 檔案暫不刪除，避免破壞未知相容流程。
+
+## 最近效能清理
+
+主要列表已共用 `ScreenState` 處理初始 Loading；匯出服務會在後端啟動時清理超過 7 天的已完成／失敗／取消匯出檔。Android production bundle 已實測輸出，約 3.85 MB（Hermes bundle）；`dist/` 僅為產物且不納入 Git。
+
+協尋 QR 目前採單一啟用狀態：啟用公開頁就代表正在協尋，不再另外要求開啟「走失模式」。

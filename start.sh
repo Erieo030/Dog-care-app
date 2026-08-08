@@ -12,6 +12,7 @@ LOG_DIR="$ROOT_DIR/.logs"
 BACKEND_PORT="${PORT:-8000}"
 EXPO_CONNECTION="${EXPO_CONNECTION:-lan}"
 BACKEND_PID=""
+COMPOSE_STARTED=0
 
 info() { printf 'ℹ️  %s\n' "$1"; }
 success() { printf '✅ %s\n' "$1"; }
@@ -22,6 +23,11 @@ cleanup() {
     info "Stopping backend..."
     kill "$BACKEND_PID" 2>/dev/null || true
     wait "$BACKEND_PID" 2>/dev/null || true
+  fi
+  if [[ "$COMPOSE_STARTED" == "1" ]]; then
+    info "Stopping MongoDB and Mongo Express..."
+    docker compose --env-file "$BACKEND_DIR/.env" -f "$BACKEND_DIR/docker-compose.yml" down || true
+    COMPOSE_STARTED=0
   fi
 }
 trap cleanup EXIT INT TERM
@@ -130,6 +136,7 @@ fi
 
 info "Starting MongoDB and Mongo Express..."
 docker compose --env-file "$BACKEND_DIR/.env" -f "$BACKEND_DIR/docker-compose.yml" up -d
+COMPOSE_STARTED=1
 
 info "Waiting for MongoDB health check..."
 if ! wait_for_mongo; then

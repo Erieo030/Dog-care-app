@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import {
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,10 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,7 +38,6 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
   const [details, setDetails] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
   const [images, setImages] = useState<Attachment[]>([]);
-  const [showTime, setShowTime] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -174,7 +172,7 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
             setState={setDetails}
           />
         )}
-        <Text style={styles.label}>嚴重程度 *</Text>
+        <Text style={styles.label}>嚴重程度（必填）</Text>
         <View style={styles.chips}>
           {severityOptions.map(([value, text]) => (
             <Chip
@@ -185,21 +183,14 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
             />
           ))}
         </View>
-        <Text style={styles.label}>發生時間 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShowTime(true)}>
-          <Text style={styles.inputText}>{occurredAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showTime && (
-          <DateTimePicker
-            value={occurredAt}
-            mode="datetime"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShowTime(Platform.OS === 'ios');
-              if (value) setOccurredAt(value);
-            }}
-          />
-        )}
+        <DatePickerField
+          label="發生時間（必填）"
+          value={occurredAt}
+          mode="datetime"
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setOccurredAt}
+        />
         <AttachmentPicker
           userId={session!.userId}
           petId={selectedPet!.id}
@@ -209,7 +200,7 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
           onChange={setImages}
           disabled={submitting}
         />
-        <Text style={styles.label}>備註（選填）</Text>
+        <Text style={styles.label}>備註</Text>
         <TextInput
           style={[styles.input, styles.notes]}
           value={notes}

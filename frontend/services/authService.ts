@@ -1,5 +1,5 @@
 /** 用途：封裝登入與註冊 API；安全 Token 流程依目前範圍暫緩。 */
-import { apiRequest } from './api';
+import { apiData } from './api';
 import { Pet } from '../types';
 
 export interface AuthResponse {
@@ -11,7 +11,7 @@ export interface AuthResponse {
 }
 
 const submitCredentials = (path: string, email: string, password: string) =>
-  apiRequest<AuthResponse>(path, {
+  apiData<AuthResponse>(path, {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });

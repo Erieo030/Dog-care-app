@@ -1,9 +1,8 @@
 /** 用途：切換登入導航樹，並在登入、回前景及通知點擊時同步 Local Notification。 */
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
 import {
   createNavigationContainerRef,
-  DarkTheme,
   DefaultTheme,
   NavigationContainer,
 } from '@react-navigation/native';
@@ -26,33 +25,18 @@ const navigationRef = createNavigationContainerRef<MainTabParamList>();
 export default function RootNavigator() {
   const { session, isLoading } = useAuth();
   const { pets, isLoading: isLoadingPets, selectPet } = usePet();
-  const { settings, loading: isLoadingSettings } = useSettings();
-  const systemScheme = useColorScheme();
-  const dark =
-    settings.theme === 'dark' || (settings.theme === 'system' && systemScheme === 'dark');
-  const navigationTheme = dark
-    ? {
-        ...DarkTheme,
-        colors: {
-          ...DarkTheme.colors,
-          primary: '#E9C46A',
-          card: '#241F1B',
-          background: '#191613',
-          text: '#F4EDE4',
-          border: '#3D352F',
-        },
-      }
-    : {
-        ...DefaultTheme,
-        colors: {
-          ...DefaultTheme.colors,
-          primary: '#C98742',
-          card: '#FFFFFF',
-          background: '#FCFAF1',
-          text: '#6A4D3E',
-          border: '#E8E0D4',
-        },
-      };
+  const { loading: isLoadingSettings } = useSettings();
+  const navigationTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: '#C98742',
+      card: '#FFFFFF',
+      background: '#FCFAF1',
+      text: '#6A4D3E',
+      border: '#E8E0D4',
+    },
+  };
 
   const reconcile = useCallback(() => {
     if (!session?.userId || !pets.length) return;

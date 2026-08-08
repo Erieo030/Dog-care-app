@@ -4,7 +4,6 @@ import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import {
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,8 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import DatePickerField from '../components/DatePickerField';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -24,7 +23,6 @@ import * as service from '../services/medicalVisitService';
 import { reconcileAccountNotifications } from '../services/notificationService';
 import { Attachment, Medication } from '../types';
 type Props = NativeStackScreenProps<HomeStackParamList, 'MedicalVisitForm'>;
-type Picker = { kind: 'visit' | 'follow' | 'medStart' | 'medEnd'; index?: number } | null;
 const emptyMedication = (): Medication => ({
   name: '',
   instructions: '',
@@ -62,7 +60,6 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState(existing?.notes || '');
   const [attachments, setAttachments] = useState<Attachment[]>(existing?.attachments || []);
   const [medications, setMedications] = useState<Medication[]>(existing?.medications || []);
-  const [picker, setPicker] = useState<Picker>(null);
   const [submitting, setSubmitting] = useState(false);
   const updateMed = (i: number, key: keyof Medication, value: string | number) =>
     setMedications((v) => v.map((m, n) => (n === i ? { ...m, [key]: value } : m)));
@@ -130,7 +127,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
         cost: cost ? Number(cost) : null,
         notes: notes.trim(),
         attachmentIds: attachments
-          .filter((a) => a.storageProvider !== 'legacy_local')
+
           .map((a) => a.id),
         medications: medications.map((m) => ({
           ...m,
@@ -170,48 +167,30 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
       />
     </>
   );
-  const pickerValue = () => {
-    if (!picker) return new Date();
-    if (picker.kind === 'visit') return visitedAt;
-    if (picker.kind === 'follow')
-      return followUp || new Date(Math.max(Date.now(), visitedAt.getTime()));
-    const med = medications[picker.index || 0];
-    return parseDate(picker.kind === 'medStart' ? med?.startDate : med?.endDate);
-  };
-  const onPick = (value?: Date) => {
-    const current = picker;
-    setPicker(Platform.OS === 'ios' ? current : null);
-    if (!value || !current) return;
-    if (current.kind === 'visit') setVisitedAt(value);
-    else if (current.kind === 'follow') setFollowUp(value);
-    else if (current.index != null)
-      updateMed(
-        current.index,
-        current.kind === 'medStart' ? 'startDate' : 'endDate',
-        localDate(value),
-      );
-  };
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Text style={s.title}>{existing ? '編輯就醫紀錄' : '新增就醫紀錄'}</Text>
         <Text style={s.notice}>此處保存飼主取得的就醫資訊，不是正式動物醫院病歷。</Text>
-        <Text style={s.label}>就醫日期 *</Text>
-        <TouchableOpacity style={s.input} onPress={() => setPicker({ kind: 'visit' })}>
-          <Text style={s.inputText}>{visitedAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {field('看診原因 *', reason, setReason, false, 500)}
-        {field('動物醫院名稱（選填）', clinic, setClinic, false, 200)}
-        {field('獸醫姓名（選填）', vet, setVet, false, 100)}
-        {field('獸醫說明（選填）', vetNotes, setVetNotes, true)}
-        {field('治療內容（選填）', treatment, setTreatment, true)}
-        {field('一般用藥說明（選填）', medNotes, setMedNotes, true)}
-        <Text style={s.label}>下次回診日期（選填）</Text>
-        <TouchableOpacity style={s.input} onPress={() => setPicker({ kind: 'follow' })}>
-          <Text style={s.inputText}>
-            {followUp ? followUp.toLocaleString('zh-TW') : '選擇日期'}
-          </Text>
-        </TouchableOpacity>
+        <DatePickerField
+          label="就醫日期（必填）"
+          value={visitedAt}
+          mode="datetime"
+          onChange={setVisitedAt}
+        />
+        {field('看診原因（必填）', reason, setReason, false, 500)}
+        {field('動物醫院名稱', clinic, setClinic, false, 200)}
+        {field('獸醫姓名', vet, setVet, false, 100)}
+        {field('獸醫說明', vetNotes, setVetNotes, true)}
+        {field('治療內容', treatment, setTreatment, true)}
+        {field('一般用藥說明', medNotes, setMedNotes, true)}
+        <DatePickerField
+          label="下次回診日期"
+          value={followUp || undefined}
+          mode="datetime"
+          minimumDate={visitedAt}
+          onChange={setFollowUp}
+        />
         {followUp && (
           <TouchableOpacity
             onPress={() => {
@@ -231,7 +210,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
             <Switch value={createReminder} onValueChange={setCreateReminder} />
           </View>
         )}
-        <Text style={s.label}>費用（選填，NT$）</Text>
+        <Text style={s.label}>費用</Text>
         <TextInput
           style={s.input}
           keyboardType="decimal-pad"
@@ -239,7 +218,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           onChangeText={setCost}
           placeholder="0"
         />
-        {field('備註（選填）', notes, setNotes, true)}
+        {field('備註', notes, setNotes, true)}
         <Text style={s.heading}>藥物</Text>
         {!medications.length && <Text style={s.empty}>目前沒有藥物</Text>}
         {medications.map((m, i) => (
@@ -250,35 +229,32 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
                 <Text style={s.removeText}>刪除</Text>
               </TouchableOpacity>
             </View>
-            {field('藥品名稱 *', m.name, (v) => updateMed(i, 'name', v), false, 100)}
+            {field('藥品名稱（必填）', m.name, (v) => updateMed(i, 'name', v), false, 100)}
             {field(
-              '服用方式（選填）',
+              '服用方式',
               m.instructions,
               (v) => updateMed(i, 'instructions', v),
               false,
               500,
             )}
-            <Text style={s.label}>每日次數 *</Text>
+            <Text style={s.label}>每日次數（必填）</Text>
             <TextInput
               style={s.input}
               keyboardType="number-pad"
               value={String(m.timesPerDay)}
               onChangeText={(v) => updateMed(i, 'timesPerDay', Number(v))}
             />
-            <Text style={s.label}>開始日期（選填）</Text>
-            <TouchableOpacity
-              style={s.input}
-              onPress={() => setPicker({ kind: 'medStart', index: i })}
-            >
-              <Text style={s.inputText}>{m.startDate || '選擇日期'}</Text>
-            </TouchableOpacity>
-            <Text style={s.label}>結束日期（選填）</Text>
-            <TouchableOpacity
-              style={s.input}
-              onPress={() => setPicker({ kind: 'medEnd', index: i })}
-            >
-              <Text style={s.inputText}>{m.endDate || '選擇日期'}</Text>
-            </TouchableOpacity>
+            <DatePickerField
+              label="開始日期"
+              value={m.startDate ? parseDate(m.startDate) : undefined}
+              onChange={(date) => updateMed(i, 'startDate', localDate(date))}
+            />
+            <DatePickerField
+              label="結束日期"
+              value={m.endDate ? parseDate(m.endDate) : undefined}
+              minimumDate={m.startDate ? parseDate(m.startDate) : undefined}
+              onChange={(date) => updateMed(i, 'endDate', localDate(date))}
+            />
             <Text style={s.label}>飯前／飯後</Text>
             <View style={s.mealRow}>
               {(
@@ -297,7 +273,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
               ))}
             </View>
-            {field('藥物備註（選填）', m.notes, (v) => updateMed(i, 'notes', v), true, 500)}
+            {field('藥物備註', m.notes, (v) => updateMed(i, 'notes', v), true, 500)}
           </View>
         ))}
         <TouchableOpacity
@@ -316,14 +292,6 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           onChange={setAttachments}
           disabled={submitting}
         />
-        {picker && (
-          <DateTimePicker
-            value={pickerValue()}
-            mode={picker.kind === 'medStart' || picker.kind === 'medEnd' ? 'date' : 'datetime'}
-            minimumDate={picker.kind === 'follow' ? visitedAt : undefined}
-            onChange={(_, v) => onPick(v)}
-          />
-        )}
         <TouchableOpacity
           disabled={submitting}
           style={[s.submit, submitting && s.disabled]}

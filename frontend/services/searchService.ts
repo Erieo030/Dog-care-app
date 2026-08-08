@@ -1,5 +1,5 @@
 /** 用途：封裝後端全域搜尋、篩選、排序與分頁。 */
-import { apiRequest } from './api';
+import { apiData } from './api';
 import { SearchFilters, SearchPage } from '../types';
 export async function searchRecords(
   userId: string,
@@ -26,11 +26,5 @@ export async function searchRecords(
   if (filters.endAt) query.set('endAt', filters.endAt);
   if (filters.minWeight != null) query.set('minWeight', String(filters.minWeight));
   if (filters.maxWeight != null) query.set('maxWeight', String(filters.maxWeight));
-  return (
-    await apiRequest<{ success: boolean; message: string; data: SearchPage }>(
-      `/api/pets/${petId}/search?${query.toString()}`,
-      {},
-      15000,
-    )
-  ).data;
+  return await apiData<SearchPage>(`/api/pets/${petId}/search?${query.toString()}`, {}, 15000);
 }

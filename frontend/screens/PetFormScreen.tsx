@@ -1,5 +1,6 @@
 /** 毛孩新增與編輯共用表單，集中處理欄位驗證與健康資料輸入。 */
 import React, { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   Alert,
   Image,
@@ -16,6 +17,7 @@ import {
 } from 'react-native';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import { emptyPetData, PetData } from '../types';
 
 interface PetFormScreenProps {
@@ -38,12 +40,12 @@ export default function PetFormScreen({
     setForm((current) => ({ ...current, [key]: value }));
 
   const submit = () => {
-    if (!form.name.trim() || !form.gender.trim() || !form.breed.trim()) {
-      Alert.alert('提示', '請填寫姓名、性別與品種');
+    if (!form.name.trim() || !form.gender || !form.breed.trim() || !form.arrivalDate.trim()) {
+      Alert.alert('提示', '請填寫姓名、性別、品種與到家日期');
       return;
     }
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (!datePattern.test(form.birthday)) {
+    if (form.birthday && !datePattern.test(form.birthday)) {
       Alert.alert('提示', '出生日期請使用 YYYY-MM-DD 格式');
       return;
     }
@@ -54,7 +56,7 @@ export default function PetFormScreen({
     onSubmit({
       ...form,
       name: form.name.trim(),
-      gender: form.gender.trim(),
+      gender: form.gender,
       breed: form.breed.trim(),
     });
   };
@@ -65,12 +67,10 @@ export default function PetFormScreen({
     placeholder: string;
     multiline?: boolean;
   }> = [
-    { key: 'name', label: '毛孩姓名 *', placeholder: '例如：Kuro' },
-    { key: 'gender', label: '性別 *', placeholder: '例如：公犬' },
-    { key: 'breed', label: '品種 *', placeholder: '例如：柴犬' },
-    { key: 'birthday', label: '出生日期 *', placeholder: 'YYYY-MM-DD' },
-    { key: 'arrivalDate', label: '到家日期', placeholder: 'YYYY-MM-DD' },
-    { key: 'avatarUri', label: '頭像圖片網址', placeholder: 'https://...' },
+    { key: 'name', label: '毛孩姓名（必填）', placeholder: '例如：Kuro' },
+    { key: 'breed', label: '品種（必填）', placeholder: '例如：柴犬、米克斯' },
+    { key: 'birthday', label: '出生日期', placeholder: '不知道可留空：YYYY-MM-DD' },
+    { key: 'arrivalDate', label: '到家日期（必填）', placeholder: 'YYYY-MM-DD' },
     { key: 'allergies', label: '過敏資訊', placeholder: '沒有可留空', multiline: true },
     {
       key: 'chronicDiseases',
@@ -78,11 +78,11 @@ export default function PetFormScreen({
       placeholder: '沒有可留空',
       multiline: true,
     },
-    { key: 'microchipNumber', label: '晶片號碼（選填）', placeholder: '可留空' },
-    { key: 'coatColor', label: '毛色（選填）', placeholder: '例如：黑色' },
+    { key: 'microchipNumber', label: '晶片號碼', placeholder: '可留空' },
+    { key: 'coatColor', label: '毛色', placeholder: '例如：黑色' },
     {
       key: 'distinctiveFeatures',
-      label: '明顯特徵（選填）',
+      label: '明顯特徵',
       placeholder: '例如：胸口有白毛',
       multiline: true,
     },
@@ -104,20 +104,51 @@ export default function PetFormScreen({
             </View>
           )}
 
+          <Text style={styles.label}>性別（必填）</Text>
+          <View style={styles.optionRow}>
+            {([['male', '公'], ['female', '母']] as const).map(([value, label]) => (
+              <TouchableOpacity key={value} style={[styles.option, form.gender === value && styles.optionSelected]} onPress={() => update('gender', value)}>
+                <Text style={[styles.optionText, form.gender === value && styles.optionTextSelected]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.label}>品種類型（必填）</Text>
+          <View style={styles.optionRow}>
+            {([['purebred', '純種'], ['mixed', '混種'], ['unknown', '不確定']] as const).map(([value, label]) => (
+              <TouchableOpacity key={value} style={[styles.option, form.breedType === value && styles.optionSelected]} onPress={() => update('breedType', value)}>
+                <Text style={[styles.optionText, form.breedType === value && styles.optionTextSelected]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.label}>頭像</Text>
+          <View style={styles.imageActions}>
+            <TouchableOpacity style={styles.imageButton} onPress={async () => { const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 }); if (!r.canceled) update('avatarUri', r.assets[0].uri); }}><Text style={styles.imageButtonText}>從相簿選擇</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.imageButton} onPress={async () => { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) { Alert.alert('需要相機權限', '請允許相機權限後再拍照'); return; } const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 }); if (!r.canceled) update('avatarUri', r.assets[0].uri); }}><Text style={styles.imageButtonText}>拍照</Text></TouchableOpacity>
+            {form.avatarUri ? <TouchableOpacity style={styles.removeButton} onPress={() => update('avatarUri', '')}><Text style={styles.removeText}>移除圖片</Text></TouchableOpacity> : null}
+          </View>
           {fields.map((field) => (
             <View key={field.key}>
               <Text style={styles.label}>{field.label}</Text>
-              <TextInput
-                style={[styles.input, field.multiline && styles.multiline]}
-                value={String(form[field.key] ?? '')}
-                onChangeText={(value) => update(field.key, value as never)}
-                placeholder={field.placeholder}
-                placeholderTextColor={Colors.subtext}
-                multiline={field.multiline}
-              />
+              {field.key === 'birthday' || field.key === 'arrivalDate' ? (
+                <DatePickerField
+                  label=""
+                  value={form[field.key] ? new Date(`${form[field.key]}T12:00:00`) : undefined}
+                  placeholder={field.placeholder}
+                  onChange={(date) => update(field.key, date.toISOString().slice(0, 10))}
+                  maximumDate={new Date()}
+                />
+              ) : (
+                <TextInput
+                  style={[styles.input, field.multiline && styles.multiline]}
+                  value={String(form[field.key] ?? '')}
+                  onChangeText={(value) => update(field.key, value as never)}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={Colors.subtext}
+                  multiline={field.multiline}
+                />
+              )}
             </View>
           ))}
-
           <View style={styles.switchRow}>
             <View>
               <Text style={styles.label}>結紮狀態</Text>
@@ -174,9 +205,22 @@ const styles = StyleSheet.create({
   },
   avatarEmoji: { fontSize: 48 },
   label: { color: Colors.text, fontWeight: '600', marginBottom: 7 },
+  optionRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  option: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  optionSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  optionText: { color: Colors.text, fontWeight: '700' },
+  optionTextSelected: { color: '#FFF' },
+  imageActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
+  imageButton: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 10, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  imageButtonText: { color: Colors.primary, fontWeight: '700' },
+  removeButton: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FFF1F0', borderWidth: 1, borderColor: '#F3B5AE' },
+  removeText: { color: '#C94C4C', fontWeight: '700' },
   hint: { color: Colors.subtext, fontSize: 12 },
+  dateValue: { color: Colors.text },
+  datePlaceholder: { color: Colors.subtext },
   input: {
     minHeight: 54,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,

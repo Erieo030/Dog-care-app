@@ -1,10 +1,9 @@
-/** 用途：PawLog 統一「我的／設定」中心。 */
+/** 用途：PawLog 統一設定中心。 */
 import Constants from 'expo-constants';
 import React, { useState } from 'react';
 import {
   Alert,
   SafeAreaView,
-  useColorScheme,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +13,6 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
-import { useSettings } from '../contexts/SettingsContext';
 import { ProfileStackParamList } from '../navigation/types';
 import { cancelAccountNotifications } from '../services/notificationService';
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileOverview'>;
@@ -36,16 +34,16 @@ const Row = ({
   danger?: boolean;
 }) => (
   <TouchableOpacity accessibilityRole="button" style={s.row} onPress={onPress}>
-    <Text style={[s.title, danger && s.danger]}>{title}</Text>
-    <Text style={[s.value, danger && s.danger]}>{value ? `${value}  ` : ''}›</Text>
+    <Text numberOfLines={1} ellipsizeMode="tail" style={[s.title, danger && s.danger]}>{title}</Text>
+    <View style={s.accessory}>
+      {value ? <Text numberOfLines={1} ellipsizeMode="tail" style={[s.value, danger && s.danger]}>{value}</Text> : null}
+      <Text style={[s.chevron, danger && s.danger]}>›</Text>
+    </View>
   </TouchableOpacity>
 );
 export default function ProfileScreen({ navigation }: Props) {
   const { session, logout } = useAuth();
   const { selectedPet } = usePet();
-  const { settings } = useSettings();
-  const system = useColorScheme();
-  const dark = settings.theme === 'dark' || (settings.theme === 'system' && system === 'dark');
   const [loggingOut, setLoggingOut] = useState(false);
   const confirmLogout = () =>
     Alert.alert('登出帳號', '登出後會取消此帳號在本機排程的 PawLog 通知；後端健康資料不會刪除。', [
@@ -67,9 +65,9 @@ export default function ProfileScreen({ navigation }: Props) {
       },
     ]);
   return (
-    <SafeAreaView style={[s.safe, dark && { backgroundColor: '#191613' }]}>
+    <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.hero}>我的／設定</Text>
+        <Text style={s.hero}>設定</Text>
         <Section title="帳號與毛孩">
           <Row
             title="帳號"
@@ -77,14 +75,12 @@ export default function ProfileScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('AccountInfo')}
           />
           <Row
-            title="我的毛孩"
+            title="毛孩管理"
             value={selectedPet?.name}
             onPress={() => navigation.navigate('PetManagement')}
           />
-          <Row title="新增毛孩" onPress={() => navigation.navigate('PetManagement')} />
         </Section>
         <Section title="一般設定">
-          <Row title="外觀" onPress={() => navigation.navigate('AppearanceSettings')} />
           <Row title="通知" onPress={() => navigation.navigate('NotificationSettings')} />
           <Row title="提醒偏好" onPress={() => navigation.navigate('ReminderPreferences')} />
         </Section>
@@ -157,11 +153,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E8E0D4',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { fontSize: 15, fontWeight: '700', color: '#6A4D3E' },
-  value: { fontSize: 13, color: '#887A6D', maxWidth: '62%', textAlign: 'right' },
+  title: { flex: 1, fontSize: 15, fontWeight: '700', color: '#6A4D3E' },
+  accessory: { maxWidth: '58%', flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
+  value: { flexShrink: 1, fontSize: 13, color: '#887A6D', textAlign: 'right' },
+  chevron: { marginLeft: 8, fontSize: 22, lineHeight: 22, color: '#887A6D' },
   danger: { color: '#C94C4C' },
   note: { fontSize: 13, lineHeight: 19, color: '#887A6D', marginTop: 14 },
 });

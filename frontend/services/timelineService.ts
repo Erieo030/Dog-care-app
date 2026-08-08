@@ -1,5 +1,5 @@
 /** 用途：讀取具 ownership、類型篩選與分頁的毛孩統一時間軸。 */
-import { apiRequest } from './api';
+import { apiData } from './api';
 import { TimelinePage, TimelineType } from '../types';
 export const getTimelinePage = async (
   userId: string,
@@ -12,7 +12,7 @@ export const getTimelinePage = async (
     skip: String(options.skip ?? 0),
   });
   if (options.type) query.set('type', options.type);
-  return apiRequest<TimelinePage>(`/api/pets/${petId}/timeline?${query.toString()}`);
+  return apiData<TimelinePage>(`/api/pets/${petId}/timeline?${query.toString()}`);
 };
 export const getRecentTimeline = async (userId: string, petId: string, limit = 5) =>
   (await getTimelinePage(userId, petId, { limit, skip: 0 })).items;

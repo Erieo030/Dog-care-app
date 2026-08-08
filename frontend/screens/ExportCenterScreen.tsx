@@ -1,5 +1,4 @@
 /** 用途：設定資料範圍、追蹤匯出進度，並分享或儲存完成檔案。 */
-import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DatePickerField from '../components/DatePickerField';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -152,14 +152,8 @@ export default function ExportCenterScreen() {
         </View>
         {period === 'custom' && (
           <View style={styles.dateRow}>
-            <View>
-              <Text style={styles.muted}>開始</Text>
-              <DateTimePicker value={start} mode="date" onChange={(_, d) => d && setStart(d)} />
-            </View>
-            <View>
-              <Text style={styles.muted}>結束</Text>
-              <DateTimePicker value={end} mode="date" onChange={(_, d) => d && setEnd(d)} />
-            </View>
+            <DatePickerField label="開始日期" value={start} onChange={setStart} maximumDate={new Date()} />
+            <DatePickerField label="結束日期" value={end} onChange={setEnd} maximumDate={new Date()} />
           </View>
         )}
         {format !== 'csv' && (

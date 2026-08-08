@@ -50,12 +50,12 @@ def _date_match(field:str,request:SearchRequest,query_date:tuple[datetime,dateti
 
 def _attachment_match(mode:str)->dict:
     if mode=="any": return {}
-    present={"$or":[{"attachmentIds.0":{"$exists":True}},{"imageUrls.0":{"$exists":True}},{"attachments.0":{"$exists":True}}]}
+    present={"attachmentIds.0":{"":True}}
     return present if mode=="with" else {"$nor":present["$or"]}
 
 
 def _count_attachments(item:dict)->int:
-    return max(len(item.get("attachmentIds",[])),len(item.get("imageUrls",[])),len(item.get("attachments",[])))
+    return len(item.get("attachmentIds",[]))
 
 
 def _result(kind:str,item:dict,date_field:str,title:str,description:str="",metadata:dict|None=None)->dict:

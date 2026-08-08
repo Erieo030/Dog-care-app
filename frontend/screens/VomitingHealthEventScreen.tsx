@@ -3,7 +3,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,11 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import { SEVERITY_LABELS } from '../constants/HealthEvents';
@@ -58,7 +57,6 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
   const [notes, setNotes] = useState('');
   const [images, setImages] = useState<Attachment[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showTime, setShowTime] = useState(false);
   const [loading, setLoading] = useState(Boolean(eventId));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -131,7 +129,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
         details,
         notes: notes.trim(),
         attachmentIds: images
-          .filter((item) => item.storageProvider !== 'legacy_local')
+
           .map((item) => item.id),
       };
       if (eventId) await service.updateVomitingHealthEvent(session.userId, eventId, input);
@@ -180,37 +178,30 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
         <Text style={styles.title}>{eventId ? '編輯嘔吐紀錄' : '記錄嘔吐'}</Text>
         <Text style={styles.subtitle}>只記錄看到的狀況，不提供疾病診斷。</Text>
 
-        <Text style={styles.label}>發生次數 *</Text>
+        <Text style={styles.label}>發生次數（必填）</Text>
         <OptionGroup
           options={VOMIT_COUNT_OPTIONS}
           value={details.vomitCount}
           onChange={(vomitCount) => setDetails((current) => ({ ...current, vomitCount }))}
         />
 
-        <Text style={styles.label}>精神狀況 *</Text>
+        <Text style={styles.label}>精神狀況（必填）</Text>
         <OptionGroup
           options={ENERGY_OPTIONS}
           value={details.energyCondition}
           onChange={(energyCondition) => setDetails((current) => ({ ...current, energyCondition }))}
         />
 
-        <Text style={styles.label}>發生時間 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShowTime(true)}>
-          <Text style={styles.inputText}>{occurredAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showTime && (
-          <DateTimePicker
-            value={occurredAt}
-            mode="datetime"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShowTime(Platform.OS === 'ios');
-              if (value) setOccurredAt(value);
-            }}
-          />
-        )}
+        <DatePickerField
+          label="發生時間（必填）"
+          value={occurredAt}
+          mode="datetime"
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setOccurredAt}
+        />
 
-        <Text style={styles.label}>嚴重程度 *</Text>
+        <Text style={styles.label}>嚴重程度（必填）</Text>
         <OptionGroup<Severity> options={severities} value={severity} onChange={setSeverity} />
 
         <AttachmentPicker
@@ -231,7 +222,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
 
         {showAdvanced && (
           <View style={styles.advanced}>
-            <Text style={styles.label}>顏色（選填）</Text>
+            <Text style={styles.label}>顏色</Text>
             <OptionGroup
               options={VOMIT_COLOR_OPTIONS}
               value={details.color}
@@ -269,7 +260,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
               />
             </View>
 
-            <Text style={styles.label}>飲水狀況（選填）</Text>
+            <Text style={styles.label}>飲水狀況</Text>
             <OptionGroup
               options={DRINKING_OPTIONS}
               value={details.drinkingCondition}
@@ -278,7 +269,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
               }
             />
 
-            <Text style={styles.label}>備註（選填，最多 500 字）</Text>
+            <Text style={styles.label}>備註（最多 500 字）</Text>
             <TextInput
               style={[styles.input, styles.notes]}
               value={notes}

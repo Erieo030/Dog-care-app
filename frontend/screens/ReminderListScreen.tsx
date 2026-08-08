@@ -3,7 +3,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -12,11 +11,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
+import ScreenState from '../components/ScreenState';
 import { tonightAt } from '../constants/Reminders';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -141,7 +141,7 @@ export default function ReminderListScreen({ navigation, route }: Props) {
     ]);
 
   const customItem = items.find((item) => item.id === customSnoozeId);
-  if (loading) return <Center text="載入提醒中…" loading />;
+  if (loading) return <ScreenState text="載入提醒中…" loading />;
   if (error) return <Center text={error} action={load} />;
   return (
     <SafeAreaView style={styles.container}>
@@ -159,13 +159,14 @@ export default function ReminderListScreen({ navigation, route }: Props) {
         }
       >
         {customItem && (
-          <DateTimePicker
-            value={new Date()}
+          <DatePickerField
+            label="自訂延後時間"
             mode="datetime"
             minimumDate={new Date()}
-            onChange={(_, date) => {
-              if (Platform.OS !== 'ios' || date) setCustomSnoozeId(null);
-              if (date) runSnooze(customItem, date);
+            onChange={(date) => {
+              const item = customItem;
+              setCustomSnoozeId(null);
+              runSnooze(item, date);
             }}
           />
         )}

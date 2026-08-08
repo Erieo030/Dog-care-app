@@ -3,6 +3,8 @@ const rawBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBL
 
 export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 
+export type ApiEnvelope<T> = { success: boolean; message?: string; data: T };
+
 export class ApiError extends Error {
   status?: number;
 
@@ -22,6 +24,22 @@ const getErrorMessage = (body: unknown, fallback: string) => {
   if (Array.isArray(result?.detail)) return result.detail[0]?.msg ?? fallback;
   return result?.message ?? fallback;
 };
+
+export function unwrapApiEnvelope<T>(body: T | ApiEnvelope<T>): T {
+  if (body && typeof body === 'object' && 'data' in body) {
+    return (body as ApiEnvelope<T>).data;
+  }
+  return body as T;
+}
+
+export async function apiData<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs = 10000,
+): Promise<T> {
+  const body = await apiRequest<T | ApiEnvelope<T>>(path, options, timeoutMs);
+  return unwrapApiEnvelope(body);
+}
 
 export async function apiRequest<T>(
   path: string,

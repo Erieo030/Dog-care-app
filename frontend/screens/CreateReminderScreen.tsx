@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import {
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,10 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import { RECURRENCE_RULES, REMINDER_TYPES } from '../constants/Reminders';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -49,7 +48,6 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
   );
   const [rule, setRule] = useState<RecurrenceRule>(existing?.recurrenceRule ?? 'monthly');
   const [notes, setNotes] = useState(existing?.notes ?? '');
-  const [showPicker, setShowPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [clientRequestId] = useState(
     () => `reminder-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
@@ -108,7 +106,7 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Label text="提醒類型 *" />
+        <Label text="提醒類型（必填）" />
         <View style={styles.chips}>
           {REMINDER_TYPES.map((item) => (
             <Chip
@@ -119,23 +117,16 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
             />
           ))}
         </View>
-        <Label text="提醒名稱 *" />
+        <Label text="提醒名稱（必填）" />
         <TextInput style={styles.input} value={title} onChangeText={setTitle} maxLength={100} />
-        <Label text="提醒日期與時間 *" />
-        <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
-          <Text style={styles.inputText}>{scheduledAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showPicker && (
-          <DateTimePicker
-            value={scheduledAt}
-            mode="datetime"
-            minimumDate={new Date()}
-            onChange={(_, date) => {
-              setShowPicker(Platform.OS === 'ios');
-              if (date) setScheduledAt(date);
-            }}
-          />
-        )}
+        <DatePickerField
+          label="提醒日期與時間（必填）"
+          value={scheduledAt}
+          mode="datetime"
+          minimumDate={new Date()}
+          disabled={submitting}
+          onChange={setScheduledAt}
+        />
         <Label text="是否重複（建議值，可自行調整）" />
         <View style={styles.chips}>
           {RECURRENCE_RULES.map(([value, label]) => (
@@ -148,7 +139,7 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
           ))}
         </View>
         <Text style={styles.notice}>實際頻率請依獸醫建議與產品說明為準。</Text>
-        <Label text="備註（選填）" />
+        <Label text="備註" />
         <TextInput
           style={[styles.input, styles.multiline]}
           value={notes}

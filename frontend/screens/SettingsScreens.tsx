@@ -8,7 +8,6 @@ import {
   Linking,
   Platform,
   SafeAreaView,
-  useColorScheme,
   ScrollView,
   StyleSheet,
   Switch,
@@ -32,7 +31,6 @@ import {
 import { clearSearchHistory } from '../services/searchHistoryService';
 import { clearPawLogCache, getStorageUsage } from '../services/storageService';
 import { shareFeedbackInfo } from '../services/feedbackService';
-import { ThemePreference } from '../services/settingsService';
 const palette = {
   bg: '#F7F4EE',
   surface: '#FFFFFF',
@@ -62,11 +60,8 @@ const formatBytes = (value: number) =>
       ? `${(value / 1024).toFixed(1)} KB`
       : `${(value / 1048576).toFixed(1)} MB`;
 const Page = ({ children }: { children: React.ReactNode }) => {
-  const { settings } = useSettings();
-  const system = useColorScheme();
-  const dark = settings.theme === 'dark' || (settings.theme === 'system' && system === 'dark');
   return (
-    <SafeAreaView style={[s.safe, dark && { backgroundColor: '#191613' }]}>
+    <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.content}>{children}</ScrollView>
     </SafeAreaView>
   );
@@ -88,11 +83,11 @@ const Row = ({
     style={s.row}
     accessibilityRole={onPress ? 'button' : undefined}
   >
-    <Text style={[s.rowTitle, danger && s.danger]}>{title}</Text>
-    <Text style={[s.value, danger && s.danger]}>
-      {value}
-      {onPress ? '  ›' : ''}
-    </Text>
+    <Text numberOfLines={1} ellipsizeMode="tail" style={[s.rowTitle, danger && s.danger]}>{title}</Text>
+    <View style={s.accessory}>
+      {value ? <Text numberOfLines={1} ellipsizeMode="tail" style={[s.value, danger && s.danger]}>{value}</Text> : null}
+      {onPress ? <Text style={[s.chevron, danger && s.danger]}>›</Text> : null}
+    </View>
   </TouchableOpacity>
 );
 export function PetManagementScreen({
@@ -112,9 +107,9 @@ export function PetManagementScreen({
               <Text style={s.avatarText}>{p.name.slice(0, 1)}</Text>
             </View>
           )}
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => selectPet(p.id)}>
+          <TouchableOpacity style={s.petInfo} onPress={() => selectPet(p.id)}>
             <Text style={s.rowTitle}>{p.name}</Text>
-            <Text style={s.value}>
+            <Text numberOfLines={2} ellipsizeMode="tail" style={s.value}>
               {p.breed || '未填品種'} · {p.gender || '未填性別'} · {ageText(p.birthDate)}
               {selectedPet?.id === p.id ? ' · 目前毛孩' : ''}
             </Text>
@@ -135,34 +130,6 @@ export function PetManagementScreen({
       <TouchableOpacity style={s.primary} onPress={() => navigation.navigate('LostPetSettings')}>
         <Text style={s.primaryText}>走失協尋 QR</Text>
       </TouchableOpacity>
-    </Page>
-  );
-}
-export function AppearanceSettingsScreen() {
-  const { settings, update, saving } = useSettings();
-  const options: [ThemePreference, string][] = [
-    ['system', '跟隨系統'],
-    ['light', '淺色'],
-    ['dark', '深色'],
-  ];
-  return (
-    <Page>
-      {options.map(([v, l]) => (
-        <TouchableOpacity
-          disabled={saving}
-          key={v}
-          style={s.row}
-          onPress={() =>
-            update({ theme: v }).catch(() => Alert.alert('儲存失敗', '外觀設定未變更'))
-          }
-        >
-          <Text style={s.rowTitle}>{l}</Text>
-          <Text style={s.link}>{settings.theme === v ? '已選擇' : ''}</Text>
-        </TouchableOpacity>
-      ))}
-      <Text style={s.note}>
-        第一版已套用設定中心與主要 Navigation；部分既有功能畫面仍使用原有淺色樣式。
-      </Text>
     </Page>
   );
 }
@@ -408,14 +375,14 @@ export function LocalDataSettingsScreen() {
       },
     ]);
   const resetPrefs = () =>
-    Alert.alert('重設 App 偏好', '會重設外觀與提醒偏好，不會刪除健康資料。', [
+    Alert.alert('重設提醒偏好', '會重設提醒偏好，不會刪除健康資料。', [
       { text: '取消', style: 'cancel' },
       {
         text: '重設',
         style: 'destructive',
         onPress: async () => {
           await reset();
-          Alert.alert('已重設', 'App 偏好已恢復預設值');
+          Alert.alert('已重設', '提醒偏好已恢復預設值');
         },
       },
     ]);
@@ -423,7 +390,7 @@ export function LocalDataSettingsScreen() {
     <Page>
       <Row title="清除搜尋紀錄" onPress={clearSearch} />
       <Row
-        title={saving ? '重設中…' : '重設 App 偏好'}
+        title={saving ? '重設中…' : '重設提醒偏好'}
         onPress={saving ? undefined : resetPrefs}
         danger
       />
@@ -441,11 +408,12 @@ const s = StyleSheet.create({
     borderBottomColor: palette.border,
     backgroundColor: palette.surface,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  rowTitle: { fontSize: 15, fontWeight: '700', color: palette.text },
-  value: { color: palette.sub, fontSize: 13, maxWidth: '55%', textAlign: 'right' },
+  rowTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: palette.text },
+  accessory: { maxWidth: '58%', flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
+  value: { flexShrink: 1, color: palette.sub, fontSize: 13, textAlign: 'right' },
+  chevron: { marginLeft: 8, color: palette.sub, fontSize: 22, lineHeight: 22 },
   note: { color: palette.sub, lineHeight: 19, fontSize: 13, marginVertical: 14 },
   link: { color: palette.primary, fontWeight: '800' },
   danger: { color: palette.danger },
@@ -458,6 +426,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
   },
+  petInfo: { flex: 1, minWidth: 0 },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: palette.border },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: palette.text, fontWeight: '800' },

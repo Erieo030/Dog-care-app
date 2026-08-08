@@ -148,7 +148,7 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
     return {
         "pet": {
             "id": str(pet["_id"]), "name": pet.get("name", ""),
-            "breed": pet.get("breed", ""), "gender": pet.get("gender", ""),
+            "breed": pet.get("breed", ""), "breedType": pet.get("breedType", "unknown"), "gender": pet.get("gender", ""),
             "birthDate": pet.get("birthday", ""), "avatarUrl": pet.get("avatarUri", ""),
         },
         "todayReminders": {

@@ -1,11 +1,10 @@
-import { apiRequest } from '../api';
+import { apiData } from '../api';
 import { getTodayDailyLog, createDailyLog } from '../dailyLogService';
 import { createExport, cancelExport } from '../exportService';
 import { getLostProfile, rotateLostToken, saveLostProfile } from '../lostPetService';
 import { loadSettings, timeOnDate, DEFAULT_SETTINGS } from '../settingsService';
-import { attachmentUri } from '../attachmentService';
 
-jest.mock('../api', () => ({ apiRequest: jest.fn() }));
+jest.mock('../api', () => ({ apiData: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
@@ -23,7 +22,7 @@ jest.mock('expo-image-manipulator', () => ({
 }));
 jest.mock('expo-image-picker', () => ({}));
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
-const request = apiRequest as jest.MockedFunction<typeof apiRequest>;
+const request = apiData as jest.MockedFunction<typeof apiData>;
 beforeEach(() => jest.clearAllMocks());
 
 test('daily log service addresses today and create endpoints', async () => {
@@ -67,21 +66,4 @@ test('settings validates defaults and local time conversion', async () => {
   const date = timeOnDate('20:30', new Date('2026-08-08T00:00:00'));
   expect(date.getHours()).toBe(20);
   expect(date.getMinutes()).toBe(30);
-});
-
-test('legacy attachment URLs remain directly usable', () => {
-  expect(
-    attachmentUri(
-      {
-        id: 'a',
-        petId: 'p',
-        storageProvider: 'legacy_local',
-        fileName: 'x',
-        mimeType: 'image/jpeg',
-        sizeBytes: 1,
-        contentPath: 'file:///tmp/x',
-      },
-      'u',
-    ),
-  ).toBe('file:///tmp/x');
 });

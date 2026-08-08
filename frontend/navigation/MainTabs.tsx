@@ -1,9 +1,10 @@
 /** 用途：組合全部功能 Stack 與四個主要底部分頁。 */
 import React from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 
 import AbnormalRecordTypeScreen from '../screens/AbnormalRecordTypeScreen';
 import CreateHealthEventScreen from '../screens/CreateHealthEventScreen';
@@ -12,7 +13,6 @@ import DailyLogScreen from '../screens/DailyLogScreen';
 import VomitingHealthEventScreen from '../screens/VomitingHealthEventScreen';
 import StoolHealthEventScreen from '../screens/StoolHealthEventScreen';
 import ObservationHealthEventScreen from '../screens/ObservationHealthEventScreen';
-import FeaturePreviewScreen from '../screens/FeaturePreviewScreen';
 import HealthEventDetailScreen from '../screens/HealthEventDetailScreen';
 import HealthEventEditScreen from '../screens/HealthEventEditScreen';
 import HealthEventListScreen from '../screens/HealthEventListScreen';
@@ -26,7 +26,6 @@ import MedicalVisitListScreen from '../screens/MedicalVisitListScreen';
 import ProfileScreen, { AccountInfoScreen } from '../screens/ProfileScreen';
 import {
   AboutScreen,
-  AppearanceSettingsScreen,
   FeedbackScreen,
   LocalDataSettingsScreen,
   NotificationSettingsScreen,
@@ -64,6 +63,15 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 const HealthStackNav = createNativeStackNavigator<HomeStackParamList>();
 const TimelineStackNav = createNativeStackNavigator<HomeStackParamList>();
 const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
+
+// react-native-screens 支援全螢幕返回，但目前 native-stack 型別尚未暴露此欄位。
+const iosSwipeStackOptions = {
+  animation: 'none',
+  gestureEnabled: Platform.OS === 'ios',
+  fullScreenSwipeEnabled: Platform.OS === 'ios',
+  gestureResponseDistance: { start: 200 },
+  headerBackVisible: Platform.OS !== 'ios',
+} as NativeStackNavigationOptions & { fullScreenSwipeEnabled?: boolean };
 
 const healthEventScreens = (Screen: typeof Stack) => (
   <>
@@ -171,7 +179,8 @@ const sharedHealthScreens = (Screen: typeof Stack) => (
 
 function HomeStack() {
   return (
-    <Stack.Navigator id="HomeStack">
+    <Stack.Navigator id="HomeStack" screenOptions={iosSwipeStackOptions}
+    >
       <Stack.Screen name="HomeOverview" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: '今日紀錄' }} />
       <Stack.Screen
@@ -186,14 +195,14 @@ function HomeStack() {
       <Stack.Screen name="AbnormalType" component={AbnormalRecordTypeScreen} />
       <Stack.Screen name="CreateHealthEvent" component={CreateHealthEventScreen} />
       {sharedHealthScreens(Stack)}
-      <Stack.Screen name="FeaturePreview" component={FeaturePreviewScreen} />
     </Stack.Navigator>
   );
 }
 
 function HealthStack() {
   return (
-    <HealthStackNav.Navigator id="HealthStack">
+    <HealthStackNav.Navigator id="HealthStack" screenOptions={iosSwipeStackOptions}
+    >
       <HealthStackNav.Screen
         name="HealthOverview"
         component={HealthHubScreen}
@@ -206,7 +215,8 @@ function HealthStack() {
 
 function TimelineStack() {
   return (
-    <TimelineStackNav.Navigator id="TimelineStack">
+    <TimelineStackNav.Navigator id="TimelineStack" screenOptions={iosSwipeStackOptions}
+    >
       <TimelineStackNav.Screen
         name="TimelineOverview"
         component={TimelineScreen}
@@ -216,6 +226,11 @@ function TimelineStack() {
         name="ReminderList"
         component={ReminderListScreen}
         options={{ title: '提醒' }}
+      />
+      <TimelineStackNav.Screen
+        name="DailyLog"
+        component={DailyLogScreen}
+        options={{ title: '今日紀錄' }}
       />
       <TimelineStackNav.Screen
         name="CreateReminder"
@@ -229,7 +244,10 @@ function TimelineStack() {
 
 function ProfileStack() {
   return (
-    <ProfileStackNav.Navigator id="ProfileStack">
+    <ProfileStackNav.Navigator
+      id="ProfileStack"
+      screenOptions={{ ...iosSwipeStackOptions, headerBackButtonDisplayMode: 'minimal' }}
+    >
       <ProfileStackNav.Screen
         name="ProfileOverview"
         component={ProfileScreen}
@@ -243,12 +261,7 @@ function ProfileStack() {
       <ProfileStackNav.Screen
         name="PetManagement"
         component={PetManagementScreen}
-        options={{ title: '我的毛孩' }}
-      />
-      <ProfileStackNav.Screen
-        name="AppearanceSettings"
-        component={AppearanceSettingsScreen}
-        options={{ title: '外觀' }}
+        options={{ title: '毛孩管理' }}
       />
       <ProfileStackNav.Screen
         name="NotificationSettings"
@@ -347,7 +360,7 @@ export default function MainTabs() {
       <Tabs.Screen
         name="Profile"
         component={ProfileStack}
-        options={{ title: '我的', tabBarIcon: icon('🐾') }}
+        options={{ title: '設定', tabBarIcon: icon('⚙️') }}
       />
     </Tabs.Navigator>
   );

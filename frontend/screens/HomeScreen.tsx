@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import HealthEventPieChart from '../components/dashboard/HealthEventPieChart';
@@ -22,7 +23,7 @@ import { HEALTH_EVENT_LABELS } from '../constants/HealthEvents';
 import { openTimelineSource, TIMELINE_META } from '../constants/Timeline';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
-import { HomeStackParamList } from '../navigation/types';
+import { HomeStackParamList, MainTabParamList } from '../navigation/types';
 import { getHealthDashboard } from '../services/dashboardService';
 import {
   cancelReminderNotifications,
@@ -530,7 +531,9 @@ export default function HomeScreen() {
         <Section
           title="近期時間軸"
           action="查看全部"
-          onAction={() => navigation.getParent()?.navigate('Timeline' as never)}
+          onAction={() =>
+            navigation.getParent<BottomTabNavigationProp<MainTabParamList>>()?.navigate('Timeline')
+          }
         >
           {!data.timeline.length ? (
             <Empty text="目前還沒有近期紀錄" />

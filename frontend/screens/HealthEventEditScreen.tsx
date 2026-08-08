@@ -3,7 +3,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,11 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import { HEALTH_EVENT_LABELS, SEVERITY_LABELS } from '../constants/HealthEvents';
@@ -43,7 +42,6 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
   const [severity, setSeverity] = useState<Severity>('mild');
   const [notes, setNotes] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [showTime, setShowTime] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -104,7 +102,7 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
         notes: notes.trim(),
         details: item.details ?? {},
         attachmentIds: attachments
-          .filter((value) => value.storageProvider !== 'legacy_local')
+
           .map((value) => value.id),
       });
       navigation.goBack();
@@ -140,7 +138,7 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.label}>異常類型 *</Text>
+        <Text style={styles.label}>異常類型（必填）</Text>
         <View style={styles.chips}>
           {eventTypes.map((value) => (
             <Chip
@@ -151,7 +149,7 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
             />
           ))}
         </View>
-        <Text style={styles.label}>摘要 *</Text>
+        <Text style={styles.label}>摘要（必填）</Text>
         <TextInput
           value={summary}
           onChangeText={setSummary}
@@ -160,7 +158,7 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
           placeholder="簡短描述這次狀況"
           placeholderTextColor={Colors.subtext}
         />
-        <Text style={styles.label}>嚴重程度 *</Text>
+        <Text style={styles.label}>嚴重程度（必填）</Text>
         <View style={styles.chips}>
           {severities.map((value) => (
             <Chip
@@ -171,22 +169,15 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
             />
           ))}
         </View>
-        <Text style={styles.label}>發生時間 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShowTime(true)}>
-          <Text style={styles.inputText}>{occurredAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showTime && (
-          <DateTimePicker
-            value={occurredAt}
-            mode="datetime"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShowTime(Platform.OS === 'ios');
-              if (value) setOccurredAt(value);
-            }}
-          />
-        )}
-        <Text style={styles.label}>備註（選填）</Text>
+        <DatePickerField
+          label="發生時間（必填）"
+          value={occurredAt}
+          mode="datetime"
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setOccurredAt}
+        />
+        <Text style={styles.label}>備註</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}

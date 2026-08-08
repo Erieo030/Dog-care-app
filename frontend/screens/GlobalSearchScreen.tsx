@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -11,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import DatePickerField from '../components/DatePickerField';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -35,7 +34,6 @@ import {
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'GlobalSearch'>;
 type Period = 'all' | 7 | 30 | 90 | 'custom';
-type DateField = 'start' | 'end' | null;
 const EMPTY: SearchFilters = {
   query: '',
   types: [],
@@ -75,7 +73,6 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const { selectedPet } = usePet();
   const [filters, setFilters] = useState<SearchFilters>(EMPTY);
   const [period, setPeriod] = useState<Period>('all');
-  const [dateField, setDateField] = useState<DateField>(null);
   const [items, setItems] = useState<SearchResultItem[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,40 +210,25 @@ export default function GlobalSearchScreen({ navigation }: Props) {
       </View>
       {period === 'custom' && (
         <View style={s.dateRow}>
-          <TouchableOpacity style={s.dateButton} onPress={() => setDateField('start')}>
-            <Text style={s.dateText}>
-              {filters.startAt ? new Date(filters.startAt).toLocaleDateString('zh-TW') : '開始日期'}
-            </Text>
-          </TouchableOpacity>
-          <Text>—</Text>
-          <TouchableOpacity style={s.dateButton} onPress={() => setDateField('end')}>
-            <Text style={s.dateText}>
-              {filters.endAt ? new Date(filters.endAt).toLocaleDateString('zh-TW') : '結束日期'}
-            </Text>
-          </TouchableOpacity>
+          <DatePickerField
+            label="開始日期"
+            value={filters.startAt ? new Date(filters.startAt) : undefined}
+            maximumDate={new Date()}
+            onChange={(date) => {
+              date.setHours(0, 0, 0, 0);
+              setFilters((x) => ({ ...x, startAt: date.toISOString() }));
+            }}
+          />
+          <DatePickerField
+            label="結束日期"
+            value={filters.endAt ? new Date(filters.endAt) : undefined}
+            maximumDate={new Date()}
+            onChange={(date) => {
+              date.setHours(23, 59, 59, 999);
+              setFilters((x) => ({ ...x, endAt: date.toISOString() }));
+            }}
+          />
         </View>
-      )}
-      {dateField && (
-        <DateTimePicker
-          value={
-            new Date(
-              dateField === 'start' ? filters.startAt || Date.now() : filters.endAt || Date.now(),
-            )
-          }
-          mode="date"
-          maximumDate={new Date()}
-          onChange={(_, date) => {
-            setDateField(Platform.OS === 'ios' ? dateField : null);
-            if (date) {
-              if (dateField === 'start') date.setHours(0, 0, 0, 0);
-              else date.setHours(23, 59, 59, 999);
-              setFilters((x) => ({
-                ...x,
-                [dateField === 'start' ? 'startAt' : 'endAt']: date.toISOString(),
-              }));
-            }
-          }}
-        />
       )}
       <FilterTitle title="事件分類" />
       <View style={s.chips}>

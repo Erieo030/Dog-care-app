@@ -3,7 +3,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -22,6 +20,7 @@ import {
   QuickOptionGroup,
 } from '../components/QuickHealthFields';
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import { SEVERITY_LABELS } from '../constants/HealthEvents';
@@ -53,7 +52,6 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
   const [severity, setSeverity] = useState<Severity>('mild');
   const [notes, setNotes] = useState('');
   const [images, setImages] = useState<Attachment[]>([]);
-  const [showTime, setShowTime] = useState(false);
   const [loading, setLoading] = useState(Boolean(eventId));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +109,7 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
         details: values,
         notes: notes.trim(),
         attachmentIds: images
-          .filter((item) => item.storageProvider !== 'legacy_local')
+
           .map((item) => item.id),
       };
       if (eventId) await service.updateObservationHealthEvent(session.userId, eventId, input);
@@ -161,7 +159,7 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
           {eventId ? `編輯${config.title}紀錄` : `記錄${config.title}`}
         </Text>
         <Text style={styles.subtitle}>只保存觀察到的狀況，不提供疾病診斷或治療建議。</Text>
-        <Text style={styles.label}>{config.primaryLabel} *</Text>
+        <Text style={styles.label}>{config.primaryLabel}（必填）</Text>
         <QuickOptionGroup
           options={config.primaryOptions}
           value={values[config.primaryKey] as string | undefined}
@@ -194,22 +192,15 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
             />
           </>
         )}
-        <Text style={styles.label}>發生時間 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShowTime(true)}>
-          <Text style={styles.inputText}>{occurredAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showTime && (
-          <DateTimePicker
-            value={occurredAt}
-            mode="datetime"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShowTime(Platform.OS === 'ios');
-              if (value) setOccurredAt(value);
-            }}
-          />
-        )}
-        <Text style={styles.label}>嚴重程度 *</Text>
+        <DatePickerField
+          label="發生時間（必填）"
+          value={occurredAt}
+          mode="datetime"
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setOccurredAt}
+        />
+        <Text style={styles.label}>嚴重程度（必填）</Text>
         <QuickOptionGroup
           options={severities}
           value={severity}
@@ -224,7 +215,7 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
           onChange={setImages}
           disabled={submitting}
         />
-        <Text style={styles.label}>備註（選填，最多 500 字）</Text>
+        <Text style={styles.label}>備註（最多 500 字）</Text>
         <TextInput
           style={[styles.input, styles.notes]}
           value={notes}

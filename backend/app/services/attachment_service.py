@@ -205,20 +205,10 @@ def sync_source_attachments(
 
 
 def source_attachments(item: dict, source_type: str) -> list[dict]:
-    source_id = str(item["_id"])
     ids = item.get("attachmentIds", [])
-    if ids:
-        parsed = [ObjectId(value) for value in ids if ObjectId.is_valid(value)]
-        indexed = {str(doc["_id"]): doc for doc in db.attachments.find({"_id": {"$in": parsed}})}
-        return [_serialize(indexed[value]) for value in ids if value in indexed]
-    # 舊資料只做讀取相容；新寫入不再保存分散的 URL。
-    legacy = item.get("imageUrls", []) or [value.get("fileUrl") for value in item.get("attachments", []) if isinstance(value, dict) and value.get("fileUrl")]
-    return [{
-        "id": f"legacy-{index}", "petId": item["petId"], "sourceType": source_type,
-        "sourceId": source_id, "storageProvider": "legacy_local", "fileName": f"舊附件 {index + 1}",
-        "mimeType": "image/jpeg", "sizeBytes": 0, "width": None, "height": None,
-        "contentPath": uri, "createdAt": item.get("createdAt"), "updatedAt": item.get("updatedAt"),
-    } for index, uri in enumerate(legacy)]
+    parsed = [ObjectId(value) for value in ids if ObjectId.is_valid(value)]
+    indexed = {str(doc["_id"]): doc for doc in db.attachments.find({"_id": {"$in": parsed}})}
+    return [_serialize(indexed[value]) for value in ids if value in indexed]
 
 
 def delete_source_attachments(pet_id: str, source_type: str, source_id: str) -> None:

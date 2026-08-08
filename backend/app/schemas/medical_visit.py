@@ -3,12 +3,6 @@ from datetime import date, datetime
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-class MedicalAttachment(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    type: Literal["medication_bag", "receipt", "lab_report", "diagnosis_certificate", "medical_summary", "imaging_report", "other"] = "other"
-    fileUrl: str = Field(min_length=1, max_length=2000)
-    fileName: str = Field(default="", max_length=200)
-
 class Medication(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=100)
@@ -50,7 +44,6 @@ class MedicalVisitRequest(BaseModel):
     followUpAt: datetime | None = None
     cost: float | None = Field(default=None, ge=0, le=10000000)
     notes: str = Field(default="", max_length=2000)
-    attachments: list[MedicalAttachment] = Field(default_factory=list, max_length=10)
     attachmentIds: list[str] = Field(default_factory=list, max_length=10)
     medications: list[Medication] = Field(default_factory=list, max_length=20)
     clientRequestId: str | None = Field(default=None, min_length=8, max_length=80)

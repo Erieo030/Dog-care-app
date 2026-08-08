@@ -3,7 +3,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,11 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import DatePickerField from '../components/DatePickerField';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import { SEVERITY_LABELS } from '../constants/HealthEvents';
@@ -55,7 +54,6 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
   const [severity, setSeverity] = useState<Severity>('mild');
   const [notes, setNotes] = useState('');
   const [images, setImages] = useState<Attachment[]>([]);
-  const [showTime, setShowTime] = useState(false);
   const [loading, setLoading] = useState(Boolean(eventId));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -116,7 +114,7 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
         details,
         notes: notes.trim(),
         attachmentIds: images
-          .filter((item) => item.storageProvider !== 'legacy_local')
+
           .map((item) => item.id),
       };
       if (eventId) await service.updateStoolHealthEvent(session.userId, eventId, input);
@@ -165,7 +163,7 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
         <Text style={styles.title}>{eventId ? '編輯排便異常紀錄' : '記錄排便異常'}</Text>
         <Text style={styles.subtitle}>只記錄觀察到的外觀與狀況，不提供疾病診斷。</Text>
 
-        <Text style={styles.label}>形狀 *</Text>
+        <Text style={styles.label}>形狀（必填）</Text>
         <OptionGroup
           options={STOOL_CONSISTENCY_OPTIONS}
           value={details.stoolConsistency}
@@ -174,7 +172,7 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
           }
         />
 
-        <Text style={styles.label}>顏色 *</Text>
+        <Text style={styles.label}>顏色（必填）</Text>
         <OptionGroup
           options={STOOL_COLOR_OPTIONS}
           value={details.stoolColor}
@@ -214,23 +212,16 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
           />
         </View>
 
-        <Text style={styles.label}>發生時間 *</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setShowTime(true)}>
-          <Text style={styles.inputText}>{occurredAt.toLocaleString('zh-TW')}</Text>
-        </TouchableOpacity>
-        {showTime && (
-          <DateTimePicker
-            value={occurredAt}
-            mode="datetime"
-            maximumDate={new Date()}
-            onChange={(_, value) => {
-              setShowTime(Platform.OS === 'ios');
-              if (value) setOccurredAt(value);
-            }}
-          />
-        )}
+        <DatePickerField
+          label="發生時間（必填）"
+          value={occurredAt}
+          mode="datetime"
+          maximumDate={new Date()}
+          disabled={submitting}
+          onChange={setOccurredAt}
+        />
 
-        <Text style={styles.label}>嚴重程度 *</Text>
+        <Text style={styles.label}>嚴重程度（必填）</Text>
         <OptionGroup<Severity> options={severities} value={severity} onChange={setSeverity} />
 
         <AttachmentPicker
@@ -243,7 +234,7 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
           disabled={submitting}
         />
 
-        <Text style={styles.label}>備註（選填，最多 500 字）</Text>
+        <Text style={styles.label}>備註（最多 500 字）</Text>
         <TextInput
           style={[styles.input, styles.notes]}
           value={notes}

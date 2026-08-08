@@ -80,7 +80,7 @@ def _serialize(item: dict) -> dict:
         "id": str(item["_id"]), "petId": item["petId"], "type": item["type"],
         "occurredAt": item["occurredAt"], "severity": item["severity"],
         "summary": item["summary"], "details": item.get("details", {}),
-        "notes": item.get("notes", ""), "imageUrls": item.get("imageUrls", []),
+        "notes": item.get("notes", ""),
         "attachmentIds": item.get("attachmentIds", []), "attachments": source_attachments(item, "health_event"),
         "createdAt": item.get("createdAt"), "updatedAt": item.get("updatedAt"),
     }

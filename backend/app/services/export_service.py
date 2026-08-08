@@ -134,7 +134,7 @@ def _write_pdf(path,data,attachments,job):
     story += [Paragraph(f"{i+1}. {_s(p.get('name','毛孩'))}",body) for i,p in enumerate(data["pets"])] + [PageBreak()]
     by_id={str(a["_id"]):a for a in attachments}
     for pet in data["pets"]:
-        _check(job); pid=pet["id"]; story += [Paragraph(_s(pet.get("name","毛孩")),h1),Paragraph(f"品種：{_s(pet.get('breed'))}　性別：{_s(pet.get('gender'))}　生日：{_s(pet.get('birthday') or pet.get('birthDate'))}",body),Paragraph(f"結紮：{_s('已結紮' if pet.get('neutered') else '未設定或未結紮')}　毛色：{_s(pet.get('coatColor'))}　明顯特徵：{_s(pet.get('distinctiveFeatures'))}",body),Spacer(1,5*mm)]
+        _check(job); pid=pet["id"]; story += [Paragraph(_s(pet.get("name","毛孩")),h1),Paragraph(f"品種：{_s(pet.get('breed'))}（{_s({"purebred":"純種","mixed":"混種","unknown":"不確定"}.get(pet.get('breedType'),"不確定"))}）　性別：{_s(pet.get('gender'))}　生日：{_s(pet.get('birthday'))}",body),Paragraph(f"結紮：{_s('已結紮' if pet.get('neutered') else '未設定或未結紮')}　毛色：{_s(pet.get('coatColor'))}　明顯特徵：{_s(pet.get('distinctiveFeatures'))}",body),Spacer(1,5*mm)]
         groups={k:[x for x in data[k] if x.get("petId")==pid] for k in COLLECTIONS}
         story += [Paragraph("體重趨勢",h1),_chart(groups["weights"],font),Paragraph("健康事件",h1)]
         story += [Paragraph(f"{_s(x.get('occurredAt'))}　{_s(x.get('summary') or x.get('type'))}",body) for x in groups["healthEvents"]] or [Paragraph("此期間沒有健康事件。",body)]
@@ -178,8 +178,21 @@ def create_job(user_id,request):
     with LOCK: JOBS[job["id"]]=job; _persist(job)
     EXECUTOR.submit(_run,job); return _public(job)
 
+def cleanup_expired_exports(max_age_days: int = 7) -> None:
+    """清理已完成或失敗且超過保留期限的匯出檔，避免暫存目錄持續增長。"""
+    cutoff = _now() - timedelta(days=max_age_days)
+    for job in db.export_jobs.find({"updatedAt": {"$lt": cutoff}, "status": {"$in": ["completed", "failed", "cancelled"]}}):
+        file_path = job.get("filePath")
+        if file_path:
+            path = Path(file_path)
+            if path.is_file():
+                path.unlink(missing_ok=True)
+        db.export_jobs.delete_one({"_id": job["_id"]})
+        JOBS.pop(job.get("_id"), None)
+
 def recover_jobs() -> None:
     """FastAPI process 重啟時重新接手未完成的匯出工作。"""
+    cleanup_expired_exports()
     for stored in db.export_jobs.find({"status": {"$in": ["queued", "processing"]}}):
         try:
             request = ExportCreateRequest.model_validate(stored.get("request", {}))

@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -56,12 +57,7 @@ export function VaccinationListScreen() {
   useEffect(() => {
     load();
   }, [load]);
-  if (loading)
-    return (
-      <View style={s.center}>
-        <ActivityIndicator />
-      </View>
-    );
+  if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Text style={s.title}>疫苗紀錄</Text>
@@ -94,15 +90,31 @@ export function VaccinationListScreen() {
     </ScrollView>
   );
 }
+type VaccinationDraft = {
+  vaccineName: string;
+  administeredAt: string;
+  hospitalName: string;
+  veterinarianName: string;
+  batchNumber: string;
+  manufacturer: string;
+  nextDueAt: string;
+  notes: string;
+  createReminder: boolean;
+  [key: string]: string | boolean;
+};
+
 export function VaccinationFormScreen() {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const route = useRoute<RouteProp<HomeStackParamList, 'VaccinationForm'>>();
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const existing = route.params?.record as Vaccination | undefined;
-  const [d, setD] = useState<any>(existing || empty());
+  const [d, setD] = useState<VaccinationDraft>(
+    (existing ? { ...empty(), ...existing } : empty()) as VaccinationDraft,
+  );
   const [saving, setSaving] = useState(false);
-  const set = (k: string, v: any) => setD((x: any) => ({ ...x, [k]: v }));
+  const set = <K extends keyof VaccinationDraft>(key: K, value: VaccinationDraft[K]) =>
+    setD((current) => ({ ...current, [key]: value }));
   const save = async () => {
     if (!session?.userId || !selectedPet || saving) return;
     if (!d.vaccineName.trim()) {
@@ -111,7 +123,13 @@ export function VaccinationFormScreen() {
     }
     setSaving(true);
     try {
-      const payload = { ...d, nextDueAt: d.nextDueAt || null };
+      const payload = {
+        vaccineName: d.vaccineName.trim(), administeredAt: d.administeredAt,
+        hospitalName: d.hospitalName.trim(), veterinarianName: d.veterinarianName.trim(),
+        batchNumber: d.batchNumber.trim(), manufacturer: d.manufacturer.trim(),
+        nextDueAt: d.nextDueAt || null, notes: d.notes.trim(),
+        attachmentIds: Array.isArray(d.attachmentIds) ? d.attachmentIds : [], createReminder: d.createReminder,
+      };
       const r = existing
         ? await updateVaccination(session.userId, existing.id, payload)
         : await createVaccination(session.userId, selectedPet.id, payload);
@@ -136,13 +154,15 @@ export function VaccinationFormScreen() {
         ['nextDueAt', '下次接種日期 ISO'],
         ['notes', '備註'],
       ].map(([k, l]) => (
-        <TextInput
-          key={k}
-          style={s.input}
-          placeholder={l}
-          value={d[k] || ''}
-          onChangeText={(v) => set(k, k === 'administeredAt' || k === 'nextDueAt' ? v : v)}
-        />
+        <View key={k}>
+          <Text style={s.label}>{l}</Text>
+          <TextInput
+            style={s.input}
+            placeholder={k === 'notes' ? '補充疫苗相關備註' : `請輸入${l.replace('（必填）', '')}`}
+            value={typeof d[k] === 'string' ? d[k] : ''}
+            onChangeText={(v) => set(k, v)}
+          />
+        </View>
       ))}
       <TouchableOpacity style={s.check} onPress={() => set('createReminder', !d.createReminder)}>
         <Text>{d.createReminder ? '☑' : '□'} 是否建立下次疫苗提醒？</Text>
@@ -223,6 +243,7 @@ const s = StyleSheet.create({
     gap: 5,
   },
   name: { fontSize: 18, fontWeight: '700' },
+  label: { color: '#5F5148', fontWeight: '700', marginBottom: 7, marginTop: 10 },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',

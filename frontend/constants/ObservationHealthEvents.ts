@@ -131,12 +131,7 @@ export const normalizeObservationDetails = (
 ): ObservationValues => {
   const config = OBSERVATION_CONFIG[type];
   const result = emptyObservationValues(type);
-  const legacy = typeof raw.level === 'string' ? raw.level : undefined;
-  const legacyMap: Record<string, string> =
-    type === 'low_appetite'
-      ? { 輕微下降: 'slightly_reduced', 明顯下降: 'less_than_half', 完全不吃: 'not_eating' }
-      : { 稍微沒精神: 'slightly_low', 明顯沒精神: 'clearly_low', 幾乎不活動: 'barely_active' };
-  const primary = raw[config.primaryKey] ?? (legacy ? legacyMap[legacy] : undefined);
+  const primary = raw[config.primaryKey];
   if (typeof primary === 'string') result[config.primaryKey] = primary;
   config.optionalGroups.forEach(({ key }) => {
     if (typeof raw[key] === 'string') result[key] = raw[key] as string;

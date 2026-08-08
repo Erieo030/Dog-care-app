@@ -10,9 +10,11 @@ router = APIRouter(tags=["authentication"])
 
 @router.post("/register")
 def register(data: RegisterRequest):
-    return register_user(data)
+    result = register_user(data)
+    return {"success": True, "message": result.get("message", "註冊成功"), "data": result}
 
 
 @router.post("/login")
 def login(data: LoginRequest):
-    return login_user(data)
+    result = login_user(data)
+    return {"success": True, "message": "登入成功", "data": result}
