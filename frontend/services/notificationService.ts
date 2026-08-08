@@ -10,7 +10,9 @@ const CHANNEL_ID = 'pawlog-reminders';
 const OWNER_KEY = 'pawlog-local-reminder';
 
 export type NotificationPermissionState = 'granted' | 'denied' | 'undetermined';
-export type ScheduleResult = { status: 'scheduled'; identifier: string } | { status: 'denied' | 'expired' | 'disabled' };
+export type ScheduleResult =
+  | { status: 'scheduled'; identifier: string }
+  | { status: 'denied' | 'expired' | 'disabled' };
 export type NotificationTarget = { userId: string; reminderId: string; petId: string };
 
 Notifications.setNotificationHandler({
@@ -54,7 +56,8 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 const dataOf = (request: Notifications.NotificationRequest) => request.content.data ?? {};
-const isPawLog = (request: Notifications.NotificationRequest) => dataOf(request).owner === OWNER_KEY;
+const isPawLog = (request: Notifications.NotificationRequest) =>
+  dataOf(request).owner === OWNER_KEY;
 const isForUser = (request: Notifications.NotificationRequest, userId: string) =>
   isPawLog(request) && dataOf(request).userId === userId;
 const isForReminder = (request: Notifications.NotificationRequest, reminderId: string) =>
@@ -62,7 +65,7 @@ const isForReminder = (request: Notifications.NotificationRequest, reminderId: s
 
 export async function getPawLogScheduledNotifications(userId?: string) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  return scheduled.filter((item) => userId ? isForUser(item, userId) : isPawLog(item));
+  return scheduled.filter((item) => (userId ? isForUser(item, userId) : isPawLog(item)));
 }
 
 export async function scheduleReminderNotification(
@@ -71,9 +74,10 @@ export async function scheduleReminderNotification(
   petName: string,
   requestPermission = true,
 ): Promise<ScheduleResult> {
-  if (!await localNotificationsEnabled()) return { status: 'disabled' };
+  if (!(await localNotificationsEnabled())) return { status: 'disabled' };
   const date = new Date(reminder.scheduledAt);
-  if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) return { status: 'expired' };
+  if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now())
+    return { status: 'expired' };
   const permission = requestPermission
     ? await requestNotificationPermission()
     : await getNotificationPermissionState();
@@ -82,9 +86,10 @@ export async function scheduleReminderNotification(
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'PawLog 提醒 🐾',
-      body: reminder.type === 'follow_up'
-        ? `${petName} 今天需要回診`
-        : `${petName} 的${reminder.title}時間到了`,
+      body:
+        reminder.type === 'follow_up'
+          ? `${petName} 今天需要回診`
+          : `${petName} 的${reminder.title}時間到了`,
       sound: 'default',
       data: {
         owner: OWNER_KEY,
@@ -108,25 +113,34 @@ export async function scheduleReminderNotification(
 export async function cancelReminderNotifications(reminderId: string) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
-    scheduled.filter((item) => isForReminder(item, reminderId))
+    scheduled
+      .filter((item) => isForReminder(item, reminderId))
       .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
   );
 }
 
-export async function replaceReminderNotification(userId: string, reminder: Reminder, petName: string) {
+export async function replaceReminderNotification(
+  userId: string,
+  reminder: Reminder,
+  petName: string,
+) {
   await cancelReminderNotifications(reminder.id);
   return scheduleReminderNotification(userId, reminder, petName);
 }
 
 export async function cancelAccountNotifications(userId: string) {
   const scheduled = await getPawLogScheduledNotifications(userId);
-  await Promise.all(scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+  await Promise.all(
+    scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+  );
 }
 
 export async function reconcileAccountNotifications(userId: string, pets: Pet[]) {
-  if (!await localNotificationsEnabled()) {
+  if (!(await localNotificationsEnabled())) {
     const scheduled = await getPawLogScheduledNotifications(userId);
-    await Promise.all(scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+    await Promise.all(
+      scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+    );
     return { scheduled: 0, cancelled: scheduled.length, permission: 'undetermined' as const };
   }
   if (!pets.length) return { scheduled: 0, cancelled: 0, permission: 'undetermined' as const };
@@ -135,7 +149,11 @@ export async function reconcileAccountNotifications(userId: string, pets: Pet[])
   );
   const desired = remindersByPet.flatMap(({ pet, reminders }) =>
     reminders
-      .filter((item) => ['pending', 'snoozed'].includes(item.status) && new Date(item.scheduledAt).getTime() > Date.now())
+      .filter(
+        (item) =>
+          ['pending', 'snoozed'].includes(item.status) &&
+          new Date(item.scheduledAt).getTime() > Date.now(),
+      )
       .map((reminder) => ({ reminder, petName: pet.name })),
   );
   const desiredIds = new Set(desired.map(({ reminder }) => reminder.id));
@@ -158,14 +176,23 @@ export async function reconcileAccountNotifications(userId: string, pets: Pet[])
   if (permission !== 'granted') return { scheduled: 0, cancelled, permission };
 
   for (const { reminder, petName } of desired) {
-    const current = (await getPawLogScheduledNotifications(userId))
-      .filter((item) => isForReminder(item, reminder.id));
+    const current = (await getPawLogScheduledNotifications(userId)).filter((item) =>
+      isForReminder(item, reminder.id),
+    );
     const exact = current.filter((item) => {
       const data = dataOf(item);
-      return data.scheduledAt === reminder.scheduledAt && data.reminderTitle === reminder.title && data.petName === petName;
+      return (
+        data.scheduledAt === reminder.scheduledAt &&
+        data.reminderTitle === reminder.title &&
+        data.petName === petName
+      );
     });
-    const stale = exact.length ? current.filter((item) => item.identifier !== exact[0].identifier) : current;
-    await Promise.all(stale.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+    const stale = exact.length
+      ? current.filter((item) => item.identifier !== exact[0].identifier)
+      : current;
+    await Promise.all(
+      stale.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+    );
     cancelled += stale.length;
     if (!exact.length) {
       const result = await scheduleReminderNotification(userId, reminder, petName, false);
@@ -179,12 +206,18 @@ export function subscribeToNotificationResponses(handler: (target: NotificationT
   const handle = (response: Notifications.NotificationResponse | null) => {
     const data = response?.notification.request.content.data;
     if (!data || data.owner !== OWNER_KEY) return;
-    if (typeof data.userId === 'string' && typeof data.reminderId === 'string' && typeof data.petId === 'string') {
+    if (
+      typeof data.userId === 'string' &&
+      typeof data.reminderId === 'string' &&
+      typeof data.petId === 'string'
+    ) {
       handler({ userId: data.userId, reminderId: data.reminderId, petId: data.petId });
       Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
     }
   };
-  Notifications.getLastNotificationResponseAsync().then(handle).catch(() => undefined);
+  Notifications.getLastNotificationResponseAsync()
+    .then(handle)
+    .catch(() => undefined);
   const subscription = Notifications.addNotificationResponseReceivedListener(handle);
   return () => subscription.remove();
 }

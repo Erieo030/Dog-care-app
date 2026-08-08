@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { usePet } from '../contexts/PetContext';
 import CreatePetScreen from '../screens/CreatePetScreen';
-import { PetData } from '../types/models';
+import { PetData } from '../types';
 import { PetSetupStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<PetSetupStackParamList>();
@@ -33,10 +33,7 @@ export default function PetSetupStack() {
 
   return (
     <Stack.Navigator id="PetSetupStack">
-      <Stack.Screen
-        name="CreatePet"
-        options={{ title: '建立毛孩資料', headerBackVisible: false }}
-      >
+      <Stack.Screen name="CreatePet" options={{ title: '建立毛孩資料', headerBackVisible: false }}>
         {() => <CreatePetScreen onSubmit={handleCreate} />}
       </Stack.Screen>
     </Stack.Navigator>

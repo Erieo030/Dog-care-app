@@ -11,6 +11,6 @@ def get_timeline(
     user_id: str = Query(alias="userId"),
     limit: int = Query(default=20, ge=1, le=50),
     skip: int = Query(default=0, ge=0),
-    item_type: Literal["reminder_completed", "health_event", "weight", "medical_visit"] | None = Query(default=None, alias="type"),
+    item_type: Literal["reminder_completed", "health_event", "weight", "medical_visit", "daily_log", "vaccination", "deworming", "medication"] | None = Query(default=None, alias="type"),
 ):
     return {"success": True, **list_timeline(pet_id, user_id, limit, skip, item_type)}

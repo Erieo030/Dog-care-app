@@ -8,7 +8,7 @@ class SearchRequest(BaseModel):
     timezone_offset_minutes: int = Field(default=0, ge=-840, le=840)
     start_at: datetime | None = None
     end_at: datetime | None = None
-    types: set[Literal["weight", "health_event", "medical_visit", "reminder"]] = Field(default_factory=set)
+    types: set[Literal["weight", "health_event", "medical_visit", "reminder", "deworming", "medication"]] = Field(default_factory=set)
     health_categories: set[Literal["digestive", "skin", "respiratory", "eye", "injury", "other"]] = Field(default_factory=set)
     clinic: str = Field(default="", max_length=100)
     veterinarian: str = Field(default="", max_length=100)

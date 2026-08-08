@@ -40,7 +40,9 @@ export const buildStoolSummary = (details: StoolDetails) => {
     details.hasForeignObject && '有異物',
     details.suspectedParasite && '疑似蟲體',
     details.hasMucus && '有黏液',
-  ].filter(Boolean).slice(0, 2);
+  ]
+    .filter(Boolean)
+    .slice(0, 2);
   return [
     consistencySummary[details.stoolConsistency],
     colorSummary[details.stoolColor],
@@ -49,29 +51,36 @@ export const buildStoolSummary = (details: StoolDetails) => {
 };
 
 export const shouldShowStoolSafety = (details: StoolDetails, severity: Severity) =>
-  (details.stoolConsistency === 'watery' && severity === 'severe')
-  || details.stoolColor === 'black'
-  || details.stoolColor === 'red'
-  || details.suspectedBlood
-  || details.hasForeignObject
-  || details.suspectedParasite
-  || severity === 'severe';
+  (details.stoolConsistency === 'watery' && severity === 'severe') ||
+  details.stoolColor === 'black' ||
+  details.stoolColor === 'red' ||
+  details.suspectedBlood ||
+  details.hasForeignObject ||
+  details.suspectedParasite ||
+  severity === 'severe';
 
 export const STOOL_SAFETY_MESSAGE =
   '如果毛孩持續腹瀉、精神明顯下降、無法飲水、反覆排出黑色或紅色糞便、疑似大量出血、誤食異物或症狀持續惡化，請儘快聯絡動物醫院。';
 
 export const normalizeStoolDetails = (value: Record<string, unknown>): StoolDetails => {
   const consistencyMap: Record<string, StoolConsistency> = {
-    '偏軟': 'soft', '水狀': 'watery', '很硬': 'hard', '其他': 'other',
+    偏軟: 'soft',
+    水狀: 'watery',
+    很硬: 'hard',
+    其他: 'other',
   };
   const colorMap: Record<string, StoolColor> = {
-    '一般': 'normal', '黃色': 'yellow', '綠色': 'green',
-    '黑色': 'black', '紅色': 'red', '其他': 'other',
+    一般: 'normal',
+    黃色: 'yellow',
+    綠色: 'green',
+    黑色: 'black',
+    紅色: 'red',
+    其他: 'other',
   };
   const legacyOther = String(value.other ?? '');
   return {
-    stoolConsistency: (value.stoolConsistency as StoolConsistency)
-      ?? consistencyMap[String(value.shape)],
+    stoolConsistency:
+      (value.stoolConsistency as StoolConsistency) ?? consistencyMap[String(value.shape)],
     stoolColor: (value.stoolColor as StoolColor) ?? colorMap[String(value.color)],
     hasMucus: Boolean(value.hasMucus) || legacyOther === '黏液',
     suspectedBlood: Boolean(value.suspectedBlood) || legacyOther === '疑似血液',

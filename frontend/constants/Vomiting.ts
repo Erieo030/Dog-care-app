@@ -1,6 +1,10 @@
 /** 用途：集中嘔吐快速表單選項、摘要與保守安全提示規則。 */
 import {
-  DrinkingCondition, EnergyCondition, Severity, VomitColor, VomitCount,
+  DrinkingCondition,
+  EnergyCondition,
+  Severity,
+  VomitColor,
+  VomitCount,
   VomitingDetails,
 } from '../types';
 
@@ -36,25 +40,43 @@ const labelFor = <T extends string>(options: Array<[T, string]>, value: T) =>
 export const buildVomitingSummary = (details: VomitingDetails) =>
   `嘔吐 ${labelFor(VOMIT_COUNT_OPTIONS, details.vomitCount)}，精神${labelFor(ENERGY_OPTIONS, details.energyCondition)}`;
 
-export const shouldShowVomitingSafety = (
-  details: VomitingDetails,
-  severity: Severity
-) => details.vomitCount === 'four_or_more'
-  || details.energyCondition === 'very_low'
-  || severity === 'severe'
-  || details.suspectedBlood
-  || details.suspectedForeignObject
-  || details.drinkingCondition === 'vomits_after_drinking'
-  || details.drinkingCondition === 'refuses';
+export const shouldShowVomitingSafety = (details: VomitingDetails, severity: Severity) =>
+  details.vomitCount === 'four_or_more' ||
+  details.energyCondition === 'very_low' ||
+  severity === 'severe' ||
+  details.suspectedBlood ||
+  details.suspectedForeignObject ||
+  details.drinkingCondition === 'vomits_after_drinking' ||
+  details.drinkingCondition === 'refuses';
 
 export const VOMITING_SAFETY_MESSAGE =
   '如果毛孩持續惡化、反覆嘔吐、無法飲水、精神明顯下降、呼吸困難、昏倒或疑似大量出血，請儘快聯絡動物醫院。';
 
 export const normalizeVomitingDetails = (value: Record<string, unknown>): VomitingDetails => {
-  const countMap: Record<string, VomitCount> = { '1 次': 'once', '2～3 次': 'two_to_three', '4 次以上': 'four_or_more' };
-  const energyMap: Record<string, EnergyCondition> = { '正常': 'normal', '稍差': 'slightly_low', '很差': 'very_low' };
-  const drinkingMap: Record<string, DrinkingCondition> = { '可以': 'normal', '不太能': 'vomits_after_drinking', '完全不能': 'refuses' };
-  const colorMap: Record<string, VomitColor> = { '透明': 'transparent', '白色': 'white', '黃色': 'yellow', '綠色': 'green', '褐色': 'brown', '紅色': 'red_or_blood', '其他': 'other' };
+  const countMap: Record<string, VomitCount> = {
+    '1 次': 'once',
+    '2～3 次': 'two_to_three',
+    '4 次以上': 'four_or_more',
+  };
+  const energyMap: Record<string, EnergyCondition> = {
+    正常: 'normal',
+    稍差: 'slightly_low',
+    很差: 'very_low',
+  };
+  const drinkingMap: Record<string, DrinkingCondition> = {
+    可以: 'normal',
+    不太能: 'vomits_after_drinking',
+    完全不能: 'refuses',
+  };
+  const colorMap: Record<string, VomitColor> = {
+    透明: 'transparent',
+    白色: 'white',
+    黃色: 'yellow',
+    綠色: 'green',
+    褐色: 'brown',
+    紅色: 'red_or_blood',
+    其他: 'other',
+  };
   const contents = String(value.contents ?? '');
   return {
     vomitCount: (value.vomitCount as VomitCount) ?? countMap[String(value.count)],
@@ -64,7 +86,8 @@ export const normalizeVomitingDetails = (value: Record<string, unknown>): Vomiti
     hasFood: Boolean(value.hasFood) || contents === '有食物',
     suspectedBlood: Boolean(value.suspectedBlood) || contents === '疑似有血',
     suspectedForeignObject: Boolean(value.suspectedForeignObject) || contents === '疑似有異物',
-    drinkingCondition: (value.drinkingCondition as DrinkingCondition) ?? drinkingMap[String(value.canDrink)],
+    drinkingCondition:
+      (value.drinkingCondition as DrinkingCondition) ?? drinkingMap[String(value.canDrink)],
   };
 };
 
@@ -79,7 +102,9 @@ export const vomitingDetailRows = (details: VomitingDetails) => {
     details.hasFood && '有未消化食物',
     details.suspectedBlood && '疑似有血',
     details.suspectedForeignObject && '疑似有異物',
-  ].filter(Boolean).join('、');
+  ]
+    .filter(Boolean)
+    .join('、');
   if (features) rows.push(['內容特徵', features]);
   if (details.drinkingCondition) {
     rows.push(['飲水狀況', labelFor(DRINKING_OPTIONS, details.drinkingCondition)]);

@@ -26,9 +26,9 @@ ROOT.mkdir(parents=True, exist_ok=True)
 EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="pawlog-export")
 LOCK = threading.Lock()
 JOBS: dict[str, dict] = {}
-DATE_FIELDS = {"weights":"measuredAt", "healthEvents":"occurredAt", "medicalVisits":"visitedAt", "reminders":"scheduledAt"}
-COLLECTIONS = {"weights":db.weight_records, "healthEvents":db.health_events, "medicalVisits":db.medical_visits, "reminders":db.reminders}
-CSV_MAP = {"weight":"weights", "health_event":"healthEvents", "medical_visit":"medicalVisits", "reminder":"reminders"}
+DATE_FIELDS = {"weights":"measuredAt", "healthEvents":"occurredAt", "medicalVisits":"visitedAt", "reminders":"scheduledAt", "dewormings":"administeredAt", "medications":"startDate"}
+COLLECTIONS = {"weights":db.weight_records, "healthEvents":db.health_events, "medicalVisits":db.medical_visits, "reminders":db.reminders, "dewormings":db.dewormings, "medications":db.medications}
+CSV_MAP = {"weight":"weights", "health_event":"healthEvents", "medical_visit":"medicalVisits", "reminder":"reminders", "deworming":"dewormings", "medication":"medications"}
 
 class Cancelled(Exception): pass
 
@@ -41,6 +41,13 @@ def _json(value):
 
 def _public(job):
     return {k:_json(v) for k,v in job.items() if k not in {"userId","filePath","request","cancelRequested"}}
+
+def _persist(job):
+    """將匯出狀態保存到 MongoDB，讓 process 重啟後仍可查詢已完成工作。"""
+    payload={k:v for k,v in job.items() if k not in {"request","cancelRequested"}}
+    if hasattr(job.get("request"), "model_dump"):
+        payload["request"]=job["request"].model_dump(by_alias=True)
+    db.export_jobs.update_one({"_id": job["id"]},{"$set": payload},upsert=True)
 
 def _owned_pets(user_id, request):
     query={"userId":user_id}
@@ -77,7 +84,7 @@ def _collect(user_id, request, pet_docs=None):
 def _check(job):
     if job.get("cancelRequested"): raise Cancelled()
 def _progress(job,n):
-    with LOCK: job["progress"]=n; job["updatedAt"]=_now()
+    with LOCK: job["progress"]=n; job["updatedAt"]=_now(); _persist(job)
 
 def _write_json(path,data):
     payload={"schemaVersion":"1.0","exportedAt":_now().isoformat(),"app":"PawLog","data":data}
@@ -100,7 +107,7 @@ def _zip_json(path,data,attachments,job):
     backup.unlink(missing_ok=True)
 
 def _write_csv(path,key,items):
-    fields={"weights":["id","petId","measuredAt","weightKg","notes","attachmentIds"],"healthEvents":["id","petId","occurredAt","type","severity","summary","notes","details","attachmentIds"],"medicalVisits":["id","petId","visitedAt","clinicName","veterinarianName","reason","treatmentNotes","followUpAt","cost","notes","medications","attachmentIds"],"reminders":["id","petId","scheduledAt","type","title","status","recurrenceRule","completedAt","notes"]}[key]
+    fields={"weights":["id","petId","measuredAt","weightKg","notes","attachmentIds"],"healthEvents":["id","petId","occurredAt","type","severity","summary","notes","details","attachmentIds"],"medicalVisits":["id","petId","visitedAt","clinicName","veterinarianName","reason","treatmentNotes","followUpAt","cost","notes","medications","attachmentIds"],"reminders":["id","petId","scheduledAt","type","title","status","recurrenceRule","completedAt","notes"],"dewormings":["id","petId","type","productName","administeredAt","nextDueAt","notes"],"medications":["id","petId","name","instructions","timesPerDay","startDate","endDate","mealTiming","status","notes"]}[key]
     with path.open("w",encoding="utf-8-sig",newline="") as f:
         writer=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore"); writer.writeheader()
         for item in items:
@@ -127,7 +134,7 @@ def _write_pdf(path,data,attachments,job):
     story += [Paragraph(f"{i+1}. {_s(p.get('name','毛孩'))}",body) for i,p in enumerate(data["pets"])] + [PageBreak()]
     by_id={str(a["_id"]):a for a in attachments}
     for pet in data["pets"]:
-        _check(job); pid=pet["id"]; story += [Paragraph(_s(pet.get("name","毛孩")),h1),Paragraph(f"品種：{_s(pet.get('breed'))}　性別：{_s(pet.get('gender'))}　生日：{_s(pet.get('birthday') or pet.get('birthDate'))}",body),Spacer(1,5*mm)]
+        _check(job); pid=pet["id"]; story += [Paragraph(_s(pet.get("name","毛孩")),h1),Paragraph(f"品種：{_s(pet.get('breed'))}　性別：{_s(pet.get('gender'))}　生日：{_s(pet.get('birthday') or pet.get('birthDate'))}",body),Paragraph(f"結紮：{_s('已結紮' if pet.get('neutered') else '未設定或未結紮')}　毛色：{_s(pet.get('coatColor'))}　明顯特徵：{_s(pet.get('distinctiveFeatures'))}",body),Spacer(1,5*mm)]
         groups={k:[x for x in data[k] if x.get("petId")==pid] for k in COLLECTIONS}
         story += [Paragraph("體重趨勢",h1),_chart(groups["weights"],font),Paragraph("健康事件",h1)]
         story += [Paragraph(f"{_s(x.get('occurredAt'))}　{_s(x.get('summary') or x.get('type'))}",body) for x in groups["healthEvents"]] or [Paragraph("此期間沒有健康事件。",body)]
@@ -160,18 +167,33 @@ def _run(job):
         elif ext=="zip": _zip_json(path,data,attachments,job)
         else: _write_json(path,data)
         _check(job)
-        with LOCK: job.update(status="completed",progress=100,filePath=str(path),fileName=path.name,mimeType=mime,updatedAt=_now())
+        with LOCK: job.update(status="completed",progress=100,filePath=str(path),fileName=path.name,mimeType=mime,updatedAt=_now()); _persist(job)
     except Cancelled:
-        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="cancelled",updatedAt=_now())
+        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="cancelled",updatedAt=_now()); _persist(job)
     except Exception:
-        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="failed",error="匯出失敗，請稍後重試",updatedAt=_now())
+        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="failed",error="匯出失敗，請稍後重試",updatedAt=_now()); _persist(job)
 
 def create_job(user_id,request):
     _owned_pets(user_id,request); job={"id":uuid4().hex,"userId":user_id,"format":request.format,"status":"queued","progress":0,"createdAt":_now(),"updatedAt":_now(),"request":request,"cancelRequested":False}
-    with LOCK: JOBS[job["id"]]=job
+    with LOCK: JOBS[job["id"]]=job; _persist(job)
     EXECUTOR.submit(_run,job); return _public(job)
+
+def recover_jobs() -> None:
+    """FastAPI process 重啟時重新接手未完成的匯出工作。"""
+    for stored in db.export_jobs.find({"status": {"$in": ["queued", "processing"]}}):
+        try:
+            request = ExportCreateRequest.model_validate(stored.get("request", {}))
+            job = {**stored, "id": stored["_id"], "request": request,
+                   "cancelRequested": False, "status": "queued", "updatedAt": _now()}
+            JOBS[job["id"]] = job
+            _persist(job)
+            EXECUTOR.submit(_run, job)
+        except Exception:
+            db.export_jobs.update_one({"_id": stored["_id"]}, {"$set": {"status": "failed", "error": "匯出工作無法恢復", "updatedAt": _now()}})
 def _owned(job_id,user_id):
     job=JOBS.get(job_id)
+    if not job:
+        job=db.export_jobs.find_one({"_id":job_id})
     if not job or job["userId"]!=user_id: raise HTTPException(404,"找不到匯出工作")
     return job
 def get_job(job_id,user_id): return _public(_owned(job_id,user_id))

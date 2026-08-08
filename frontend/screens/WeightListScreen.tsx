@@ -58,7 +58,10 @@ const getDifferenceText = (summary: WeightSummary) => {
   if (summary.differenceKg == null) return '尚無前一次體重可比較';
   if (summary.change === 'unchanged') return '與前一次相比無變化';
   const direction = summary.change === 'increased' ? '增加' : '減少';
-  return `比前一次${direction} ${Math.abs(summary.differenceKg).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')} kg`;
+  return `比前一次${direction} ${Math.abs(summary.differenceKg)
+    .toFixed(2)
+    .replace(/\.00$/, '')
+    .replace(/(\.\d)0$/, '$1')} kg`;
 };
 
 export default function WeightListScreen({ navigation, route }: Props) {
@@ -97,13 +100,10 @@ export default function WeightListScreen({ navigation, route }: Props) {
     useCallback(() => {
       setLoading(true);
       load();
-    }, [load])
+    }, [load]),
   );
 
-  const filteredItems = useMemo(
-    () => filterByPeriod(items, period),
-    [items, period]
-  );
+  const filteredItems = useMemo(() => filterByPeriod(items, period), [items, period]);
 
   const refresh = () => {
     setRefreshing(true);
@@ -156,9 +156,7 @@ export default function WeightListScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       >
         <TouchableOpacity
           style={styles.primary}
@@ -174,18 +172,10 @@ export default function WeightListScreen({ navigation, route }: Props) {
           {PERIODS.map((option) => (
             <TouchableOpacity
               key={String(option.value)}
-              style={[
-                styles.filter,
-                period === option.value && styles.filterActive,
-              ]}
+              style={[styles.filter, period === option.value && styles.filterActive]}
               onPress={() => setPeriod(option.value)}
             >
-              <Text
-                style={[
-                  styles.filterText,
-                  period === option.value && styles.filterTextActive,
-                ]}
-              >
+              <Text style={[styles.filterText, period === option.value && styles.filterTextActive]}>
                 {option.label}
               </Text>
             </TouchableOpacity>
@@ -196,20 +186,24 @@ export default function WeightListScreen({ navigation, route }: Props) {
         <WeightLineChart items={filteredItems} />
 
         <Text style={styles.heading}>歷史紀錄</Text>
-        {route.params?.focusRecordId && !items.some(item => item.id === route.params?.focusRecordId) && <Text style={styles.sourceMissing}>來源體重紀錄可能已刪除或不屬於目前毛孩。</Text>}
+        {route.params?.focusRecordId &&
+          !items.some((item) => item.id === route.params?.focusRecordId) && (
+            <Text style={styles.sourceMissing}>來源體重紀錄可能已刪除或不屬於目前毛孩。</Text>
+          )}
         {!items.length ? (
           <Text style={styles.empty}>尚未記錄體重</Text>
         ) : !filteredItems.length ? (
           <Text style={styles.empty}>此期間沒有體重紀錄</Text>
         ) : (
           filteredItems.map((item) => (
-            <View key={item.id} style={[styles.card, route.params?.focusRecordId === item.id && styles.focusCard]}>
+            <View
+              key={item.id}
+              style={[styles.card, route.params?.focusRecordId === item.id && styles.focusCard]}
+            >
               <View style={styles.recordContent}>
                 <Text style={styles.weight}>{item.weightKg} kg</Text>
                 <Text style={styles.date}>{formatDate(item.measuredAt)}</Text>
-                <Text style={styles.notes}>
-                  {item.notes?.trim() || '無備註'}
-                </Text>
+                <Text style={styles.notes}>{item.notes?.trim() || '無備註'}</Text>
               </View>
               <View style={styles.actions}>
                 <TouchableOpacity
@@ -218,13 +212,8 @@ export default function WeightListScreen({ navigation, route }: Props) {
                 >
                   <Text style={styles.link}>編輯</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => remove(item)}
-                  disabled={Boolean(deletingId)}
-                >
-                  <Text style={styles.delete}>
-                    {deletingId === item.id ? '刪除中…' : '刪除'}
-                  </Text>
+                <TouchableOpacity onPress={() => remove(item)} disabled={Boolean(deletingId)}>
+                  <Text style={styles.delete}>{deletingId === item.id ? '刪除中…' : '刪除'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -241,14 +230,10 @@ function WeightSummaryCard({ summary }: { summary: WeightSummary }) {
     <View style={styles.summary}>
       <Text style={styles.caption}>最新體重</Text>
       <Text style={styles.current}>
-        {summary.latestWeightKg == null
-          ? '尚未記錄體重'
-          : `${summary.latestWeightKg} kg`}
+        {summary.latestWeightKg == null ? '尚未記錄體重' : `${summary.latestWeightKg} kg`}
       </Text>
       {summary.latestMeasuredAt && (
-        <Text style={styles.measuredAt}>
-          最近測量日期：{formatDate(summary.latestMeasuredAt)}
-        </Text>
+        <Text style={styles.measuredAt}>最近測量日期：{formatDate(summary.latestMeasuredAt)}</Text>
       )}
       {differenceText && (
         <Text
@@ -268,12 +253,11 @@ function WeightSummaryCard({ summary }: { summary: WeightSummary }) {
 function WeightLineChart({ items }: { items: WeightRecord[] }) {
   const [width, setWidth] = useState(0);
   const chronological = useMemo(
-    () => [...items].sort(
-      (left, right) =>
-        new Date(left.measuredAt).getTime() -
-        new Date(right.measuredAt).getTime()
-    ),
-    [items]
+    () =>
+      [...items].sort(
+        (left, right) => new Date(left.measuredAt).getTime() - new Date(right.measuredAt).getTime(),
+      ),
+    [items],
   );
 
   if (!chronological.length) {
@@ -299,8 +283,7 @@ function WeightLineChart({ items }: { items: WeightRecord[] }) {
     item,
   }));
 
-  const onLayout = (event: LayoutChangeEvent) =>
-    setWidth(event.nativeEvent.layout.width);
+  const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
 
   return (
     <View style={styles.chartCard} onLayout={onLayout}>
@@ -308,34 +291,41 @@ function WeightLineChart({ items }: { items: WeightRecord[] }) {
         <Text style={[styles.axisLabel, { top: 0 }]}>{max.toFixed(1)} kg</Text>
         <Text style={[styles.axisLabel, { top: plotHeight - 4 }]}>{min.toFixed(1)} kg</Text>
         <View style={[styles.axisLine, { left: plotLeft, top: plotTop, height: plotHeight }]} />
-        <View style={[styles.horizontalAxis, { left: plotLeft, top: plotTop + plotHeight, width: plotWidth }]} />
-        {width > 0 && points.slice(0, -1).map((point, index) => {
-          const next = points[index + 1];
-          const deltaX = next.x - point.x;
-          const deltaY = next.y - point.y;
-          const length = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-          const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-          return (
+        <View
+          style={[
+            styles.horizontalAxis,
+            { left: plotLeft, top: plotTop + plotHeight, width: plotWidth },
+          ]}
+        />
+        {width > 0 &&
+          points.slice(0, -1).map((point, index) => {
+            const next = points[index + 1];
+            const deltaX = next.x - point.x;
+            const deltaY = next.y - point.y;
+            const length = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+            const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+            return (
+              <View
+                key={`${point.item.id}-${next.item.id}`}
+                style={[
+                  styles.chartLine,
+                  {
+                    width: length,
+                    left: (point.x + next.x - length) / 2,
+                    top: (point.y + next.y) / 2,
+                    transform: [{ rotate: `${angle}deg` }],
+                  },
+                ]}
+              />
+            );
+          })}
+        {width > 0 &&
+          points.map((point) => (
             <View
-              key={`${point.item.id}-${next.item.id}`}
-              style={[
-                styles.chartLine,
-                {
-                  width: length,
-                  left: (point.x + next.x - length) / 2,
-                  top: (point.y + next.y) / 2,
-                  transform: [{ rotate: `${angle}deg` }],
-                },
-              ]}
+              key={point.item.id}
+              style={[styles.chartPoint, { left: point.x - 4, top: point.y - 4 }]}
             />
-          );
-        })}
-        {width > 0 && points.map((point) => (
-          <View
-            key={point.item.id}
-            style={[styles.chartPoint, { left: point.x - 4, top: point.y - 4 }]}
-          />
-        ))}
+          ))}
       </View>
       <View style={styles.xLabels}>
         <Text style={styles.xLabel}>{formatDate(chronological[0].measuredAt)}</Text>
@@ -359,11 +349,24 @@ const styles = StyleSheet.create({
   },
   stateTitle: { color: Colors.text, fontSize: 21, fontWeight: '800' },
   stateText: { color: Colors.subtext, textAlign: 'center', marginTop: 8 },
-  retry: { backgroundColor: Colors.primary, borderRadius: 13, paddingHorizontal: 22, paddingVertical: 11, marginTop: 18 },
+  retry: {
+    backgroundColor: Colors.primary,
+    borderRadius: 13,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    marginTop: 18,
+  },
   retryText: { color: '#FFF', fontWeight: '800' },
   primary: { backgroundColor: Colors.primary, padding: 15, borderRadius: 15, alignItems: 'center' },
   primaryText: { color: '#FFF', fontWeight: '800' },
-  summary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, padding: 20, marginTop: 16 },
+  summary: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 16,
+  },
   caption: { color: Colors.subtext },
   current: { color: Colors.text, fontSize: 30, fontWeight: '800', marginTop: 4 },
   measuredAt: { color: Colors.subtext, marginTop: 6 },
@@ -372,22 +375,56 @@ const styles = StyleSheet.create({
   decreased: { color: '#4F8A6D' },
   heading: { color: Colors.text, fontSize: 20, fontWeight: '800', marginTop: 22, marginBottom: 12 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filter: { borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9 },
+  filter: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
   filterActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   filterText: { color: Colors.text, fontSize: 12, fontWeight: '600' },
   filterTextActive: { color: '#FFF' },
-  chartCard: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 18, padding: 12 },
+  chartCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 18,
+    padding: 12,
+  },
   chartCanvas: { height: 165, position: 'relative' },
   axisLabel: { position: 'absolute', left: 0, width: 42, color: Colors.subtext, fontSize: 10 },
   axisLine: { position: 'absolute', width: 1, backgroundColor: Colors.border },
   horizontalAxis: { position: 'absolute', height: 1, backgroundColor: Colors.border },
   chartLine: { position: 'absolute', height: 2, borderRadius: 1, backgroundColor: Colors.primary },
-  chartPoint: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.text },
+  chartPoint: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.text,
+  },
   xLabels: { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 42, marginTop: 3 },
   xLabel: { color: Colors.subtext, fontSize: 10, maxWidth: '48%' },
   xLabelRight: { textAlign: 'right' },
-  empty: { color: Colors.subtext, textAlign: 'center', backgroundColor: Colors.surface, borderRadius: 16, padding: 25 },
-  card: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
+  empty: {
+    color: Colors.subtext,
+    textAlign: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 25,
+  },
+  card: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   focusCard: { borderColor: Colors.primary, borderWidth: 2 },
   sourceMissing: { color: '#C55B5B', textAlign: 'center', marginVertical: 10 },
   recordContent: { flex: 1, paddingRight: 12 },

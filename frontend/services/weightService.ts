@@ -7,48 +7,34 @@ export interface WeightListResult {
   summary: WeightSummary;
 }
 
-const userQuery = (userId: string) =>
-  `userId=${encodeURIComponent(userId)}`;
+const userQuery = (userId: string) => `userId=${encodeURIComponent(userId)}`;
 
-export const getWeights = async (
-  userId: string,
-  petId: string
-): Promise<WeightListResult> => {
+export const getWeights = async (userId: string, petId: string): Promise<WeightListResult> => {
   const result = await apiRequest<WeightListResult>(
-    `/api/pets/${petId}/weights?${userQuery(userId)}`
+    `/api/pets/${petId}/weights?${userQuery(userId)}`,
   );
   return {
     records: [...result.records].sort(
-      (left, right) =>
-        new Date(right.measuredAt).getTime() -
-        new Date(left.measuredAt).getTime()
+      (left, right) => new Date(right.measuredAt).getTime() - new Date(left.measuredAt).getTime(),
     ),
     summary: result.summary,
   };
 };
 
-export const createWeight = async (
-  userId: string,
-  petId: string,
-  data: WeightInput
-) =>
+export const createWeight = async (userId: string, petId: string, data: WeightInput) =>
   (
-    await apiRequest<{ record: WeightRecord }>(
-      `/api/pets/${petId}/weights?${userQuery(userId)}`,
-      { method: 'POST', body: JSON.stringify(data) }
-    )
+    await apiRequest<{ record: WeightRecord }>(`/api/pets/${petId}/weights?${userQuery(userId)}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   ).record;
 
-export const updateWeight = async (
-  userId: string,
-  id: string,
-  data: WeightInput
-) =>
+export const updateWeight = async (userId: string, id: string, data: WeightInput) =>
   (
-    await apiRequest<{ record: WeightRecord }>(
-      `/api/weights/${id}?${userQuery(userId)}`,
-      { method: 'PATCH', body: JSON.stringify(data) }
-    )
+    await apiRequest<{ record: WeightRecord }>(`/api/weights/${id}?${userQuery(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
   ).record;
 
 export const deleteWeight = (userId: string, id: string) =>

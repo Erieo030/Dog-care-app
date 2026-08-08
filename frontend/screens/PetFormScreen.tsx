@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import { Colors } from '../constants/Colors';
-import { emptyPetData, PetData } from '../types/models';
+import { emptyPetData, PetData } from '../types';
 
 interface PetFormScreenProps {
   title: string;
@@ -76,6 +76,14 @@ export default function PetFormScreen({
       key: 'chronicDiseases',
       label: '慢性病',
       placeholder: '沒有可留空',
+      multiline: true,
+    },
+    { key: 'microchipNumber', label: '晶片號碼（選填）', placeholder: '可留空' },
+    { key: 'coatColor', label: '毛色（選填）', placeholder: '例如：黑色' },
+    {
+      key: 'distinctiveFeatures',
+      label: '明顯特徵（選填）',
+      placeholder: '例如：胸口有白毛',
       multiline: true,
     },
   ];

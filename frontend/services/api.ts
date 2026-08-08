@@ -1,8 +1,5 @@
 /** 用途：提供統一 API Client，集中處理網址、JSON、逾時與錯誤訊息。 */
-const rawBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL ??
-  process.env.EXPO_PUBLIC_API_URL ??
-  '';
+const rawBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBLIC_API_URL ?? '';
 
 export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 
@@ -29,7 +26,7 @@ const getErrorMessage = (body: unknown, fallback: string) => {
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
-  timeoutMs = 10000
+  timeoutMs = 10000,
 ): Promise<T> {
   if (!API_BASE_URL) {
     throw new ApiError('尚未設定 EXPO_PUBLIC_API_BASE_URL');
@@ -51,10 +48,7 @@ export async function apiRequest<T>(
     const text = await response.text();
     const body = text ? JSON.parse(text) : {};
     if (!response.ok) {
-      throw new ApiError(
-        getErrorMessage(body, `伺服器錯誤 (${response.status})`),
-        response.status
-      );
+      throw new ApiError(getErrorMessage(body, `伺服器錯誤 (${response.status})`), response.status);
     }
     return body as T;
   } catch (error) {

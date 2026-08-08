@@ -1,11 +1,5 @@
 /** 用途：集中管理登入、註冊與登出狀態；安全持久化依目前範圍暫緩。 */
-import React, {
-  createContext,
-  PropsWithChildren,
-  useContext,
-  useMemo,
-  useState,
-} from 'react';
+import React, { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
 
 import * as authService from '../services/authService';
 import { normalizePets } from '../services/petService';
@@ -37,7 +31,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const authenticate = async (
     request: typeof authService.login,
     email: string,
-    password: string
+    password: string,
   ) => {
     setIsLoading(true);
     setError(null);
@@ -63,17 +57,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
       session,
       isLoading,
       error,
-      login: (email, password) =>
-        authenticate(authService.login, email, password),
-      register: (email, password) =>
-        authenticate(authService.register, email, password),
+      login: (email, password) => authenticate(authService.login, email, password),
+      register: (email, password) => authenticate(authService.register, email, password),
       logout: () => {
         setSession(null);
         setError(null);
       },
       clearError: () => setError(null),
     }),
-    [session, isLoading, error]
+    [session, isLoading, error],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

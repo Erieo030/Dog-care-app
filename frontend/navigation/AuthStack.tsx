@@ -13,11 +13,7 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 export default function AuthStack() {
   const { login, register } = useAuth();
 
-  const submit = async (
-    action: typeof login,
-    email: string,
-    password: string
-  ) => {
+  const submit = async (action: typeof login, email: string, password: string) => {
     try {
       await action(email, password);
     } catch (error) {
@@ -30,9 +26,7 @@ export default function AuthStack() {
       <Stack.Screen name="Login">
         {({ navigation }) => (
           <LoginScreen
-            onLoginSuccess={(email, password) =>
-              submit(login, email, password)
-            }
+            onLoginSuccess={(email, password) => submit(login, email, password)}
             onGoToRegister={() => navigation.navigate('Register')}
           />
         )}
@@ -40,9 +34,7 @@ export default function AuthStack() {
       <Stack.Screen name="Register">
         {({ navigation }) => (
           <RegisterScreen
-            onRegisterSuccess={(email, password) =>
-              submit(register, email, password)
-            }
+            onRegisterSuccess={(email, password) => submit(register, email, password)}
             onGoToLogin={() => navigation.goBack()}
           />
         )}

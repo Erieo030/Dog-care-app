@@ -11,7 +11,7 @@ export default function App() {
     <SettingsProvider>
       <AuthProvider>
         <PetProvider>
-        <RootNavigator />
+          <RootNavigator />
         </PetProvider>
       </AuthProvider>
     </SettingsProvider>

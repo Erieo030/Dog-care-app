@@ -42,6 +42,20 @@ PawLog 是照護紀錄工具，不是獸醫診斷系統，也不提供藥物或�
 
 TODO：正式支援的最低 Node.js、Python、Android 及 iOS 版本尚未確認。
 
+## 第一次 clone 後
+
+```bash
+git clone <repository-url>
+cd Dog-care-app
+cp backend/.env.example backend/.env
+cd frontend && npm ci
+cd ..
+python3 -m venv dog-care
+dog-care/bin/python -m pip install -r backend/requirements.txt
+```
+
+接著依照下方環境變數設定，最後執行 `./start.sh`。不要把 `backend/.env`、密碼或 API key 提交到 Git。
+
 ## 第一次安裝
 
 先建立後端環境設定：
@@ -73,9 +87,19 @@ dog-care/bin/python -m pip install -r backend/requirements.txt
 
 ## 最簡單的啟動方式
 
+`start.sh` 會檢查環境、啟動 MongoDB／Mongo Express、啟動 FastAPI，並以目前 LAN IP 設定 Expo API URL。手機掃 QR 前，請先用手機瀏覽器開啟它顯示的 Phone API 位址。
+
+目前資料庫含一組展示測試資料。帳號密碼請使用交付訊息中的資料；不要把密碼寫入 Git 或正式文件。資料重置只適用測試環境。
+
 ```bash
 ./start.sh
 ```
+
+## 展示測試帳號
+
+目前資料庫已建立一組展示資料，涵蓋主要功能。帳號密碼請使用交付訊息中的資料；不要把密碼寫入 Git 或正式文件。
+
+資料重置會清除所有 MongoDB application collections，僅可在展示或測試環境執行，並應重新執行型別、後端與 API 檢查。
 
 它會準備並啟動：
 
@@ -101,29 +125,6 @@ EXPO_CONNECTION=tunnel ./start.sh
 
 注意：Expo tunnel 只處理 App bundle，手機仍然必須能連到 FastAPI API。
 
-## 分開啟動
-
-```bash
-# MongoDB 與 Mongo Express
-docker compose --env-file backend/.env -f backend/docker-compose.yml up -d
-
-# FastAPI
-cd backend
-../dog-care/bin/python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Expo
-cd frontend
-npm start
-```
-
-其他前端指令：
-
-```bash
-cd frontend && npm run android
-cd frontend && npm run ios
-cd frontend && npm run web
-```
-
 ## 停止服務
 
 在執行 `start.sh` 的終端按 `Ctrl+C`，可停止 Expo 與 FastAPI。
@@ -145,7 +146,7 @@ cd .. && dog-care/bin/python -m compileall -q backend/app
 git diff --check
 ```
 
-目前沒有正式設定的 lint、前端自動測試、後端 pytest 或 CI。
+目前已設定 lint、Prettier、前端 Jest、後端 pytest 與 GitHub Actions CI。
 
 ## 常見問題
 
@@ -197,3 +198,11 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ROADMAP.md](ROADMAP.md)
 - [adjust.txt](adjust.txt) 是需求與候選方案，不代表每次都要一次完成全部項目。
+## 工程品質
+
+目前可執行 TypeScript、ESLint、Prettier、Jest、Python smoke test 與 pytest；GitHub Actions 也會執行基本檢查。
+
+```bash
+cd frontend && npm run typecheck
+cd .. && PYTHONPATH=backend dog-care/bin/python -m unittest discover -s backend/tests
+```

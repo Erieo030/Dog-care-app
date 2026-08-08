@@ -10,7 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View, ScrollView,
+  ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -29,9 +29,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
   const { selectedPet, refreshPets } = usePet();
   const initialDate = record ? new Date(record.measuredAt) : new Date();
   const [weight, setWeight] = useState(record ? String(record.weightKg) : '');
-  const [date, setDate] = useState(
-    Number.isNaN(initialDate.getTime()) ? new Date() : initialDate
-  );
+  const [date, setDate] = useState(Number.isNaN(initialDate.getTime()) ? new Date() : initialDate);
   const [notes, setNotes] = useState(record?.notes || '');
   const [show, setShow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,10 +45,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
       value <= 0 ||
       value > 300
     ) {
-      Alert.alert(
-        '請確認體重',
-        '體重需大於 0、不超過 300 kg，且最多兩位小數。'
-      );
+      Alert.alert('請確認體重', '體重需大於 0、不超過 300 kg，且最多兩位小數。');
       return;
     }
     if (Number.isNaN(date.getTime()) || date.getTime() > Date.now()) {
@@ -68,7 +63,9 @@ export default function WeightFormScreen({ route, navigation }: Props) {
         weightKg: value,
         measuredAt: date.toISOString(),
         notes: notes.trim(),
-        attachmentIds: attachments.filter(item => item.storageProvider !== 'legacy_local').map(item => item.id),
+        attachmentIds: attachments
+          .filter((item) => item.storageProvider !== 'legacy_local')
+          .map((item) => item.id),
       };
       if (record) {
         await service.updateWeight(session.userId, record.id, data);
@@ -98,11 +95,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
         />
 
         <Text style={styles.label}>測量日期 *</Text>
-        <TouchableOpacity
-          style={styles.input}
-          onPress={() => setShow(true)}
-          disabled={submitting}
-        >
+        <TouchableOpacity style={styles.input} onPress={() => setShow(true)} disabled={submitting}>
           <Text>{date.toLocaleDateString('zh-TW')}</Text>
         </TouchableOpacity>
         {show && (
@@ -126,16 +119,24 @@ export default function WeightFormScreen({ route, navigation }: Props) {
           editable={!submitting}
         />
 
-        {session?.userId && (selectedPet || record) && <AttachmentPicker userId={session.userId} petId={record?.petId || selectedPet!.id} sourceType="weight" limit={ATTACHMENT_LIMITS.weight} value={attachments} onChange={setAttachments} disabled={submitting} />}
+        {session?.userId && (selectedPet || record) && (
+          <AttachmentPicker
+            userId={session.userId}
+            petId={record?.petId || selectedPet!.id}
+            sourceType="weight"
+            limit={ATTACHMENT_LIMITS.weight}
+            value={attachments}
+            onChange={setAttachments}
+            disabled={submitting}
+          />
+        )}
 
         <TouchableOpacity
           disabled={submitting}
           style={[styles.submit, submitting && styles.disabled]}
           onPress={submit}
         >
-          <Text style={styles.submitText}>
-            {submitting ? '儲存中…' : '儲存體重'}
-          </Text>
+          <Text style={styles.submitText}>{submitting ? '儲存中…' : '儲存體重'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -6,7 +6,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
 import PetFormScreen from './PetFormScreen';
-import { PetData } from '../types/models';
+import { PetData } from '../types';
 
 type AddProps = NativeStackScreenProps<HomeStackParamList, 'AddPet'>;
 type EditProps = NativeStackScreenProps<HomeStackParamList, 'EditPet'>;
@@ -56,6 +56,9 @@ export function EditPetScreen({ navigation }: EditProps) {
     neutered: selectedPet.neutered,
     allergies: selectedPet.allergies ?? '',
     chronicDiseases: selectedPet.chronicDiseases ?? '',
+    microchipNumber: selectedPet.microchipNumber ?? '',
+    coatColor: selectedPet.coatColor ?? '',
+    distinctiveFeatures: selectedPet.distinctiveFeatures ?? '',
   };
   const submit = async (data: PetData) => {
     try {

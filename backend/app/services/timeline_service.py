@@ -10,6 +10,10 @@ SOURCE_TYPES = {
     "health_event": "health_event",
     "weight": "weight_record",
     "medical_visit": "medical_visit",
+    "daily_log": "daily_log",
+    "vaccination": "vaccination",
+    "deworming": "deworming",
+    "medication": "medication",
     "life_event": "life_event",
 }
 SOURCE_COLLECTIONS = {
@@ -17,6 +21,10 @@ SOURCE_COLLECTIONS = {
     "health_event": db.health_events,
     "weight_record": db.weight_records,
     "medical_visit": db.medical_visits,
+    "daily_log": db.daily_logs,
+    "vaccination": db.vaccinations,
+    "deworming": db.dewormings,
+    "medication": db.medications,
 }
 
 def _pet_id(value: str) -> ObjectId:

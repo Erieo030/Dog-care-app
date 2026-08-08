@@ -15,6 +15,9 @@ const normalizePet = (pet: Record<string, unknown>): Pet => ({
   neutered: Boolean(pet.neutered),
   allergies: String(pet.allergies ?? ''),
   chronicDiseases: String(pet.chronicDiseases ?? ''),
+  microchipNumber: String(pet.microchipNumber ?? ''),
+  coatColor: String(pet.coatColor ?? ''),
+  distinctiveFeatures: String(pet.distinctiveFeatures ?? ''),
   latestWeightKg: pet.latestWeightKg == null ? undefined : Number(pet.latestWeightKg),
   latestWeightAt: pet.latestWeightAt ? String(pet.latestWeightAt) : undefined,
 });
@@ -29,37 +32,31 @@ const toPayload = (data: PetFormData) => ({
   neutered: data.neutered,
   allergies: data.allergies,
   chronicDiseases: data.chronicDiseases,
+  microchipNumber: data.microchipNumber,
+  coatColor: data.coatColor,
+  distinctiveFeatures: data.distinctiveFeatures,
 });
 
 export const normalizePets = (pets: unknown[] = []) =>
   pets.map((pet) => normalizePet(pet as Record<string, unknown>));
 
 export const listPets = async (userId: string) => {
-  const result = await apiRequest<{ pets: Record<string, unknown>[] }>(
-    `/api/pets/${userId}`
-  );
+  const result = await apiRequest<{ pets: Record<string, unknown>[] }>(`/api/pets/${userId}`);
   return normalizePets(result.pets);
 };
 
 export const createPet = async (userId: string, data: PetFormData) => {
-  const result = await apiRequest<{ petData: Record<string, unknown> }>(
-    '/api/create-pet',
-    {
-      method: 'POST',
-      body: JSON.stringify({ userId, ...toPayload(data) }),
-    }
-  );
+  const result = await apiRequest<{ petData: Record<string, unknown> }>('/api/create-pet', {
+    method: 'POST',
+    body: JSON.stringify({ userId, ...toPayload(data) }),
+  });
   return normalizePet(result.petData);
 };
 
-export const updatePet = async (
-  userId: string,
-  petId: string,
-  data: PetFormData
-) => {
+export const updatePet = async (userId: string, petId: string, data: PetFormData) => {
   const result = await apiRequest<{ petData: Record<string, unknown> }>(
     `/api/pets/${petId}?userId=${encodeURIComponent(userId)}`,
-    { method: 'PUT', body: JSON.stringify(toPayload(data)) }
+    { method: 'PUT', body: JSON.stringify(toPayload(data)) },
   );
   return normalizePet(result.petData);
 };

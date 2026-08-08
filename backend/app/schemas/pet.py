@@ -15,6 +15,9 @@ class PetFields(BaseModel):
     neutered: bool = False
     allergies: str = Field(default="", max_length=1000)
     chronicDiseases: str = Field(default="", max_length=1000)
+    microchipNumber: str = Field(default="", max_length=100)
+    coatColor: str = Field(default="", max_length=100)
+    distinctiveFeatures: str = Field(default="", max_length=500)
 
 
 class PetCreateRequest(PetFields):

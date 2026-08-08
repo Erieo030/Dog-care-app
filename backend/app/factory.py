@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.services.export_service import recover_jobs
 
 
 def create_app() -> FastAPI:
@@ -30,4 +31,5 @@ def create_app() -> FastAPI:
         }
 
     application.include_router(api_router)
+    recover_jobs()
     return application

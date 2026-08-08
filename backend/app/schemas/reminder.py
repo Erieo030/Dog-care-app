@@ -13,8 +13,9 @@ class ReminderCreateRequest(BaseModel):
     scheduledAt: datetime
     recurrenceRule: RecurrenceRule = "none"
     notes: str = Field(default="", max_length=1000)
-    sourceType: Literal["medical_visit"] | None = None
+    sourceType: Literal["medical_visit", "vaccination", "deworming", "medication"] | None = None
     sourceId: str | None = Field(default=None, max_length=24)
+    sourceSlot: str | None = Field(default=None, max_length=5)
     clientRequestId: str | None = Field(default=None, min_length=8, max_length=64)
 
 class ReminderUpdateRequest(ReminderCreateRequest):

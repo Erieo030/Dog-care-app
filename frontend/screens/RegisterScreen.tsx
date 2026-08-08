@@ -20,10 +20,7 @@ interface RegisterScreenProps {
   onGoToLogin: () => void;
 }
 
-export default function RegisterScreen({
-  onRegisterSuccess,
-  onGoToLogin,
-}: RegisterScreenProps) {
+export default function RegisterScreen({ onRegisterSuccess, onGoToLogin }: RegisterScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -92,17 +89,11 @@ export default function RegisterScreen({
               secureTextEntry
             />
 
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={handleRegisterPress}
-            >
+            <TouchableOpacity style={styles.registerButton} onPress={handleRegisterPress}>
               <Text style={styles.registerButtonText}>註冊帳號</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.loginLinkButton}
-              onPress={onGoToLogin}
-            >
+            <TouchableOpacity style={styles.loginLinkButton} onPress={onGoToLogin}>
               <Text style={styles.loginLinkText}>已經有帳號？返回登入</Text>
             </TouchableOpacity>
           </View>

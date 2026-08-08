@@ -3,6 +3,7 @@ import React, {
   createContext,
   PropsWithChildren,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -30,9 +31,7 @@ const PetContext = createContext<PetContextValue | undefined>(undefined);
 export function PetProvider({ children }: PropsWithChildren) {
   const { session } = useAuth();
   const [pets, setPets] = useState<Pet[]>(session?.pets ?? []);
-  const [selectedPetId, setSelectedPetId] = useState<string | null>(
-    session?.pets[0]?.id ?? null
-  );
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(session?.pets[0]?.id ?? null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,26 +42,29 @@ export function PetProvider({ children }: PropsWithChildren) {
     setSelectedPetId(nextPets[0]?.id ?? null);
   }, [session]);
 
-  const loadPets = async (refreshing = false) => {
-    if (!session?.userId) return;
-    refreshing ? setIsRefreshing(true) : setIsLoading(true);
-    setError(null);
-    try {
-      const result = await petService.listPets(session.userId);
-      setPets(result);
-      setSelectedPetId((current) =>
-        result.some((pet) => pet.id === current) ? current : result[0]?.id ?? null
-      );
-    } catch (requestError) {
-      setError((requestError as Error).message || '無法載入毛孩資料');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
+  const loadPets = useCallback(
+    async (refreshing = false) => {
+      if (!session?.userId) return;
+      if (refreshing) setIsRefreshing(true);
+      else setIsLoading(true);
+      setError(null);
+      try {
+        const result = await petService.listPets(session.userId);
+        setPets(result);
+        setSelectedPetId((current) =>
+          result.some((pet) => pet.id === current) ? current : (result[0]?.id ?? null),
+        );
+      } catch (requestError) {
+        setError((requestError as Error).message || '無法載入毛孩資料');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [session?.userId],
+  );
 
-  const selectedPet =
-    pets.find((pet) => pet.id === selectedPetId) ?? pets[0] ?? null;
+  const selectedPet = pets.find((pet) => pet.id === selectedPetId) ?? pets[0] ?? null;
 
   const value = useMemo<PetContextValue>(
     () => ({
@@ -82,14 +84,8 @@ export function PetProvider({ children }: PropsWithChildren) {
       },
       updateSelectedPet: async (data) => {
         if (!session?.userId || !selectedPet) return;
-        const updated = await petService.updatePet(
-          session.userId,
-          selectedPet.id,
-          data
-        );
-        setPets((current) =>
-          current.map((pet) => (pet.id === updated.id ? updated : pet))
-        );
+        const updated = await petService.updatePet(session.userId, selectedPet.id, data);
+        setPets((current) => current.map((pet) => (pet.id === updated.id ? updated : pet)));
       },
       deleteSelectedPet: async () => {
         if (!session?.userId || !selectedPet) return;
@@ -98,14 +94,7 @@ export function PetProvider({ children }: PropsWithChildren) {
         setSelectedPetId(null);
       },
     }),
-    [
-      pets,
-      selectedPet,
-      isLoading,
-      isRefreshing,
-      error,
-      session?.userId,
-    ]
+    [pets, selectedPet, isLoading, isRefreshing, error, session?.userId, loadPets],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

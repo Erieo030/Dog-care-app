@@ -1,35 +1,28 @@
 /** 用途：提供全應用程式共用按鈕元件與按壓效果。 */
 import React from 'react';
-import { 
-  Text, 
-  StyleSheet, 
-  Pressable, 
-  ViewStyle, 
-  StyleProp, 
-  Platform 
-} from 'react-native';
+import { Text, StyleSheet, Pressable, ViewStyle, StyleProp, Platform } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 // 1. 定義 Props 的型別
 interface AppButtonProps {
-  title: string;               // 標題:字串
-  onPress: () => void;         // onPress 不回傳數值的函式
+  title: string; // 標題:字串
+  onPress: () => void; // onPress 不回傳數值的函式
   style?: StyleProp<ViewStyle>; // style 是選填的 (?)，型別為 React Native 的 View 樣式
 }
 
 // 2. 將型別套用到組件上
 export const AppButton = ({ title, onPress, style }: AppButtonProps) => {
   return (
-    <Pressable 
+    <Pressable
       onPress={onPress}
       // 加入按壓縮放效果
       style={({ pressed }) => [
         styles.button,
-        { 
-          opacity: pressed ? 0.8 : 1, 
-          transform: [{ scale: pressed ? 0.96 : 1 }] 
+        {
+          opacity: pressed ? 0.8 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
         },
-        style
+        style,
       ]}
     >
       <Text style={styles.text}>{title}</Text>

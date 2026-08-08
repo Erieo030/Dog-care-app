@@ -12,8 +12,8 @@ HEALTH_CATEGORY_TYPES={
  "skin":{"skin_issue"},"respiratory":set(),"eye":{"eye_ear_issue"},
  "injury":{"injury","possible_ingestion"},"other":{"low_energy","other"},
 }
-SOURCE_TYPE_MAP={"weight":"weight_record","health_event":"health_event","medical_visit":"medical_visit","reminder":"reminder"}
-TIMELINE_RESULT_MAP={"weight":"weight","health_event":"health_event","medical_visit":"medical_visit","reminder_completed":"reminder"}
+SOURCE_TYPE_MAP={"weight":"weight_record","health_event":"health_event","medical_visit":"medical_visit","reminder":"reminder", "deworming":"deworming", "medication":"medication"}
+TIMELINE_RESULT_MAP={"weight":"weight","health_event":"health_event","medical_visit":"medical_visit","reminder_completed":"reminder", "deworming":"deworming", "medication":"medication"}
 
 
 def _ensure_owned_pet(pet_id:str,user_id:str)->None:
@@ -70,7 +70,7 @@ def _fetch(collection,match:dict,sort:list[tuple[str,int]],limit:int)->list[dict
 
 def search(pet_id:str,user_id:str,request:SearchRequest)->dict:
     _ensure_owned_pet(pet_id,user_id);ensure_search_indexes()
-    wanted=request.types or {"weight","health_event","medical_visit","reminder"}
+    wanted=request.types or {"weight","health_event","medical_visit","reminder","deworming","medication"}
     escaped=re.escape(request.query.strip());regex={"$regex":escaped,"$options":"i"} if escaped else None
     query_date=_date_from_query(request.query, request.timezone_offset_minutes);take=request.page*request.page_size;items=[]
     direction=1 if request.sort in {"oldest","az"} else -1
@@ -102,6 +102,16 @@ def search(pet_id:str,user_id:str,request:SearchRequest)->dict:
         if regex and not query_date: match["$or"]=[{field:regex} for field in ["reason","clinicName","veterinarianName","veterinarianNotes","treatmentNotes","medicationNotes","notes","medications.name","medications.instructions","medications.notes"]]
         for item in _fetch(db.medical_visits,match,[("visitedAt",direction),("_id",direction)],take):
             clinic=item.get("clinicName","") or "未填寫醫院";items.append(_result("medical_visit",item,"visitedAt",item.get("reason","就醫紀錄"),f"{clinic} · {item.get('veterinarianName','') or '未填寫醫師'}",{"clinicName":item.get("clinicName",""),"veterinarianName":item.get("veterinarianName","")}))
+
+    if "deworming" in wanted:
+        match={"petId":pet_id,**_date_match("administeredAt",request,query_date),**_attachment_match(request.attachment)}
+        if regex and not query_date: match["$or"]=[{"productName":regex},{"type":regex},{"hospitalName":regex},{"notes":regex}]
+        for item in _fetch(db.dewormings,match,[("administeredAt",direction),("_id",direction)],take): items.append(_result("deworming",item,"administeredAt",item.get("productName","驅蟲紀錄"),item.get("type",""),{"dewormingType":item.get("type")}))
+
+    if "medication" in wanted:
+        match={"petId":pet_id,**_attachment_match(request.attachment)}
+        if regex: match["$or"]=[{"name":regex},{"instructions":regex},{"notes":regex}]
+        for item in _fetch(db.medications,match,[("startDate",direction),("_id",direction)],take): items.append(_result("medication",item,"startDate",item.get("name","用藥紀錄"),item.get("instructions",""),{"status":item.get("status")}))
 
     if "reminder" in wanted and request.attachment!="with":
         match={"petId":pet_id,**_date_match("scheduledAt",request,query_date)};now=datetime.now(timezone.utc)

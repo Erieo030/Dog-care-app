@@ -2,7 +2,7 @@
 import React from 'react';
 
 import PetFormScreen from './PetFormScreen';
-import { PetData } from '../types/models';
+import { PetData } from '../types';
 
 interface CreatePetScreenProps {
   onSubmit: (data: PetData) => void;

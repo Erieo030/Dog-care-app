@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app.db import db
 from app.schemas import PetCreateRequest, PetUpdateRequest
+from app.services.attachment_service import _delete_document
 
 
 def _object_id(value: str, label: str) -> ObjectId:
@@ -36,6 +37,9 @@ def serialize_pet(pet: dict) -> dict:
         "neutered": pet.get("neutered", False),
         "allergies": pet.get("allergies", ""),
         "chronicDiseases": pet.get("chronicDiseases", ""),
+        "microchipNumber": pet.get("microchipNumber", ""),
+        "coatColor": pet.get("coatColor", ""),
+        "distinctiveFeatures": pet.get("distinctiveFeatures", ""),
         "latestWeightKg": pet.get("latestWeightKg"),
         "latestWeightAt": pet.get("latestWeightAt"),
     }
@@ -78,9 +82,18 @@ def update_pet(pet_id: str, user_id: str, data: PetUpdateRequest) -> dict:
 
 def delete_pet(pet_id: str, user_id: str) -> dict:
     """刪除屬於目前使用者的毛孩資料。"""
+    pet_object_id = _object_id(pet_id, "毛孩 ID ")
     result = db.pets.delete_one(
-        {"_id": _object_id(pet_id, "毛孩 ID "), "userId": user_id}
+        {"_id": pet_object_id, "userId": user_id}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="找不到毛孩資料")
+    # 毛孩刪除時一併清理私有子資料，避免留下 orphan records。
+    child_query = {"petId": pet_id}
+    for collection in (db.daily_logs, db.weight_records, db.health_events, db.medical_visits,
+                       db.vaccinations, db.dewormings, db.medications, db.reminders, db.timeline):
+        collection.delete_many(child_query)
+    for attachment in db.attachments.find(child_query):
+        _delete_document(attachment)
+    db.lost_pet_profiles.delete_many(child_query)
     return {"success": True, "message": "毛孩資料已刪除"}

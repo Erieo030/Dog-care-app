@@ -1,11 +1,31 @@
 /** 用途：集中定義導航頁面名稱與參數。 */
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { HealthEventType, MedicalVisit, ObservationHealthEventType, Reminder, WeightRecord } from '../types';
+import {
+  DailyLog,
+  Vaccination,
+  Deworming,
+  MedicationCourse,
+  HealthEventType,
+  MedicalVisit,
+  ObservationHealthEventType,
+  Reminder,
+  WeightRecord,
+} from '../types';
 
 export type AuthStackParamList = { Login: undefined; Register: undefined };
 export type PetSetupStackParamList = { CreatePet: undefined };
 export type HomeStackParamList = {
   HomeOverview: undefined;
+  DailyLog: { record?: DailyLog } | undefined;
+  VaccinationList: undefined;
+  VaccinationForm: { record?: Vaccination } | undefined;
+  VaccinationDetail: { recordId: string };
+  DewormingList: undefined;
+  DewormingForm: { record?: Deworming } | undefined;
+  DewormingDetail: { recordId: string };
+  MedicationList: undefined;
+  MedicationForm: { record?: MedicationCourse } | undefined;
+  MedicationDetail: { recordId: string };
   HealthOverview: undefined;
   TimelineOverview: undefined;
   AddPet: undefined;
@@ -29,10 +49,21 @@ export type HomeStackParamList = {
   FeaturePreview: { title: string; description: string };
 };
 export type ProfileStackParamList = {
-  ProfileOverview: undefined; AccountInfo: undefined; PetManagement: undefined;
-  AppearanceSettings: undefined; NotificationSettings: undefined; ReminderPreferences: undefined;
-  ExportCenter: undefined; StorageSettings: undefined; LocalDataSettings: undefined;
-  About: undefined; PrivacyPolicy: undefined; TermsOfUse: undefined; Feedback: undefined;
+  ProfileOverview: undefined;
+  AccountInfo: undefined;
+  PetManagement: undefined;
+  AppearanceSettings: undefined;
+  NotificationSettings: undefined;
+  ReminderPreferences: undefined;
+  ExportCenter: undefined;
+  LostPetSettings: undefined;
+  LostPetQr: undefined;
+  StorageSettings: undefined;
+  LocalDataSettings: undefined;
+  About: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfUse: undefined;
+  Feedback: undefined;
 };
 export type MainTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;

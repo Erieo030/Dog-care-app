@@ -6,3 +6,4 @@ uvicorn[standard]>=0.34,<1
 python-multipart>=0.0.20,<1
 
 reportlab>=4.2,<5
+pytest>=9,<10
