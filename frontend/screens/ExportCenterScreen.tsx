@@ -54,6 +54,7 @@ export default function ExportCenterScreen() {
   const [period, setPeriod] = useState<ExportPeriod>('30_days');
   const [csvType, setCsvType] = useState<CsvExportType>('weight');
   const [includeImages, setIncludeImages] = useState(false);
+  const [includeAiSummary, setIncludeAiSummary] = useState(true);
   const [start, setStart] = useState(new Date(Date.now() - 30 * 86400000));
   const [end, setEnd] = useState(new Date());
   const [job, setJob] = useState<ExportJob | null>(null);
@@ -75,6 +76,7 @@ export default function ExportCenterScreen() {
         endAt: period === 'custom' ? end.toISOString() : undefined,
         csvType: format === 'csv' ? csvType : undefined,
         includeImages: format !== 'csv' && includeImages,
+        includeAiSummary: format === 'pdf' && includeAiSummary,
       });
       setJob(result);
     } catch (e) {
@@ -154,6 +156,12 @@ export default function ExportCenterScreen() {
           <View style={styles.dateRow}>
             <DatePickerField label="開始日期" value={start} onChange={setStart} maximumDate={new Date()} />
             <DatePickerField label="結束日期" value={end} onChange={setEnd} maximumDate={new Date()} />
+          </View>
+        )}
+        {format === 'pdf' && (
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>包含智慧健康摘要</Text>
+            <Switch value={includeAiSummary} onValueChange={setIncludeAiSummary} />
           </View>
         )}
         {format !== 'csv' && (

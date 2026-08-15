@@ -1,4 +1,4 @@
-/** 用途：健康分頁入口，集中導向異常、體重與就醫紀錄。 */
+/** 用途：AI 助手入口，集中整理 AI 查詢與健康紀錄入口。 */
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -12,8 +12,11 @@ export default function HealthHubScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>健康</Text>
-        <Text style={styles.subtitle}>只記錄重要變化，不需要每天填寫。</Text>
+        <Text style={styles.title}>AI 助手</Text>
+        <Text style={styles.subtitle}>整理 PawLog 中已記錄的毛孩資料，不提供疾病診斷。</Text>
+        <Entry icon="✨" title="PawLog AI 助手" description="詢問體重、用藥、疫苗、就醫與提醒" onPress={() => navigation.navigate('AIChat')} />
+        <Entry icon="🩺" title="準備看醫生" description="整理近期資料，產生就醫前摘要" onPress={() => navigation.navigate('VetVisitBrief')} />
+        <Text style={styles.sectionTitle}>健康紀錄</Text>
         <Entry
           icon="🩺"
           title="健康異常紀錄"
@@ -64,6 +67,7 @@ const styles = StyleSheet.create({
   content: { padding: 18 },
   title: { color: Colors.text, fontSize: 28, fontWeight: '800' },
   subtitle: { color: Colors.subtext, marginTop: 6, marginBottom: 22 },
+  sectionTitle: { color: Colors.text, fontSize: 16, fontWeight: '800', marginTop: 10, marginBottom: 10 },
   card: {
     minHeight: 76,
     backgroundColor: Colors.surface,

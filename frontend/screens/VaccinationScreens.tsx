@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenState from '../components/ScreenState';
+import DatePickerField from '../components/DatePickerField';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -146,24 +147,22 @@ export function VaccinationFormScreen() {
       <Text style={s.title}>{existing ? '編輯疫苗' : '新增疫苗'}</Text>
       {[
         ['vaccineName', '疫苗名稱（必填）'],
-        ['administeredAt', '接種日期 ISO（必填）'],
+        ['administeredAt', '接種日期（必填）'],
         ['hospitalName', '醫院'],
         ['veterinarianName', '獸醫'],
         ['batchNumber', '批號'],
         ['manufacturer', '廠牌'],
         ['nextDueAt', '下次接種日期 ISO'],
         ['notes', '備註'],
-      ].map(([k, l]) => (
-        <View key={k}>
-          <Text style={s.label}>{l}</Text>
-          <TextInput
-            style={s.input}
-            placeholder={k === 'notes' ? '補充疫苗相關備註' : `請輸入${l.replace('（必填）', '')}`}
-            value={typeof d[k] === 'string' ? d[k] : ''}
-            onChangeText={(v) => set(k, v)}
-          />
-        </View>
-      ))}
+      ].map(([k, l]) => {
+        const isDate = k === 'administeredAt' || k === 'nextDueAt';
+        if (isDate) return (
+          <DatePickerField key={k} label={l} value={d[k] ? new Date(`${d[k].slice(0, 10)}T12:00:00`) : undefined}
+            onChange={(date) => set(k, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)} maximumDate={k === 'administeredAt' ? new Date() : undefined} />
+        );
+        return (<View key={k}><Text style={s.label}>{l}</Text><TextInput style={s.input} placeholder={`請輸入${l.replace('（必填）', '')}`} placeholderTextColor="#8A817B" value={typeof d[k] === 'string' ? d[k] : ''} onChangeText={(v) => set(k, v)} /></View>);
+      })}
+      <Text style={s.section}>回診提醒</Text>
       <TouchableOpacity style={s.check} onPress={() => set('createReminder', !d.createReminder)}>
         <Text>{d.createReminder ? '☑' : '□'} 是否建立下次疫苗提醒？</Text>
       </TouchableOpacity>
@@ -233,19 +232,20 @@ export function VaccinationDetailScreen() {
 const s = StyleSheet.create({
   page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#2F3A34' },
+  section: { fontSize: 16, fontWeight: '800', color: '#3F8064', marginTop: 14, marginBottom: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#CFC7C0',
     borderRadius: 16,
     marginTop: 12,
     gap: 5,
   },
   name: { fontSize: 18, fontWeight: '700' },
-  label: { color: '#5F5148', fontWeight: '700', marginBottom: 7, marginTop: 10 },
+  label: { color: '#3B4A43', fontSize: 14, fontWeight: '800', marginBottom: 6, marginTop: 8 },
   input: {
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF', color: '#2F3A34', borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 12,
     padding: 14,

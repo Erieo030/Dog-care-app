@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList, MainTabParamList } from '../navigation/types';
 import { getHealthDashboard } from '../services/dashboardService';
+import { getHealthMonitor, getHealthSummary, HealthMonitorResult, HealthSummaryResponse } from '../services/aiService';
 import {
   cancelReminderNotifications,
   reconcileAccountNotifications,
@@ -75,6 +76,8 @@ export default function HomeScreen() {
     error: petError,
   } = usePet();
   const [data, setData] = useState<HealthDashboard | null>(null);
+  const [monitor, setMonitor] = useState<HealthMonitorResult | null>(null);
+  const [healthSummary, setHealthSummary] = useState<HealthSummaryResponse | null>(null);
   const [healthTrend, setHealthTrend] = useState<'water' | 'food' | 'stool' | 'energy'>('water');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,12 +96,16 @@ export default function HomeScreen() {
     if (petRef.current !== petId) {
       petRef.current = petId;
       setData(null);
+      setMonitor(null);
+      setHealthSummary(null);
       setLoading(true);
     }
     try {
       setError('');
       const result = await getHealthDashboard(session.userId, petId, period);
-      if (petRef.current === petId) setData(result);
+      const monitorResult = await getHealthMonitor(session.userId, petId, period).catch(() => null);
+      const summaryResult = await getHealthSummary(session.userId, petId, period).catch(() => null);
+      if (petRef.current === petId) { setData(result); setMonitor(monitorResult); setHealthSummary(summaryResult); }
     } catch (e) {
       if (petRef.current === petId) setError((e as Error).message || '健康總覽載入失敗');
     } finally {
@@ -415,8 +422,8 @@ export default function HomeScreen() {
 
         <Section
           title="今日健康紀錄"
-          action="快速記錄"
-          onAction={() => navigation.navigate('DailyLog')}
+          action={data.todayDailyLog ? '更新紀錄' : '快速記錄'}
+          onAction={() => navigation.navigate('DailyLog', data.todayDailyLog ? { recordId: data.todayDailyLog.id } : undefined)}
         >
           {!data.todayDailyLog ? (
             <Empty text="今天還沒有日常紀錄" />
@@ -428,6 +435,30 @@ export default function HomeScreen() {
               <Text style={s.muted}>便便：{data.todayDailyLog.stoolLevel ?? '未記錄'}</Text>
             </View>
           )}
+        </Section>
+
+        {healthSummary && (
+          <Section title="AI 健康摘要" action="準備看醫生" onAction={() => navigation.navigate('VetVisitBrief')}>
+            <Text style={s.observationTitle}>{healthSummary.headline}</Text>
+            <Text style={s.muted}>{healthSummary.summary}</Text>
+            {healthSummary.highlights.slice(0, 3).map((item) => <Text key={item} style={s.mutedSmall}>• {item}</Text>)}
+            {healthSummary.fallbackUsed && <Text style={s.sectionHint}>目前使用基本紀錄摘要</Text>}
+            <Text style={s.sectionHint}>{healthSummary.disclaimer}</Text>
+          </Section>
+        )}
+
+        <Section title="健康觀察">
+          {!monitor?.alerts.length ? (
+            <Text style={s.sectionHint}>目前沒有偵測到需要特別注意的紀錄趨勢。</Text>
+          ) : (
+            monitor.alerts.slice(0, 3).map((alert) => (
+              <View key={alert.id} style={s.observationRow}>
+                <Text style={s.observationTitle}>{alert.title}</Text>
+                <Text style={s.mutedSmall}>{alert.message}</Text>
+              </View>
+            ))
+          )}
+          <Text style={s.sectionHint}>PawLog 僅根據已記錄資料整理趨勢，不提供疾病診斷。</Text>
         </Section>
 
         <Section title="日常健康趨勢">
@@ -757,6 +788,8 @@ const s = StyleSheet.create({
   avatarEmoji: { fontSize: 34 },
   petName: { fontSize: 23, fontWeight: '900', color: Colors.text },
   muted: { color: Colors.subtext, lineHeight: 20 },
+  observationRow: { padding: 12, borderRadius: 12, backgroundColor: '#F5F7F4', marginBottom: 8 },
+  observationTitle: { color: '#365E4A', fontWeight: '800', marginBottom: 4 },
   mutedSmall: { color: Colors.subtext, fontSize: 12, marginTop: 3 },
   link: { color: Colors.primary, fontWeight: '800', fontSize: 13 },
   petSwitch: { flexDirection: 'row', gap: 8, paddingTop: 14 },

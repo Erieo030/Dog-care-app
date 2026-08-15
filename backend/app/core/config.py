@@ -13,9 +13,10 @@ load_dotenv()
 class Settings:
     mongo_uri: str
     mongo_db: str
-    app_title: str = "Pet App Backend"
-    app_version: str = "2.0.0"
     public_app_url: str = ""
+    cors_origins: str = "*"
+    app_title: str = "PawLog Backend"
+    app_version: str = "2.0.0"
 
 
 @lru_cache
@@ -26,4 +27,4 @@ def get_settings() -> Settings:
         raise RuntimeError("MONGO_URI is not set")
     if not mongo_db:
         raise RuntimeError("MONGO_DB is not set")
-    return Settings(mongo_uri=mongo_uri, mongo_db=mongo_db, public_app_url=os.getenv("PUBLIC_APP_URL", "").rstrip("/"))
+    return Settings(mongo_uri=mongo_uri, mongo_db=mongo_db, public_app_url=os.getenv("PUBLIC_APP_URL", "").rstrip("/"), cors_origins=os.getenv("CORS_ORIGINS", "*"), app_title=os.getenv("APP_TITLE", "PawLog Backend"), app_version=os.getenv("APP_VERSION", "2.0.0"))

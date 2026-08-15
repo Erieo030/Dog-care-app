@@ -357,6 +357,7 @@ export interface HealthDashboard {
     energy: { id: string; loggedAt: string; energyLevel?: string }[];
   };
   todayDailyLog: {
+    id: string;
     waterLevel?: string;
     foodLevel?: string;
     energyLevel?: string;
@@ -449,6 +450,7 @@ export interface ExportRequest {
   endAt?: string;
   csvType?: CsvExportType;
   includeImages: boolean;
+  includeAiSummary?: boolean;
 }
 export interface ExportJob {
   id: string;

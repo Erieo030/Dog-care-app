@@ -73,6 +73,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const { selectedPet } = usePet();
   const [filters, setFilters] = useState<SearchFilters>(EMPTY);
   const [period, setPeriod] = useState<Period>('all');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [items, setItems] = useState<SearchResultItem[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,6 +190,11 @@ export default function GlobalSearchScreen({ navigation }: Props) {
           </View>
         </View>
       )}
+      <TouchableOpacity style={s.advancedToggle} onPress={() => setAdvancedOpen((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: advancedOpen }}>
+        <Text style={s.advancedLabel}>進階搜尋</Text>
+        <Text style={s.advancedHint}>{advancedOpen ? '收合條件' : '日期、類型、狀態與排序'} {advancedOpen ? '⌃' : '⌄'}</Text>
+      </TouchableOpacity>
+      {advancedOpen && <View style={s.advancedPanel}>
       <FilterTitle title="日期區間" />
       <View style={s.chips}>
         {(
@@ -316,6 +322,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
         ]}
         onChange={(sort) => setFilters((x) => ({ ...x, sort }))}
       />
+      </View>}
       <View style={s.resultHead}>
         <Text style={s.resultTitle}>搜尋結果</Text>
         <Text style={s.total}>{total} 筆</Text>
@@ -464,6 +471,10 @@ const s = StyleSheet.create({
   blockHead: { flexDirection: 'row', justifyContent: 'space-between' },
   blockTitle: { color: Colors.text, fontWeight: '800' },
   clear: { color: Colors.primary, fontWeight: '700', fontSize: 12 },
+  advancedToggle: { marginTop: 14, padding: 14, borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  advancedLabel: { color: Colors.text, fontWeight: '800' },
+  advancedHint: { color: Colors.subtext, fontSize: 12 },
+  advancedPanel: { paddingBottom: 4 },
   filterTitle: { color: Colors.text, fontWeight: '800', marginTop: 18, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   chip: {

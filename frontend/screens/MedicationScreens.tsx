@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenState from '../components/ScreenState';
+import DatePickerField from '../components/DatePickerField';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -164,21 +165,20 @@ export function MedicationFormScreen() {
       <Text style={s.title}>{existing ? '編輯用藥' : '新增用藥療程'}</Text>
       {[
         ['name', '藥名（必填）'],
-        ['startDate', '開始日期 YYYY-MM-DD'],
+        ['startDate', '開始日期（必填）'],
         ['endDate', '結束日期 YYYY-MM-DD'],
         ['instructions', '使用說明'],
         ['timesPerDay', '每日次數 1～6'],
         ['notes', '備註'],
-      ].map(([k, l]) => (
-        <TextInput
-          key={k}
-          style={s.input}
-          placeholder={l}
-          value={String(d[k] ?? '')}
-          keyboardType={k === 'timesPerDay' ? 'numeric' : 'default'}
-          onChangeText={(v) => set(k, k === 'timesPerDay' ? Number(v) : v)}
-        />
-      ))}
+      ].map(([k, l]) => {
+        const isDate = k === 'startDate' || k === 'endDate';
+        if (isDate) return (
+          <DatePickerField key={k} label={l} value={d[k] ? new Date(`${d[k]}T12:00:00`) : undefined}
+            onChange={(date) => set(k, date.toISOString().slice(0, 10))} maximumDate={k === 'startDate' ? new Date() : undefined} />
+        );
+        return (<View key={k}><Text style={s.label}>{l}</Text><TextInput style={s.input} placeholder={`請輸入${l.replace('（必填）', '')}`} placeholderTextColor="#8A817B" value={String(d[k] ?? '')} keyboardType={k === 'timesPerDay' ? 'numeric' : 'default'} onChangeText={(v) => set(k, k === 'timesPerDay' ? Number(v) : v)} /></View>);
+      })}
+      <Text style={s.section}>服用方式</Text>
       <View style={s.options}>
         {(Object.keys(meal) as MedicationMealTiming[]).map((k) => (
           <TouchableOpacity
@@ -190,9 +190,11 @@ export function MedicationFormScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      <Text style={s.label}>提醒時間</Text>
       <TextInput
         style={s.input}
-        placeholder="提醒時間 HH:MM（預設 08:00）"
+        placeholder="HH:MM（預設 08:00）"
+        placeholderTextColor="#8A817B"
         value={d.reminderTimeDraft || ''}
         onChangeText={(v) => set('reminderTimeDraft', v)}
       />
@@ -279,19 +281,20 @@ export function MedicationDetailScreen() {
 const s = StyleSheet.create({
   page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
-  section: { fontSize: 18, fontWeight: '700', marginTop: 18 },
+  title: { fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#2F3A34' },
+  section: { fontSize: 16, fontWeight: '800', color: '#3F8064', marginTop: 14, marginBottom: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#CFC7C0',
     borderRadius: 16,
     marginTop: 10,
     gap: 5,
   },
   name: { fontSize: 18, fontWeight: '700' },
+  label: { color: '#3B4A43', fontSize: 14, fontWeight: '800', marginBottom: 6, marginTop: 8 },
   input: {
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF', color: '#2F3A34', borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 12,
     padding: 14,

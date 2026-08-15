@@ -30,7 +30,7 @@ def _ensure_indexes() -> None:
     db.weight_records.create_index([("petId", 1), ("measuredAt", -1)], name="dashboard_weight_date")
     db.health_events.create_index([("petId", 1), ("occurredAt", -1)], name="dashboard_health_date")
     db.medical_visits.create_index([("petId", 1), ("visitedAt", -1)], name="dashboard_medical_date")
-    db.reminders.create_index([("petId", 1), ("scheduledAt", -1), ("status", 1)], name="dashboard_reminder_date_status")
+    db.reminders.create_index([("petId", 1), ("scheduledAt", -1), ("status", 1)], name="dashboard_reminder_status_date")
     db.timeline.create_index([("petId", 1), ("occurredAt", -1)], name="dashboard_timeline_date")
     _INDEXES_READY = True
 

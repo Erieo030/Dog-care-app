@@ -162,7 +162,9 @@ success "FastAPI is ready"
 LAN_IP="$(detect_lan_ip)"
 [[ -n "$LAN_IP" ]] || fail "Unable to detect a LAN IP address"
 export EXPO_PUBLIC_API_URL="${API_BASE_URL_OVERRIDE:-http://${LAN_IP}:${BACKEND_PORT}}"
-set_env_value "$FRONTEND_DIR/.env" "EXPO_PUBLIC_API_URL" "$EXPO_PUBLIC_API_URL"
+if [[ -z "$(read_env_value "$FRONTEND_DIR/.env" EXPO_PUBLIC_API_BASE_URL)" ]]; then
+  set_env_value "$FRONTEND_DIR/.env" "EXPO_PUBLIC_API_URL" "$EXPO_PUBLIC_API_URL"
+fi
 
 printf '\n%s\n' "======================================"
 printf '%s\n' "✅ SYSTEM READY"

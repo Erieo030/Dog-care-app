@@ -136,6 +136,10 @@ def _write_pdf(path,data,attachments,job):
     for pet in data["pets"]:
         _check(job); pid=pet["id"]; story += [Paragraph(_s(pet.get("name","毛孩")),h1),Paragraph(f"品種：{_s(pet.get('breed'))}（{_s({"purebred":"純種","mixed":"混種","unknown":"不確定"}.get(pet.get('breedType'),"不確定"))}）　性別：{_s(pet.get('gender'))}　生日：{_s(pet.get('birthday'))}",body),Paragraph(f"結紮：{_s('已結紮' if pet.get('neutered') else '未設定或未結紮')}　毛色：{_s(pet.get('coatColor'))}　明顯特徵：{_s(pet.get('distinctiveFeatures'))}",body),Spacer(1,5*mm)]
         groups={k:[x for x in data[k] if x.get("petId")==pid] for k in COLLECTIONS}
+        if job["request"].include_ai_summary:
+            summary = "；".join([f"體重紀錄 {len(groups["weights"])} 筆", f"健康事件 {len(groups["healthEvents"])} 筆", f"就醫紀錄 {len(groups["medicalVisits"])} 筆"]) + "。"
+            if not any(groups[k] for k in ("weights", "healthEvents", "medicalVisits")): summary = "目前紀錄不足，尚無法建立完整摘要。"
+            story += [Paragraph("健康紀錄摘要",h1), Paragraph(_s(summary),body), Paragraph("本報告依 PawLog 中由飼主記錄的資料整理，內容僅供健康紀錄與就醫溝通參考，不代表疾病診斷，也不能取代獸醫專業評估。",body), Spacer(1,5*mm)]
         story += [Paragraph("體重趨勢",h1),_chart(groups["weights"],font),Paragraph("健康事件",h1)]
         story += [Paragraph(f"{_s(x.get('occurredAt'))}　{_s(x.get('summary') or x.get('type'))}",body) for x in groups["healthEvents"]] or [Paragraph("此期間沒有健康事件。",body)]
         story += [Paragraph("就醫紀錄",h1)] + ([Paragraph(f"{_s(x.get('visitedAt'))}　{_s(x.get('clinicName'))}：{_s(x.get('reason'))}",body) for x in groups["medicalVisits"]] or [Paragraph("此期間沒有就醫紀錄。",body)])

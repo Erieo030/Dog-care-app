@@ -18,6 +18,8 @@ import HealthEventEditScreen from '../screens/HealthEventEditScreen';
 import HealthEventListScreen from '../screens/HealthEventListScreen';
 import HealthHubScreen from '../screens/HealthHubScreen';
 import HomeScreen from '../screens/HomeScreen';
+import AIChatScreen from '../screens/AIChatScreen';
+import VetVisitBriefScreen from '../screens/VetVisitBriefScreen';
 import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import { AddPetScreen, EditPetScreen } from '../screens/ManagePetScreen';
 import MedicalVisitDetailScreen from '../screens/MedicalVisitDetailScreen';
@@ -182,6 +184,8 @@ function HomeStack() {
     <Stack.Navigator id="HomeStack" screenOptions={iosSwipeStackOptions}
     >
       <Stack.Screen name="HomeOverview" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AIChat" component={AIChatScreen} options={{ title: 'PawLog AI 助手' }} />
+      <Stack.Screen name="VetVisitBrief" component={VetVisitBriefScreen} options={{ title: '就醫前摘要' }} />
       <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: '今日紀錄' }} />
       <Stack.Screen
         name="GlobalSearch"
@@ -208,6 +212,8 @@ function HealthStack() {
         component={HealthHubScreen}
         options={{ headerShown: false }}
       />
+      <HealthStackNav.Screen name="AIChat" component={AIChatScreen} options={{ title: 'PawLog AI 助手' }} />
+      <HealthStackNav.Screen name="VetVisitBrief" component={VetVisitBriefScreen} options={{ title: '就醫前摘要' }} />
       {sharedHealthScreens(HealthStackNav)}
     </HealthStackNav.Navigator>
   );
@@ -355,7 +361,7 @@ export default function MainTabs() {
       <Tabs.Screen
         name="Health"
         component={HealthStack}
-        options={{ title: '健康', tabBarIcon: icon('❤️') }}
+        options={{ title: 'AI 助手', tabBarIcon: icon('✨') }}
       />
       <Tabs.Screen
         name="Profile"

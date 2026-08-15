@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenState from '../components/ScreenState';
+import DatePickerField from '../components/DatePickerField';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
@@ -149,6 +150,7 @@ export function DewormingFormScreen() {
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Text style={s.title}>{existing ? '編輯驅蟲紀錄' : '新增驅蟲紀錄'}</Text>
+      <Text style={s.section}>驅蟲類型</Text>
       <View style={s.options}>
         {(Object.keys(labels) as DewormingType[]).map((k) => (
           <TouchableOpacity
@@ -162,7 +164,7 @@ export function DewormingFormScreen() {
       </View>
       {[
         ['productName', '產品／藥品名稱（必填）'],
-        ['administeredAt', '使用日期 ISO（必填）'],
+        ['administeredAt', '使用日期（必填）'],
         ['nextDueAt', '下次日期 ISO'],
         ['manufacturer', '廠牌'],
         ['dosageText', '劑量文字'],
@@ -170,15 +172,14 @@ export function DewormingFormScreen() {
         ['hospitalName', '醫院'],
         ['veterinarianName', '獸醫'],
         ['notes', '備註'],
-      ].map(([k, l]) => (
-        <TextInput
-          key={k}
-          style={s.input}
-          placeholder={l}
-          value={typeof d[k] === 'string' ? d[k] : ''}
-          onChangeText={(v) => set(k, v)}
-        />
-      ))}
+      ].map(([k, l]) => {
+        const isDate = k === 'administeredAt' || k === 'nextDueAt';
+        if (isDate) return (
+          <DatePickerField key={k} label={l} value={d[k] ? new Date(`${d[k].slice(0, 10)}T12:00:00`) : undefined}
+            onChange={(date) => set(k, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)} maximumDate={k === 'administeredAt' ? new Date() : undefined} />
+        );
+        return (<View key={k}><Text style={s.label}>{l}</Text><TextInput style={s.input} placeholder={`請輸入${l.replace('（必填）', '')}`} placeholderTextColor="#8A817B" value={typeof d[k] === 'string' ? d[k] : ''} onChangeText={(v) => set(k, v)} /></View>);
+      })}
       <TouchableOpacity onPress={() => set('createReminder', !d.createReminder)}>
         <Text style={s.check}>{d.createReminder ? '☑' : '□'} 是否建立下次驅蟲提醒？</Text>
       </TouchableOpacity>
@@ -248,18 +249,20 @@ export function DewormingDetailScreen() {
 const s = StyleSheet.create({
   page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#2F3A34' },
+  section: { fontSize: 16, fontWeight: '800', color: '#3F8064', marginTop: 14, marginBottom: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#CFC7C0',
     borderRadius: 16,
     marginTop: 12,
     gap: 5,
   },
   name: { fontSize: 18, fontWeight: '700' },
+  label: { color: '#3B4A43', fontSize: 14, fontWeight: '800', marginBottom: 6, marginTop: 8 },
   input: {
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF', color: '#2F3A34', borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 12,
     padding: 14,

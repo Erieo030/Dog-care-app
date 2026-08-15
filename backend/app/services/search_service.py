@@ -26,9 +26,8 @@ def ensure_search_indexes()->None:
     db.weight_records.create_index([("petId",1),("measuredAt",-1)],name="dashboard_weight_date")
     db.health_events.create_index([("petId",1),("occurredAt",-1)],name="dashboard_health_date")
     db.medical_visits.create_index([("petId",1),("visitedAt",-1)],name="dashboard_medical_date")
-    db.reminders.create_index([("petId",1),("scheduledAt",-1),("status",1)],name="dashboard_reminder_date_status")
+    db.reminders.create_index([("petId",1),("scheduledAt",-1),("status",1)],name="dashboard_reminder_status_date")
     db.timeline.create_index([("petId",1),("occurredAt",-1)],name="dashboard_timeline_date")
-    db.attachments.create_index([("sourceType",1),("sourceId",1)],name="search_attachment_source")
 
 
 def _date_from_query(value:str, timezone_offset_minutes:int)->tuple[datetime,datetime]|None:
@@ -140,6 +139,6 @@ def search(pet_id:str,user_id:str,request:SearchRequest)->dict:
         if not kind or key in existing:continue
         items.append({"id":f"{kind}:{item.get('sourceId')}","type":kind,"occurredAt":item["occurredAt"],"title":item.get("title",""),"description":item.get("description",""),"sourceId":item.get("sourceId",""),"sourceType":item.get("sourceType") or SOURCE_TYPE_MAP[kind],"attachmentCount":max(0,item.get("attachmentCount",0)),"metadata":{}});existing.add(key)
 
-    reverse=request.sort in {"newest","za"};key=(lambda x:x["title"].casefold()) if request.sort in {"az","za"} else (lambda x:x["occurredAt"])
+    reverse=request.sort in {"newest","za"};key=(lambda x:x["title"].casefold()) if request.sort in {"az","za"} else (lambda x:str(x["occurredAt"]))
     items.sort(key=key,reverse=reverse);total=len(items);start=(request.page-1)*request.page_size;page=items[start:start+request.page_size]
     return {"items":page,"page":request.page,"pageSize":request.page_size,"total":total,"hasMore":start+len(page)<total}

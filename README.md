@@ -239,3 +239,40 @@ Timeline 與 Lost Pet 私有管理 API 已完成 `data` envelope；檔案下載�
 主要列表已共用 `ScreenState` 處理初始 Loading；匯出服務會在後端啟動時清理超過 7 天的已完成／失敗／取消匯出檔。Android production bundle 已實測輸出，約 3.85 MB（Hermes bundle）；`dist/` 僅為產物且不納入 Git。
 
 協尋 QR 目前採單一啟用狀態：啟用公開頁就代表正在協尋，不再另外要求開啟「走失模式」。
+
+## AI 基礎層（目前版本）
+
+PawLog 已提供零 API 成本的 AI Data Foundation 與 Rule-based Health Monitor。後端會依毛孩資料產生有限範圍的健康 Context，再以固定規則整理可追溯的觀察趨勢。此層不使用 LLM、外部模型服務、向量資料庫或 AI 診斷。
+
+目前只描述紀錄中觀察到的模式，不提供疾病診斷、用藥建議或治療方案。
+
+## AI-M3 健康摘要（可選）
+
+PawLog 的 AI-M3 由 FastAPI 管理 LLM Provider，手機不會接觸 外部模型服務金鑰。設定 `backend/.env` 的 `AI_MODEL_API_KEY` 後，可使用 `AI_MODEL_NAME`（預設 `external-model-service/free`）產生 7／30／90 日健康摘要；未設定金鑰、額度不足、逾時或模型回傳格式不正確時，會自動改用 deterministic 基本摘要，核心紀錄仍可正常使用。免費模型的可用性與額度依 外部模型服務 官方資訊為準。摘要只整理已記錄內容，不提供診斷或用藥建議。
+
+## AI-M4 PawLog AI 助手
+
+AI 助手目前是唯讀的毛孩資料查詢功能。問題會先經過固定 Intent Router，再使用安全的 PawLog 內部資料工具；可查詢體重、日常紀錄、健康異常、就醫、用藥、疫苗、驅蟲、提醒、健康觀察與摘要。無法使用 外部模型服務 時仍會用固定格式回答。聊天不會寫入資料庫，也不能新增、修改或刪除紀錄；不提供診斷、藥物或劑量建議，也不做一般網路知識搜尋。
+
+## AI-M5 就醫前摘要與健康報告
+
+「就醫前摘要」會依 7／30／90 天整理毛孩資料、體重、日常紀錄、健康異常、用藥、就醫、疫苗、驅蟲與健康觀察。可在 App 分享純文字。Export Center 的 PDF 可選擇包含「智慧健康摘要」；即使 外部模型服務 不可用，也會使用固定資料摘要並完成 PDF。內容只供就醫溝通，不是診斷或處方。
+
+## 外部 AI Model Service
+
+目前 AI 不在 PawLog Backend 執行。Backend 透過 `AI_MODEL_API_URL` 呼叫外部 OpenAI-compatible 服務：文字模型預設 `gemma-4-26b-a4b`（PawBrain），語音模型預設 `whisper-large-v3`（PawVoice）。金鑰只放 `backend/.env`，App 不直接呼叫外部服務。未設定服務或服務失敗時，AI 功能回傳友善錯誤或既有 deterministic 結果；不影響一般 CRUD。
+
+## 重要環境設定
+
+Backend 的秘密與部署設定放在 `backend/.env`：MongoDB、`AI_MODEL_API_KEY`、外部模型 URL、模型名稱、timeout、CORS、公開 URL 與 App metadata。Frontend 只使用 `frontend/.env` 的公開設定，例如 `EXPO_PUBLIC_API_BASE_URL`、`EXPO_PUBLIC_API_URL`、`EXPO_PUBLIC_LOST_PET_BASE_URL`；不要放 API key。`./start.sh` 會依區網自動更新前端 API 位址，正式環境請改用明確的 HTTPS URL。
+
+### Env 必填／選填
+
+Backend：`MONGO_URI`、`MONGO_DB` 是啟動必填。`MONGO_USERNAME`、`MONGO_PASSWORD` 在使用 Docker 預設值時可省略。`AI_MODEL_API_URL` 與 `AI_MODEL_API_KEY` 是 AI 外部服務選填；未設定時仍可使用 deterministic fallback。
+
+Frontend：`EXPO_PUBLIC_API_URL` 是手機連線必填，`./start.sh` 會自動設定。`EXPO_PUBLIC_API_BASE_URL` 可選填固定 API 位址；`EXPO_PUBLIC_LOST_PET_BASE_URL` 與 `EXPO_PUBLIC_ENABLE_AI` 都是選填。不要在任何 `EXPO_PUBLIC_` 變數放 API Key 或密碼。
+
+
+## 搜尋
+
+搜尋欄可快速以關鍵字查找資料；「進階搜尋」可展開日期、類型、醫院／醫師、體重、附件與提醒狀態等篩選。

@@ -12,6 +12,7 @@ class ExportCreateRequest(BaseModel):
     end_at: datetime | None = Field(default=None, alias="endAt")
     csv_type: Literal["weight", "health_event", "medical_visit", "reminder"] | None = Field(default=None, alias="csvType")
     include_images: bool = Field(default=False, alias="includeImages")
+    include_ai_summary: bool = Field(default=True, alias="includeAiSummary")
 
     @model_validator(mode="after")
     def validate_options(self):
