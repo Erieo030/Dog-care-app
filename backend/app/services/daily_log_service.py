@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 from datetime import datetime,timezone
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
@@ -34,11 +35,11 @@ def get_today(pid,uid,date):
 def create(pid,uid,d:DailyLogCreateRequest):
  pet(pid,uid)
  if db.daily_logs.find_one({"petId":pid,"userId":uid,"localDate":d.localDate}):raise HTTPException(409,"今天已有日常紀錄，請編輯現有紀錄")
- n=datetime.now(timezone.utc);x={"petId":pid,"userId":uid,**d.model_dump(),"createdAt":n,"updatedAt":n};x["_id"]=db.daily_logs.insert_one(x).inserted_id;sync(x);return ser(x)
+ n=now_taipei();x={"petId":pid,"userId":uid,**d.model_dump(),"createdAt":n,"updatedAt":n};x["_id"]=db.daily_logs.insert_one(x).inserted_id;sync(x);return ser(x)
 def update(rid,uid,d:DailyLogUpdateRequest):
  x=db.daily_logs.find_one({"_id":oid(rid),"userId":uid})
  if not x:raise HTTPException(404,"找不到日常紀錄")
- pet(x["petId"],uid);v=d.model_dump(exclude_unset=True);v["updatedAt"]=datetime.now(timezone.utc);x=db.daily_logs.find_one_and_update({"_id":x["_id"]},{"$set":v},return_document=True);sync(x);return ser(x)
+ pet(x["petId"],uid);v=d.model_dump(exclude_unset=True);v["updatedAt"]=now_taipei();x=db.daily_logs.find_one_and_update({"_id":x["_id"]},{"$set":v},return_document=True);sync(x);return ser(x)
 def delete(rid,uid):
  x=db.daily_logs.find_one({"_id":oid(rid),"userId":uid})
  if not x:raise HTTPException(404,"找不到日常紀錄")

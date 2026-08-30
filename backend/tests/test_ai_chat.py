@@ -14,9 +14,26 @@ def test_intents():
     assert classify('現在吃什麼藥') == 'medication_active'
     assert classify('柴犬常見疾病') == 'unknown'
     assert classify('是不是腸胃炎') == 'medical_advice_request'
+    assert classify('明天是不是會下雨') == 'unknown'
 def test_deterministic_answers_and_sources():
     result=asyncio.run(ChatService().answer('上次疫苗？',ctx(),monitor()))
     assert '狂犬病' in result['answer']; assert result['fallbackUsed'] is True; assert result['sources'][0]['type']=='vaccination'
 def test_safety_answer():
     result=asyncio.run(ChatService().answer('藥吃多少？',ctx(),monitor()))
     assert '無法' in result['answer']; assert result['intent']=='medical_advice_request'
+
+class GeneralProvider:
+    available = True
+    model = "test-model"
+
+    async def generate_structured(self, messages):
+        assert "不限寵物主題" in messages[0]["content"]
+        assert messages[1]["content"] == "幫我整理旅行清單"
+        return {"answer": "可以，先依交通、住宿與行李分類。"}, self.model
+
+def test_general_question_uses_llm():
+    result = asyncio.run(ChatService(GeneralProvider()).answer_general("幫我整理旅行清單"))
+    assert result["answer"].startswith("可以")
+    assert result["intent"] == "general"
+    assert result["fallbackUsed"] is False
+    assert result["generationMode"] == "llm"

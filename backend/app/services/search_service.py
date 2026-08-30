@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：在後端跨來源搜尋、篩選、去重、排序及分頁。"""
 from datetime import datetime, timedelta, timezone
 import re
@@ -23,11 +24,11 @@ def _ensure_owned_pet(pet_id:str,user_id:str)->None:
 
 
 def ensure_search_indexes()->None:
-    db.weight_records.create_index([("petId",1),("measuredAt",-1)],name="dashboard_weight_date")
-    db.health_events.create_index([("petId",1),("occurredAt",-1)],name="dashboard_health_date")
-    db.medical_visits.create_index([("petId",1),("visitedAt",-1)],name="dashboard_medical_date")
+    db.weight_records.create_index([("userId",1),("petId",1),("measuredAt",-1)],name="dashboard_weight_date")
+    db.health_events.create_index([("userId",1),("petId",1),("occurredAt",-1)],name="dashboard_health_date")
+    db.medical_visits.create_index([("userId",1),("petId",1),("visitedAt",-1)],name="dashboard_medical_date")
     db.reminders.create_index([("petId",1),("scheduledAt",-1),("status",1)],name="dashboard_reminder_status_date")
-    db.timeline.create_index([("petId",1),("occurredAt",-1)],name="dashboard_timeline_date")
+    db.timeline.create_index([("userId",1),("petId",1),("occurredAt",-1)],name="dashboard_timeline_date")
 
 
 def _date_from_query(value:str, timezone_offset_minutes:int)->tuple[datetime,datetime]|None:
@@ -98,13 +99,13 @@ def search(pet_id:str,user_id:str,request:SearchRequest)->dict:
         match={"petId":pet_id,**_date_match("visitedAt",request,query_date),**_attachment_match(request.attachment)}
         if request.clinic: match["clinicName"]={"$regex":re.escape(request.clinic),"$options":"i"}
         if request.veterinarian: match["veterinarianName"]={"$regex":re.escape(request.veterinarian),"$options":"i"}
-        if regex and not query_date: match["$or"]=[{field:regex} for field in ["reason","clinicName","veterinarianName","veterinarianNotes","treatmentNotes","medicationNotes","notes","medications.name","medications.instructions","medications.notes"]]
+        if regex and not query_date: match["$or"]=[{field:regex} for field in ["reason","clinicName","veterinarianName","veterinarianNotes","treatmentNotes","notes","medications.name","medications.instructions","medications.notes"]]
         for item in _fetch(db.medical_visits,match,[("visitedAt",direction),("_id",direction)],take):
             clinic=item.get("clinicName","") or "未填寫醫院";items.append(_result("medical_visit",item,"visitedAt",item.get("reason","就醫紀錄"),f"{clinic} · {item.get('veterinarianName','') or '未填寫醫師'}",{"clinicName":item.get("clinicName",""),"veterinarianName":item.get("veterinarianName","")}))
 
     if "deworming" in wanted:
         match={"petId":pet_id,**_date_match("administeredAt",request,query_date),**_attachment_match(request.attachment)}
-        if regex and not query_date: match["$or"]=[{"productName":regex},{"type":regex},{"hospitalName":regex},{"notes":regex}]
+        if regex and not query_date: match["$or"]=[{"productName":regex},{"type":regex},{"notes":regex}]
         for item in _fetch(db.dewormings,match,[("administeredAt",direction),("_id",direction)],take): items.append(_result("deworming",item,"administeredAt",item.get("productName","驅蟲紀錄"),item.get("type",""),{"dewormingType":item.get("type")}))
 
     if "medication" in wanted:
@@ -113,7 +114,7 @@ def search(pet_id:str,user_id:str,request:SearchRequest)->dict:
         for item in _fetch(db.medications,match,[("startDate",direction),("_id",direction)],take): items.append(_result("medication",item,"startDate",item.get("name","用藥紀錄"),item.get("instructions",""),{"status":item.get("status")}))
 
     if "reminder" in wanted and request.attachment!="with":
-        match={"petId":pet_id,**_date_match("scheduledAt",request,query_date)};now=datetime.now(timezone.utc)
+        match={"petId":pet_id,**_date_match("scheduledAt",request,query_date)};now=now_taipei()
         if request.reminder_status=="completed":match["status"]="completed"
         elif request.reminder_status=="pending":match.update({"status":{"$in":["pending","snoozed"]},"scheduledAt":{**match.get("scheduledAt",{}),"$gte":max(now,match.get("scheduledAt",{}).get("$gte",now))}})
         elif request.reminder_status=="overdue":match.update({"status":{"$in":["pending","snoozed"]},"scheduledAt":{**match.get("scheduledAt",{}),"$lt":min(now,match.get("scheduledAt",{}).get("$lt",now))}})

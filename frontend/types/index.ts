@@ -55,17 +55,7 @@ export const emptyPetData: PetData = {
   coatColor: '',
   distinctiveFeatures: '',
 };
-export type ReminderType =
-  | 'vaccine'
-  | 'deworming_internal'
-  | 'deworming_external'
-  | 'heartworm'
-  | 'medication'
-  | 'follow_up'
-  | 'bath'
-  | 'grooming'
-  | 'restock'
-  | 'other';
+export type ReminderType = 'vaccine' | 'deworming' | 'medication' | 'follow_up' | 'other';
 export type ReminderStatus = 'pending' | 'completed' | 'skipped' | 'snoozed';
 export type RecurrenceRule =
   | 'none'
@@ -85,7 +75,7 @@ export interface Reminder {
   status: ReminderStatus;
   notes?: string;
   completedAt?: string;
-  sourceType?: 'medical_visit';
+  sourceType?: 'medical_visit' | 'vaccination' | 'deworming' | 'medication';
   sourceId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -249,7 +239,6 @@ export interface MedicalVisitInput {
   veterinarianName?: string;
   veterinarianNotes?: string;
   treatmentNotes?: string;
-  medicationNotes?: string;
   followUpAt?: string | null;
   cost?: number | null;
   notes?: string;
@@ -295,6 +284,8 @@ export interface TimelineItem {
   description?: string;
   sourceId: string;
   sourceType: TimelineSourceType;
+  linkedSourceType?: TimelineSourceType;
+  linkedSourceId?: string;
   createdAt: string;
   updatedAt: string;
   attachmentCount: number;
@@ -421,6 +412,8 @@ export interface SearchResultItem {
   description: string;
   sourceId: string;
   sourceType: TimelineSourceType;
+  linkedSourceType?: TimelineSourceType;
+  linkedSourceId?: string;
   attachmentCount: number;
   metadata: Record<string, string | number | null | undefined>;
 }
@@ -431,16 +424,9 @@ export interface SearchPage {
   total: number;
   hasMore: boolean;
 }
-export type ExportFormat = 'pdf' | 'csv' | 'json';
+export type ExportFormat = 'pdf';
 export type ExportScope = 'current_pet' | 'all_pets';
 export type ExportPeriod = '30_days' | '90_days' | 'all' | 'custom';
-export type CsvExportType =
-  | 'weight'
-  | 'health_event'
-  | 'medical_visit'
-  | 'reminder'
-  | 'deworming'
-  | 'medication';
 export interface ExportRequest {
   format: ExportFormat;
   scope: ExportScope;
@@ -448,8 +434,6 @@ export interface ExportRequest {
   period: ExportPeriod;
   startAt?: string;
   endAt?: string;
-  csvType?: CsvExportType;
-  includeImages: boolean;
   includeAiSummary?: boolean;
 }
 export interface ExportJob {
@@ -503,9 +487,6 @@ export interface Vaccination {
   vaccineName: string;
   administeredAt: string;
   hospitalName?: string;
-  veterinarianName?: string;
-  batchNumber?: string;
-  manufacturer?: string;
   nextDueAt?: string | null;
   notes?: string;
   attachmentIds?: string[];
@@ -524,11 +505,7 @@ export interface Deworming {
   administeredAt: string;
   nextDueAt?: string | null;
   notes?: string;
-  manufacturer?: string;
   dosageText?: string;
-  administrationMethod?: string;
-  hospitalName?: string;
-  veterinarianName?: string;
   attachmentIds?: string[];
   reminderId?: string;
   createReminder?: boolean;

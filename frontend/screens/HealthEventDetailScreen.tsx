@@ -159,7 +159,7 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
         </View>
         <Row label="異常類型" value={HEALTH_EVENT_LABELS[item.type]} />
         <Row label="摘要" value={item.summary} />
-        <Row label="發生時間" value={new Date(item.occurredAt).toLocaleString('zh-TW')} />
+        <Row label="發生時間" value={new Date(item.occurredAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })} />
         <Row label="嚴重程度" value={SEVERITY_LABELS[item.severity]} />
         {!!item.notes && <Row label="備註" value={item.notes} />}
         {!!detailRows.length && (

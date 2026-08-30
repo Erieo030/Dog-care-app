@@ -1,10 +1,10 @@
-# PawLog
+# MEGO
 
-PawLog 是一個幫飼主整理狗狗日常照護資料的手機 App。
+MEGO 是一個幫飼主整理狗狗日常照護資料的手機 App。
 
 它不是要你每天填很多表格，而是在真的有需要時，快速記下體重、身體異常、就醫內容或提醒。完成的重要操作會整理到同一條時間軸，之後要回想「什麼時候開始吐？上次看醫生是何時？最近體重有沒有變？」會比較容易。
 
-PawLog 是照護紀錄工具，不是獸醫診斷系統，也不提供藥物或治療建議。
+MEGO 是照護紀錄工具，不是獸醫診斷系統，也不提供藥物或治療建議。
 
 ## 現在可以做什麼
 
@@ -19,8 +19,10 @@ PawLog 是照護紀錄工具，不是獸醫診斷系統，也不提供藥物或�
 - 把提醒、健康異常、體重及就醫紀錄整合到時間軸。
 - 上傳健康照片附件，並在詳細頁與時間軸查看。
 - 搜尋與篩選體重、健康事件、就醫及提醒資料。
-- 匯出 PDF 健康報告、CSV、JSON，或包含照片的 ZIP。
-- 在設定中心管理毛孩入口、通知、提醒時間、儲存空間、匯出、隱私說明及登出。
+- 匯出不含圖片的 PDF 健康照護報告（可選最近 30 天、90 天或全部紀錄）。
+- 在設定中心管理毛孩入口、通知、匯出、隱私說明及登出。
+- 使用 MEGO AI 主頁建立或開啟最多 5 個獨立對話 Session；最近對話支援左滑刪除。
+- 直接查詢既有照護資料不使用 LLM，也不計入每日 AI 次數；跨資料整理才使用 LLM 額度。
 
 ## 專案由什麼組成
 
@@ -175,7 +177,7 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 ### 通知沒有出現
 
 - 確認系統通知權限已開啟。
-- 到「設定」確認「PawLog 手機提醒」已開啟。
+- 到「設定」確認手機通知權限與照護提醒已開啟。
 - Local Notification 需要 Android／iOS 實機環境驗證。
 - 關閉手機提醒不會刪除 App 內的 Reminder。
 
@@ -190,7 +192,7 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 - 目前固定使用淺色介面，外觀設定功能已移除。
 - Local Notification、分享、檔案下載及小螢幕版面仍需實機完整驗收。
 - 匯出工作狀態目前保存在單一 FastAPI process 記憶體。
-- 沒有 Cloud Backup、Push Notification Server、AI、OCR 或醫療判讀。
+- 沒有 Cloud Backup、Push Notification Server、OCR 或醫療判讀；AI 功能目前已接入受額度限制的外部模型服務。
 - 正式 TLS、監控、備份、Production build 與 App Store 發布尚未完成。
 
 更多架構與規劃：
@@ -198,6 +200,19 @@ EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ROADMAP.md](ROADMAP.md)
 - [adjust.txt](adjust.txt) 是需求與候選方案，不代表每次都要一次完成全部項目。
+
+## 最新進度（2026-08）
+
+- Home 首屏 API 已分級：Dashboard 先載入，AI health monitor 背景載入，不阻塞首頁。
+- 登入背景與首頁背景已提供 WebP 壓縮版本：`frontend/assets/home-scene/login.webp`、`background.webp`；原 PNG 保留作為來源。
+- Login／Register 使用一致的米白、輕量欄位與 terracotta CTA presentation。
+- AI 助手支援 deterministic routing、必要時 LLM 與每日帳號次數額度；token 只保留後端內部統計，不作前端限額。
+- AI Tab 與首頁 MEGO AI 入口固定開啟 AI 主頁；Session 由使用者主動選擇，不自動回到上次對話。
+- 日期與時間欄位改用自製 Calendar／Time Modal；日期預設今天並拒絕 2000 年以前資料，避免 1970 年 picker 問題。
+- 就醫與健康異常只記錄日期；提醒及用藥提醒時間只保留到分鐘。
+- 疫苗、驅蟲、用藥、就醫紀錄支援複製新增，常用欄位已依一般飼主情境精簡。
+- MongoDB healthcheck timeout 已提高至 15 秒，避免初始化較慢時誤判未 ready。
+
 ## 工程品質
 
 目前可執行 TypeScript、ESLint、Prettier、Jest、Python smoke test 與 pytest；GitHub Actions 也會執行基本檢查。
@@ -235,32 +250,41 @@ Timeline 與 Lost Pet 私有管理 API 已完成 `data` envelope；檔案下載�
 目前已明確啟用 Hermes，圖片選取時先以較低品質進入後續壓縮流程，減少高解析原圖的記憶體壓力。`dist/`、build、Pods 與 `node_modules/` 已排除，不會納入 Git；未引用的 placeholder 檔案暫不刪除，避免破壞未知相容流程。
 
 ## 最近效能清理
+首頁提醒入口改為「接下來 7 天待做」；完整提醒事項仍由「紀錄 → 提醒」管理。首頁「今天待做」會依內容導向提醒或健康異常；同時存在時提供選擇。健康觀察數量來自最近 30 天健康監測警示，不等同原始紀錄筆數。
+
+後端新產生的時間、提醒判斷與服務 log 統一以台灣時區（UTC+8）處理；目前資料庫保留 2 個展示帳號與每個功能 10 筆測試資料。
+
+健康異常、就醫、體重、疫苗、驅蟲、用藥、提醒、時間軸與搜尋列表已改用 `FlatList`，並統一設定初始渲染數、批次大小、視窗範圍與裁切非可見項目；保留既有刷新、空狀態、錯誤重試與導覽行為。
 
 主要列表已共用 `ScreenState` 處理初始 Loading；匯出服務會在後端啟動時清理超過 7 天的已完成／失敗／取消匯出檔。Android production bundle 已實測輸出，約 3.85 MB（Hermes bundle）；`dist/` 僅為產物且不納入 Git。
 
-協尋 QR 目前採單一啟用狀態：啟用公開頁就代表正在協尋，不再另外要求開啟「走失模式」。
+狗狗身份 QR 為固定公開身份連結；QR 本身只含隨機 token URL，不含帳號、密碼或健康紀錄。飼主可選擇公開毛孩欄位與聯絡方式，掃描頁以中文分組顯示，平時即可使用，不限定走失情境。
 
 ## AI 基礎層（目前版本）
 
-PawLog 已提供零 API 成本的 AI Data Foundation 與 Rule-based Health Monitor。後端會依毛孩資料產生有限範圍的健康 Context，再以固定規則整理可追溯的觀察趨勢。此層不使用 LLM、外部模型服務、向量資料庫或 AI 診斷。
+MEGO 已提供零 API 成本的 AI Data Foundation 與 Rule-based Health Monitor。後端會依毛孩資料產生有限範圍的健康 Context，再以固定規則整理可追溯的觀察趨勢。此層不使用 LLM、外部模型服務、向量資料庫或 AI 診斷。
 
 目前只描述紀錄中觀察到的模式，不提供疾病診斷、用藥建議或治療方案。
 
 ## AI-M3 健康摘要（可選）
 
-PawLog 的 AI-M3 由 FastAPI 管理 LLM Provider，手機不會接觸 外部模型服務金鑰。設定 `backend/.env` 的 `AI_MODEL_API_KEY` 後，可使用 `AI_MODEL_NAME`（預設 `external-model-service/free`）產生 7／30／90 日健康摘要；未設定金鑰、額度不足、逾時或模型回傳格式不正確時，會自動改用 deterministic 基本摘要，核心紀錄仍可正常使用。免費模型的可用性與額度依 外部模型服務 官方資訊為準。摘要只整理已記錄內容，不提供診斷或用藥建議。
+MEGO 的 AI-M3 由 FastAPI 管理 LLM Provider，手機不會接觸 外部模型服務金鑰。設定 `backend/.env` 的 `AI_MODEL_API_KEY` 後，可使用 `AI_MODEL_NAME`（預設 `gemma-4-26b-a4b`）產生 7／30／90 日健康摘要；未設定金鑰、服務失敗、逾時或模型回傳格式不正確時，會自動改用 deterministic 基本摘要，核心紀錄仍可正常使用。摘要只整理已記錄內容，不提供診斷或用藥建議。
 
-## AI-M4 PawLog AI 助手
+## AI-M4 MEGO AI 助手
 
-AI 助手目前是唯讀的毛孩資料查詢功能。問題會先經過固定 Intent Router，再使用安全的 PawLog 內部資料工具；可查詢體重、日常紀錄、健康異常、就醫、用藥、疫苗、驅蟲、提醒、健康觀察與摘要。無法使用 外部模型服務 時仍會用固定格式回答。聊天不會寫入資料庫，也不能新增、修改或刪除紀錄；不提供診斷、藥物或劑量建議，也不做一般網路知識搜尋。
+AI 助手支援毛孩紀錄查詢與一般問題。問題先經固定 Intent Router；明確的毛孩紀錄查詢使用 deterministic 回覆，不消耗 LLM 次數，健康摘要與一般問題使用 LLM。疾病確診、處方、藥物劑量與停藥等高風險要求仍會拒絕。每日次數限制預設關閉；設定 `AI_DAILY_REQUEST_LIMIT_ENABLED=true` 後，可用 `AI_DAILY_REQUEST_LIMIT` 調整。前端顯示已用與剩餘次數，不設定 token 上限。每隻毛孩最多保留 5 個本機 Session，第 6 個建立前會提示將刪除的最舊對話。
 
 ## AI-M5 就醫前摘要與健康報告
 
-「就醫前摘要」會依 7／30／90 天整理毛孩資料、體重、日常紀錄、健康異常、用藥、就醫、疫苗、驅蟲與健康觀察。可在 App 分享純文字。Export Center 的 PDF 可選擇包含「智慧健康摘要」；即使 外部模型服務 不可用，也會使用固定資料摘要並完成 PDF。內容只供就醫溝通，不是診斷或處方。
+「就醫前摘要」會依 7／30／90 天整理毛孩資料、體重、日常紀錄、健康異常、用藥、就醫、疫苗、驅蟲與健康觀察。可在 App 分享純文字。Export Center 目前固定匯出不含圖片的 PDF 健康照護報告；報告包含固定資料摘要，不呼叫 LLM。內容只供就醫溝通，不是診斷或處方。
+
+## Home 品牌與背景
+
+首頁使用 `frontend/assets/home-scene/background.webp` 作為單一自然背景，`frontend/assets/home-scene/logo.png` 作為 Header 品牌識別。首頁不載入人物、狗狗、Treehouse 或 branch 裝飾。
 
 ## 外部 AI Model Service
 
-目前 AI 不在 PawLog Backend 執行。Backend 透過 `AI_MODEL_API_URL` 呼叫外部 OpenAI-compatible 服務：文字模型預設 `gemma-4-26b-a4b`（PawBrain），語音模型預設 `whisper-large-v3`（PawVoice）。金鑰只放 `backend/.env`，App 不直接呼叫外部服務。未設定服務或服務失敗時，AI 功能回傳友善錯誤或既有 deterministic 結果；不影響一般 CRUD。
+目前 AI 不在 MEGO Backend 執行。Self-hosted Model API 是目前正式 Provider。Backend 透過 `AI_MODEL_API_URL` 呼叫外部 OpenAI-compatible 服務：文字模型預設 `gemma-4-26b-a4b`（PawBrain）。金鑰只放 `backend/.env`，App 不直接呼叫外部服務。未設定服務或服務失敗時，AI 功能回傳友善錯誤或既有 deterministic 結果；不影響一般 CRUD。
 
 ## 重要環境設定
 
@@ -276,3 +300,19 @@ Frontend：`EXPO_PUBLIC_API_URL` 是手機連線必填，`./start.sh` 會自動�
 ## 搜尋
 
 搜尋欄可快速以關鍵字查找資料；「進階搜尋」可展開日期、類型、醫院／醫師、體重、附件與提醒狀態等篩選。
+
+
+## AI 配置與用量控制
+
+- Provider：self-hosted OpenAI-compatible Model API。
+- Endpoint：`AI_MODEL_API_URL`，Backend 呼叫 `/v1/chat/completions`。
+- 文字模型：`AI_MODEL_NAME`，預設 `gemma-4-26b-a4b`。
+- API 金鑰：只放在 `backend/.env` 的 `AI_MODEL_API_KEY`，不進入 App。
+- 明確查詢先走 deterministic，不消耗 LLM；模糊／跨資料摘要才呼叫 LLM。
+- 單次 LLM completion 不由 MEGO Backend 限制，實際上限由外部模型服務決定。
+- 每日 AI 請求限制預設關閉；`AI_DAILY_REQUEST_LIMIT_ENABLED=true` 時，使用 `AI_DAILY_REQUEST_LIMIT`（預設 20）限制。
+- 不設定每日 token 顯示預算；後端可保留 token 使用量作內部監測，前端只顯示每日次數。
+- 外部服務不可用、逾時或輸出格式錯誤時，摘要使用 deterministic fallback。
+- AI 前端請求 timeout 為 45 秒；Backend 模型 timeout 為 45 秒。
+- 語音轉文字功能已移除；AI 目前只支援文字對話與健康整理。
+- 日期／時間欄位統一使用前端自製 JavaScript Modal。 日曆可點擊年月標題，以年份網格快速切換，避免逐月操作。

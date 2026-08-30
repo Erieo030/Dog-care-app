@@ -4,6 +4,7 @@ class LostPetProfileRequest(BaseModel):
  model_config=ConfigDict(extra="forbid")
  enabled:bool=False
  contactName:str=Field(default="",max_length=100)
+ contactEmail:str=Field(default="",max_length=320)
  contactPhone:str=Field(default="",max_length=50)
  alternatePhone:str=Field(default="",max_length=50)
  contactMessage:str=Field(default="",max_length=500)
@@ -13,6 +14,11 @@ class LostPetProfileRequest(BaseModel):
  showCoatColor:bool=True
  showDistinctiveFeatures:bool=True
  showAvatar:bool=True
+ showContactName:bool=True
+ showContactEmail:bool=False
+ showContactPhone:bool=True
+ showAlternatePhone:bool=False
+ showContactMessage:bool=True
  lostMode:bool=False
  lostSince:datetime|None=None
  lostLocationText:str=Field(default="",max_length=300)
@@ -33,6 +39,7 @@ class PublicLostPetResponse(BaseModel):
  lostLocationText:str|None=None
  lostMessage:str|None=None
  contactName:str
+ contactEmail:str|None=None
  contactPhone:str
  alternatePhone:str|None=None
  contactMessage:str|None=None

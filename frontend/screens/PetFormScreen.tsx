@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { Colors } from '../constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 import DatePickerField from '../components/DatePickerField';
 import { emptyPetData, PetData } from '../types';
 
@@ -100,7 +101,7 @@ export default function PetFormScreen({
             <Image source={{ uri: form.avatarUri }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarEmoji}>🐶</Text>
+              <Ionicons name="paw" size={42} color={Colors.primary} />
             </View>
           )}
 
@@ -178,25 +179,25 @@ export default function PetFormScreen({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 60 },
+  content: { paddingHorizontal: 28, paddingTop: 18, paddingBottom: 60 },
   title: {
     color: Colors.text,
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'left',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   avatarFallback: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -204,14 +205,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   avatarEmoji: { fontSize: 48 },
-  label: { color: Colors.text, fontWeight: '600', marginBottom: 7 },
+  label: { color: Colors.text, fontWeight: '700', marginBottom: 7, fontSize: 15 },
   optionRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
-  option: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  option: { flex: 1, minHeight: 50, borderWidth: 1, borderColor: '#E8DDD4', borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
   optionSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   optionText: { color: Colors.text, fontWeight: '700' },
   optionTextSelected: { color: '#FFF' },
   imageActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
-  imageButton: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 10, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  imageButton: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   imageButtonText: { color: Colors.primary, fontWeight: '700' },
   removeButton: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FFF1F0', borderWidth: 1, borderColor: '#F3B5AE' },
   removeText: { color: '#C94C4C', fontWeight: '700' },
@@ -222,9 +223,9 @@ const styles = StyleSheet.create({
     minHeight: 54,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderColor: '#E8DDD4',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderRadius: 16,
     paddingHorizontal: 15,
     marginBottom: 17,
     color: Colors.text,
@@ -238,8 +239,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: Colors.primary,
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },

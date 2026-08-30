@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Colors } from '../constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 import { Attachment, AttachmentSourceType } from '../types';
 import {
   attachmentUri,
@@ -90,14 +91,14 @@ export default function AttachmentPicker({
           style={s.button}
           onPress={() => pick('camera')}
         >
-          <Text>📷 拍照</Text>
+          <Ionicons name="camera-outline" size={18} color={Colors.text} /><Text style={s.buttonText}>拍照</Text>
         </TouchableOpacity>
         <TouchableOpacity
           disabled={busy || disabled || value.length >= limit}
           style={s.button}
           onPress={() => pick('library')}
         >
-          <Text>🖼️ 從相簿選擇</Text>
+          <Ionicons name="images-outline" size={18} color={Colors.text} /><Text style={s.buttonText}>從相簿選擇</Text>
         </TouchableOpacity>
       </View>
       {busy && (
@@ -152,6 +153,9 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10 },
   button: {
     minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: 10,
@@ -159,6 +163,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  buttonText: { color: Colors.text, fontWeight: '600' },
   status: { flexDirection: 'row', gap: 8, marginTop: 10 },
   error: { marginTop: 10, padding: 10, backgroundColor: '#FFF1F0', borderRadius: 10 },
   errorText: { color: '#A33' },

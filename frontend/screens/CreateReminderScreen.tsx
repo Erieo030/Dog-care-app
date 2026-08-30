@@ -33,8 +33,8 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const { settings } = useSettings();
-  const [type, setType] = useState<ReminderType>(existing?.type ?? 'heartworm');
-  const [title, setTitle] = useState(existing?.title ?? '心絲蟲預防');
+  const [type, setType] = useState<ReminderType>(existing?.type ?? 'other');
+  const [title, setTitle] = useState(existing?.title ?? '提醒');
   const [scheduledAt, setScheduledAt] = useState(
     existing
       ? new Date(existing.scheduledAt)
@@ -65,6 +65,10 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
       return;
     }
     if (!Number.isFinite(scheduledAt.getTime())) return Alert.alert('提示', '提醒日期無效');
+    if (scheduledAt.getTime() <= Date.now()) {
+      Alert.alert('提醒時間已過', '請選擇晚於目前時間的日期與時間；同一天的未來時間可以使用。');
+      return;
+    }
     setSubmitting(true);
     try {
       const input = {
@@ -84,9 +88,9 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
           : await scheduleReminderNotification(session.userId, saved, selectedPet.name);
         const message =
           result.status === 'disabled'
-            ? '提醒已儲存。PawLog 手機提醒已關閉，App 內提醒仍會保留。'
+            ? '提醒已儲存。MEGO 手機提醒已關閉，App 內提醒仍會保留。'
             : result.status === 'denied'
-              ? '提醒已儲存。通知權限尚未開啟，你仍可以在 PawLog 內查看提醒。'
+              ? '提醒已儲存。通知權限尚未開啟，你仍可以在 MEGO 內查看提醒。'
               : result.status === 'expired'
                 ? '提醒已儲存；時間已過，不會排程手機通知。'
                 : `提醒已儲存${existing ? '並重新排程' : '並排程手機通知'}。`;

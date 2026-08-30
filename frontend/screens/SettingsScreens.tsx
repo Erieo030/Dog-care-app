@@ -2,7 +2,6 @@
 import Constants from 'expo-constants';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -12,12 +11,12 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -28,9 +27,6 @@ import {
   requestNotificationPermission,
   NotificationPermissionState,
 } from '../services/notificationService';
-import { clearSearchHistory } from '../services/searchHistoryService';
-import { clearPawLogCache, getStorageUsage } from '../services/storageService';
-import { shareFeedbackInfo } from '../services/feedbackService';
 const palette = {
   bg: '#F7F4EE',
   surface: '#FFFFFF',
@@ -53,12 +49,6 @@ const ageText = (birthDate?: string) => {
     age--;
   return `${Math.max(age, 0)} 歲`;
 };
-const formatBytes = (value: number) =>
-  value < 1024
-    ? `${value} B`
-    : value < 1048576
-      ? `${(value / 1024).toFixed(1)} KB`
-      : `${(value / 1048576).toFixed(1)} MB`;
 const Page = ({ children }: { children: React.ReactNode }) => {
   return (
     <SafeAreaView style={s.safe}>
@@ -71,18 +61,24 @@ const Row = ({
   value,
   onPress,
   danger = false,
+  rowStyle,
+  icon,
 }: {
   title: string;
   value?: string;
   onPress?: () => void;
   danger?: boolean;
+  rowStyle?: object;
+  icon?: keyof typeof Ionicons.glyphMap;
 }) => (
   <TouchableOpacity
     disabled={!onPress}
     onPress={onPress}
-    style={s.row}
+    style={[s.row, rowStyle]}
     accessibilityRole={onPress ? 'button' : undefined}
+    accessibilityLabel={value ? `${title} ${value}` : title}
   >
+    {icon ? <Ionicons name={icon} size={20} color={danger ? palette.danger : palette.primary} style={s.rowIcon} /> : null}
     <Text numberOfLines={1} ellipsizeMode="tail" style={[s.rowTitle, danger && s.danger]}>{title}</Text>
     <View style={s.accessory}>
       {value ? <Text numberOfLines={1} ellipsizeMode="tail" style={[s.value, danger && s.danger]}>{value}</Text> : null}
@@ -97,9 +93,18 @@ export function PetManagementScreen({
   const parent = navigation.getParent<BottomTabNavigationProp<MainTabParamList>>();
   return (
     <Page>
-      <Text style={s.note}>切換目前毛孩；新增與編輯沿用既有毛孩資料表單。</Text>
+      <Text style={s.note}>選擇要一起照顧的毛孩，建立牠專屬的生活與健康紀錄。</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.petCards} snapToInterval={362} decelerationRate="fast" disableIntervalMomentum onMomentumScrollEnd={(event) => {
+        const index = Math.round(event.nativeEvent.contentOffset.x / 362);
+        const pet = pets[index];
+        if (pet && pet.id !== selectedPet?.id) selectPet(pet.id);
+      }}>
       {pets.map((p) => (
         <View key={p.id} style={s.pet}>
+          <Ionicons name="paw-outline" size={112} color="#5F9274" style={s.idWatermark} />
+          <View style={s.idAccent} />
+          <View style={s.idCardTop}><Text style={s.idCardBrand}>MEGO PET ID</Text></View>
+          <View style={s.idCardBody}>
           {p.avatarUrl ? (
             <Image source={{ uri: p.avatarUrl }} style={s.avatar} />
           ) : (
@@ -107,28 +112,31 @@ export function PetManagementScreen({
               <Text style={s.avatarText}>{p.name.slice(0, 1)}</Text>
             </View>
           )}
-          <TouchableOpacity style={s.petInfo} onPress={() => selectPet(p.id)}>
-            <Text style={s.rowTitle}>{p.name}</Text>
-            <Text numberOfLines={2} ellipsizeMode="tail" style={s.value}>
-              {p.breed || '未填品種'} · {p.gender || '未填性別'} · {ageText(p.birthDate)}
-              {selectedPet?.id === p.id ? ' · 目前毛孩' : ''}
-            </Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={`選擇毛孩：${p.name}`} style={s.petInfo} onPress={() => selectPet(p.id)}>
+            <Text style={s.idPetName}>{p.name}</Text>
+            <Text style={s.idPetBreed}>{p.breed || '品種未設定'} · {p.gender || '性別未設定'} · {ageText(p.birthDate)}</Text>
+            {selectedPet?.id === p.id && <Text style={s.currentBadge}>● 目前毛孩</Text>}
           </TouchableOpacity>
-          {selectedPet?.id === p.id && (
-            <TouchableOpacity onPress={() => parent?.navigate('Home', { screen: 'EditPet' })}>
-              <Text style={s.link}>編輯</Text>
-            </TouchableOpacity>
-          )}
+          </View>
+          <View style={s.idCardFooter}><Text style={s.idCode}>MEGO-PET-{p.id.slice(-8).toUpperCase()}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`編輯毛孩：${p.name}`} onPress={() => { selectPet(p.id); navigation.navigate('EditPet'); }}>
+            <Text style={s.link}>編輯資料</Text>
+          </TouchableOpacity></View>
         </View>
       ))}
+      </ScrollView>
+      {pets.length > 1 && <>
+        <Text style={s.cardSwipeHint}>左右滑動・點選卡片切換毛孩</Text>
+        <View style={s.cardDots}>{pets.map((p) => <View key={p.id} style={[s.cardDot, selectedPet?.id === p.id && s.cardDotActive]} />)}</View>
+      </>}
       <TouchableOpacity
         style={s.primary}
         onPress={() => parent?.navigate('Home', { screen: 'AddPet' })}
       >
-        <Text style={s.primaryText}>新增毛孩</Text>
+        <Text style={s.primaryText}>＋ 加入另一位毛孩</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={s.primary} onPress={() => navigation.navigate('LostPetSettings')}>
-        <Text style={s.primaryText}>走失協尋 QR</Text>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="毛孩身份卡" style={s.primary} onPress={() => navigation.navigate('LostPetSettings')}>
+        <Ionicons name="paw-outline" size={19} color="#FFF" />
+        <Text style={s.primaryText}>毛孩身份卡</Text>
       </TouchableOpacity>
     </Page>
   );
@@ -156,123 +164,36 @@ export function NotificationSettingsScreen() {
   };
   return (
     <Page>
+      <Text style={s.heading}>照護提醒</Text>
+      <Text style={s.note}>讓 MEGO 在用藥、回診與日常照護時間提醒你。</Text>
+      <View style={s.notificationCard}>
       <Row
-        title="系統通知權限"
+        title="手機通知權限"
         value={
           permission === 'granted' ? '已開啟' : permission === 'denied' ? '未開啟' : '尚未決定'
         }
+        rowStyle={s.notificationInnerRow}
+        icon="notifications-outline"
       />
-      <View style={s.row}>
+      <View style={[s.row, s.notificationInnerRow]}>
+        <Ionicons name="paw-outline" size={20} color={palette.primary} style={s.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={s.rowTitle}>PawLog 手機提醒</Text>
-          <Text style={s.value}>只控制 Local Notification，不刪除提醒資料。</Text>
+          <Text style={s.rowTitle}>照護提醒</Text>
+          <Text style={s.notificationDescription}>開啟後，MEGO 會在重要照護時間提醒你。</Text>
         </View>
         <Switch
-          accessibilityLabel="PawLog 手機提醒"
+          style={s.notificationSwitch}
+          accessibilityLabel="照護提醒"
           disabled={saving}
           value={settings.localNotificationsEnabled}
           onValueChange={toggle}
         />
       </View>
+      </View>
       {permission !== 'granted' && (
-        <Text style={s.note}>目前無法發送手機通知，但仍可以在 PawLog 內查看提醒。</Text>
+        <Text style={s.note}>手機通知尚未開啟，你仍可在 App 內查看提醒。</Text>
       )}
-      <Row title="前往系統設定" onPress={() => Linking.openSettings()} />
-    </Page>
-  );
-}
-export function ReminderPreferencesScreen() {
-  const { settings, update, saving } = useSettings();
-  const [normal, setNormal] = useState(settings.defaultReminderTime);
-  const [tonight, setTonight] = useState(settings.tonightTime);
-  const save = async () => {
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(normal) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(tonight))
-      return Alert.alert('格式錯誤', '請使用 24 小時 HH:mm 格式');
-    try {
-      await update({ defaultReminderTime: normal, tonightTime: tonight });
-      Alert.alert('已儲存', '提醒偏好已更新');
-    } catch {
-      Alert.alert('儲存失敗', '請稍後再試');
-    }
-  };
-  return (
-    <Page>
-      <Text style={s.label}>新增提醒預設時間</Text>
-      <TextInput
-        style={s.input}
-        value={normal}
-        onChangeText={setNormal}
-        placeholder="09:00"
-        maxLength={5}
-      />
-      <Text style={s.label}>「今晚」延後時間</Text>
-      <TextInput
-        style={s.input}
-        value={tonight}
-        onChangeText={setTonight}
-        placeholder="20:00"
-        maxLength={5}
-      />
-      <TouchableOpacity disabled={saving} style={s.primary} onPress={save}>
-        <Text style={s.primaryText}>{saving ? '儲存中…' : '儲存偏好'}</Text>
-      </TouchableOpacity>
-    </Page>
-  );
-}
-export function StorageSettingsScreen() {
-  const { session } = useAuth();
-  const [usage, setUsage] = useState<{
-    attachmentCount: number;
-    attachmentBytes: number;
-    exportCacheBytes: number;
-  } | null>(null);
-  const [error, setError] = useState('');
-  const load = useCallback(() => {
-    if (!session?.userId) return;
-    setError('');
-    getStorageUsage(session.userId)
-      .then(setUsage)
-      .catch((e) => setError((e as Error).message));
-  }, [session?.userId]);
-  useFocusEffect(load);
-  const clearCache = () =>
-    Alert.alert('清除暫存資料', '清除暫存不會刪除你的健康紀錄。', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '清除',
-        onPress: async () => {
-          await clearPawLogCache();
-          load();
-          Alert.alert('已清除', '匯出暫存已清除');
-        },
-      },
-    ]);
-  return (
-    <Page>
-      {!usage && !error ? (
-        <ActivityIndicator />
-      ) : error ? (
-        <>
-          <Text style={s.danger}>{error}</Text>
-          <Row title="重試" onPress={load} />
-        </>
-      ) : (
-        <>
-          <Row
-            title="附件"
-            value={`${usage!.attachmentCount} 個 · ${formatBytes(usage!.attachmentBytes)}`}
-          />
-          <Row title="匯出暫存" value={formatBytes(usage!.exportCacheBytes)} />
-          <Row
-            title="可可靠計算總量"
-            value={formatBytes(usage!.attachmentBytes + usage!.exportCacheBytes)}
-          />
-        </>
-      )}
-      <Text style={s.note}>
-        React Native 圖片內部 cache 無可靠統一容量 API，目前無法計算完整圖片快取。
-      </Text>
-      <Row title="清除匯出暫存" onPress={clearCache} danger />
+      <Row title="開啟手機通知權限" icon="settings-outline" onPress={() => Linking.openSettings()} rowStyle={s.roundedActionRow} />
     </Page>
   );
 }
@@ -284,23 +205,23 @@ export function AboutScreen() {
     '開發版本';
   return (
     <Page>
-      <Text style={s.hero}>PawLog</Text>
-      <Text style={s.paragraph}>
-        PawLog 是協助飼主低負擔記錄毛孩健康、提醒、體重與就醫資訊的行動 App。
+      <Text style={s.aboutHero}>MEGO</Text>
+      <Text style={s.aboutParagraph}>
+        MEGO 是協助飼主低負擔記錄毛孩健康、提醒、體重與就醫資訊的行動 App。
       </Text>
-      <Row title="App Version" value={version} />
-      <Row title="Build Version" value={String(build)} />
+      <Row title="App 版本" value={version} rowStyle={s.whiteSettingRow} />
+      <Row title="建置版本" value={String(build)} rowStyle={s.whiteSettingRow} />
       <Text style={s.heading}>健康資訊聲明</Text>
-      <Text style={s.paragraph}>
-        PawLog
+      <Text style={s.aboutParagraph}>
+        MEGO
         是紀錄與資訊整理工具，不提供疾病診斷、獸醫診斷替代、藥物處方或緊急醫療服務。若毛孩出現嚴重或持續惡化症狀，請聯絡合格動物醫院。
       </Text>
       {__DEV__ && (
         <>
-          <Text style={s.heading}>開發資訊</Text>
-          <Row title="Expo SDK" value={String(Constants.expoConfig?.sdkVersion || '尚未確認')} />
-          <Row title="Platform" value={Platform.OS} />
-          <Row title="API Environment" value="由 App 環境設定提供" />
+          <Text style={s.heading}>版本資訊</Text>
+          <Row title="App 開發版本" value={String(Constants.expoConfig?.sdkVersion || '尚未確認')} rowStyle={s.whiteSettingRow} />
+          <Row title="裝置平台" value={Platform.OS === 'ios' ? 'iPhone' : 'Android'} rowStyle={s.whiteSettingRow} />
+          <Row title="服務環境" value="由 App 設定提供" rowStyle={s.whiteSettingRow} />
         </>
       )}
     </Page>
@@ -309,18 +230,15 @@ export function AboutScreen() {
 export function PrivacyPolicyScreen() {
   return (
     <Page>
-      <Text style={s.heading}>專題開發版本隱私說明</Text>
-      <Text style={s.paragraph}>
-        PawLog
-        可能處理使用者帳號資訊、毛孩基本資料、健康事件、體重、就醫紀錄、提醒及使用者選擇的附件或照片。健康圖片只用於使用者建立的紀錄與匯出，不作為正式醫療診斷。
-      </Text>
-      <Text style={s.paragraph}>
-        使用者可在 App
-        內管理自己的紀錄。正式資料保存位置、保留期間、刪除流程與部署安全措施仍需依實際發布環境確認。
-      </Text>
-      <Text style={s.note}>
-        TODO：此為專題開發版本隱私說明，正式發布前需依實際部署環境完成法律審閱。
-      </Text>
+      <Text style={s.heading}>MEGO 隱私政策</Text>
+      <Text style={s.paragraph}>MEGO 會依本政策處理你為照護毛孩而提供的資料，包括帳號資訊、毛孩基本資料、健康事件、體重、用藥、疫苗、驅蟲、就醫紀錄、提醒、附件與照片。</Text>
+      <Text style={s.heading}>資料用途</Text>
+      <Text style={s.paragraph}>這些資料只用於建立時間軸、提供提醒、搜尋與篩選、產生匯出報告，以及在你主動使用 AI 助手時整理照護資訊。AI 回覆僅供紀錄整理與一般資訊參考，不代表醫療診斷。</Text>
+      <Text style={s.heading}>資料分享與安全</Text>
+      <Text style={s.paragraph}>MEGO 不會將你的資料用於廣告販售。使用 AI、同步或匯出功能時，必要資料可能傳送至提供該功能的服務；我們會依部署環境採取適當的存取控制與傳輸保護。請勿在紀錄中輸入不必要的敏感資訊。</Text>
+      <Text style={s.heading}>你的權利</Text>
+      <Text style={s.paragraph}>你可以在 App 中查看、編輯、匯出或刪除自己建立的毛孩與照護紀錄。若要刪除帳號或提出隱私問題，請透過產品提供的聯絡方式與我們聯繫。</Text>
+      <Text style={s.note}>本政策會在資料處理方式或服務功能重大變更時更新。</Text>
     </Page>
   );
 }
@@ -328,88 +246,37 @@ export function TermsOfUseScreen() {
   return (
     <Page>
       <Text style={s.heading}>使用條款</Text>
-      <Text style={s.paragraph}>
-        PawLog
-        用於保存使用者自行輸入的毛孩照護資料。健康資訊僅供紀錄與整理，不取代獸醫診斷、處方或緊急醫療判斷。使用者應確認輸入資料正確，並在需要醫療協助時聯絡合格動物醫院。
-      </Text>
-      <Text style={s.note}>TODO：正式發布前需完成法律審閱與版本、生效日期確認。</Text>
-    </Page>
-  );
-}
-export function FeedbackScreen() {
-  const [busy, setBusy] = useState(false);
-  const share = async () => {
-    try {
-      setBusy(true);
-      await shareFeedbackInfo();
-    } catch (e) {
-      Alert.alert('無法分享', (e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Page>
-      <Text style={s.paragraph}>
-        系統會建立不含帳號、User ID、密碼、token、API key
-        或健康紀錄的環境資訊。請在分享後自行補充問題描述。
-      </Text>
-      <TouchableOpacity disabled={busy} style={s.primary} onPress={share}>
-        <Text style={s.primaryText}>{busy ? '準備中…' : '分享問題資訊'}</Text>
-      </TouchableOpacity>
-    </Page>
-  );
-}
-export function LocalDataSettingsScreen() {
-  const { session } = useAuth();
-  const { reset, saving } = useSettings();
-  const clearSearch = () =>
-    Alert.alert('清除搜尋紀錄', '只會刪除此裝置的搜尋關鍵字。', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '清除',
-        onPress: async () => {
-          if (session?.userId) await clearSearchHistory(session.userId);
-          Alert.alert('已清除', '搜尋紀錄已清除');
-        },
-      },
-    ]);
-  const resetPrefs = () =>
-    Alert.alert('重設提醒偏好', '會重設提醒偏好，不會刪除健康資料。', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '重設',
-        style: 'destructive',
-        onPress: async () => {
-          await reset();
-          Alert.alert('已重設', '提醒偏好已恢復預設值');
-        },
-      },
-    ]);
-  return (
-    <Page>
-      <Row title="清除搜尋紀錄" onPress={clearSearch} />
-      <Row
-        title={saving ? '重設中…' : '重設提醒偏好'}
-        onPress={saving ? undefined : resetPrefs}
-        danger
-      />
+      <Text style={s.paragraph}>使用 MEGO 即表示你同意使用本 App 建立與管理毛孩資料、健康紀錄、提醒、搜尋、匯出及相關功能。你應提供真實且不侵害他人權利的內容，並妥善保管帳號登入資訊。</Text>
+      <Text style={s.heading}>健康資訊限制</Text>
+      <Text style={s.paragraph}>MEGO 是照護紀錄與整理工具，不提供疾病診斷、獸醫診斷替代、藥物處方或緊急醫療服務。用藥、疫苗、驅蟲與提醒內容請由飼主確認；毛孩出現嚴重或持續惡化症狀時，應立即聯絡合格動物醫院。</Text>
+      <Text style={s.heading}>AI 助手與資料</Text>
+      <Text style={s.paragraph}>AI 助手僅在需要模型整理或回覆時使用相關服務。AI 內容可能不完整或不準確，不能取代獸醫專業判斷；請勿將 AI 回覆視為診斷或治療指示。</Text>
+      <Text style={s.heading}>內容與服務</Text>
+      <Text style={s.paragraph}>你對自己上傳的資料負責。不得利用本 App 從事違法、侵害他人權利或干擾服務的行為。功能可能因維護、版本更新或第三方服務狀態而調整。</Text>
+      <Text style={s.note}>如不同意本條款，請停止使用 MEGO。</Text>
     </Page>
   );
 }
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: palette.bg },
   content: { padding: 18, paddingBottom: 42 },
+  notificationSwitch: { transform: [{ scale: 0.86 }], alignSelf: 'center', marginRight: -4 },
+  roundedActionRow: { borderRadius: 16, borderWidth: 1, borderColor: '#E8E0D4', backgroundColor: '#FFFFFF' },
+  notificationCard: { borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8E0D4', marginBottom: 12 },
+  whiteSettingRow: { backgroundColor: '#FFFFFF', borderRadius: 14, marginBottom: 8, borderBottomWidth: 0, overflow: 'hidden' },
+  notificationInnerRow: { backgroundColor: '#FFFFFF' },
+  notificationDescription: { color: '#887A6D', fontSize: 12, lineHeight: 17, marginTop: 3, textAlign: 'left' },
   row: {
-    minHeight: 64,
-    paddingVertical: 13,
+    minHeight: 56,
+    paddingVertical: 10,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    backgroundColor: palette.surface,
+    borderBottomColor: "rgba(228,221,212,0.70)",
+    backgroundColor: '#FFF4E8',
     flexDirection: 'row',
     alignItems: 'center',
   },
+  rowIcon: { marginRight: 10 },
   rowTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: palette.text },
   accessory: { maxWidth: '58%', flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
   value: { flexShrink: 1, color: palette.sub, fontSize: 13, textAlign: 'right' },
@@ -417,19 +284,43 @@ const s = StyleSheet.create({
   note: { color: palette.sub, lineHeight: 19, fontSize: 13, marginVertical: 14 },
   link: { color: palette.primary, fontWeight: '800' },
   danger: { color: palette.danger },
+  petCards: { gap: 12, paddingVertical: 4 },
+  cardSwipeHint: { textAlign: 'center', color: '#887A6D', fontSize: 12, marginTop: 2 },
+  cardDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 7, marginBottom: 2 },
+  cardDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D8CEC2' },
+  cardDotActive: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#5F9274' },
   pet: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: 350,
+    height: 210,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    borderRadius: 18,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E8E0D4',
+    overflow: 'hidden',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     gap: 12,
     padding: 13,
-    backgroundColor: palette.surface,
+    backgroundColor: '#FFFDF8',
     borderBottomWidth: 1,
-    borderBottomColor: palette.border,
+    borderBottomColor: "rgba(228,221,212,0.70)",
   },
-  petInfo: { flex: 1, minWidth: 0 },
-  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: palette.border },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: palette.text, fontWeight: '800' },
+  idWatermark: { position: 'absolute', right: 12, bottom: 22, opacity: 0.08 },
+  idAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, backgroundColor: '#5F9274' },
+  idCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingHorizontal: 4 },
+  idCardBrand: { color: '#B7653B', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
+  idCardBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
+  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: '#F7F4EE' },
+  avatarFallback: { backgroundColor: '#F7F4EE', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#4E8A6C', fontSize: 28, fontWeight: '900' },
+  idCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingHorizontal: 4 },
+  idCode: { color: '#887A6D', fontSize: 10, letterSpacing: 0.6 },
+  petInfo: { flex: 1, minWidth: 0, paddingHorizontal: 0, paddingVertical: 0 },
+  idPetName: { color: '#3F342C', fontSize: 22, fontWeight: '900' },
+  idPetBreed: { color: '#6A4D3E', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  currentBadge: { color: '#4E8A6C', fontSize: 11, fontWeight: '800', marginTop: 6 },
   primary: {
     marginTop: 18,
     minHeight: 52,
@@ -449,6 +340,8 @@ const s = StyleSheet.create({
     padding: 14,
     color: palette.text,
   },
+  aboutHero: { fontSize: 30, fontWeight: '900', color: '#5F9274', textAlign: 'center', marginVertical: 20 },
+  aboutParagraph: { fontSize: 15, lineHeight: 24, color: '#4A382E', marginBottom: 12 },
   hero: {
     fontSize: 30,
     fontWeight: '900',

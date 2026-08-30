@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 from datetime import datetime,timezone
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
@@ -35,11 +36,11 @@ def get(rid,uid):
  if not x:raise HTTPException(404,"找不到疫苗紀錄")
  pet(x["petId"],uid);return ser(x)
 def create(pid,uid,d):
- pet(pid,uid);now=datetime.now(timezone.utc);v=d.model_dump();v.pop("createReminder",None);x={"petId":pid,**v,"createdAt":now,"updatedAt":now,"createReminder":d.createReminder};x["_id"]=db.vaccinations.insert_one(x).inserted_id;sync_timeline(x);sync_reminder(x,uid);return ser(db.vaccinations.find_one({"_id":x["_id"]}))
+ pet(pid,uid);now=now_taipei();v=d.model_dump();v.pop("createReminder",None);x={"petId":pid,**v,"createdAt":now,"updatedAt":now,"createReminder":d.createReminder};x["_id"]=db.vaccinations.insert_one(x).inserted_id;sync_timeline(x);sync_reminder(x,uid);return ser(db.vaccinations.find_one({"_id":x["_id"]}))
 def update(rid,uid,d):
  x=db.vaccinations.find_one({"_id":oid(rid)})
  if not x:raise HTTPException(404,"找不到疫苗紀錄")
- pet(x["petId"],uid);v=d.model_dump();v["updatedAt"]=datetime.now(timezone.utc);db.vaccinations.update_one({"_id":x["_id"]},{"$set":v});x=db.vaccinations.find_one({"_id":x["_id"]});sync_timeline(x);sync_reminder(x,uid);return ser(db.vaccinations.find_one({"_id":x["_id"]}))
+ pet(x["petId"],uid);v=d.model_dump();v["updatedAt"]=now_taipei();db.vaccinations.update_one({"_id":x["_id"]},{"$set":v});x=db.vaccinations.find_one({"_id":x["_id"]});sync_timeline(x);sync_reminder(x,uid);return ser(db.vaccinations.find_one({"_id":x["_id"]}))
 def delete(rid,uid):
  x=db.vaccinations.find_one({"_id":oid(rid)})
  if not x:raise HTTPException(404,"找不到疫苗紀錄")

@@ -40,6 +40,7 @@ const parseDate = (value: string) => {
 };
 export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   const existing = route.params?.visit;
+  const duplicate = route.params?.duplicate === true;
   const { session } = useAuth();
   const { selectedPet, pets } = usePet();
   const clientRequestId = useRef(
@@ -51,7 +52,6 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   const [vet, setVet] = useState(existing?.veterinarianName || '');
   const [vetNotes, setVetNotes] = useState(existing?.veterinarianNotes || '');
   const [treatment, setTreatment] = useState(existing?.treatmentNotes || '');
-  const [medNotes, setMedNotes] = useState(existing?.medicationNotes || '');
   const [followUp, setFollowUp] = useState(
     existing?.followUpAt ? new Date(existing.followUpAt) : null,
   );
@@ -122,7 +122,6 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
         veterinarianName: vet.trim(),
         veterinarianNotes: vetNotes.trim(),
         treatmentNotes: treatment.trim(),
-        medicationNotes: medNotes.trim(),
         followUpAt: followUp?.toISOString() || null,
         cost: cost ? Number(cost) : null,
         notes: notes.trim(),
@@ -137,7 +136,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
         })),
         createFollowUpReminder: Boolean(followUp && createReminder),
       };
-      if (existing) await service.updateMedicalVisit(session.userId, existing.id, data);
+      if (existing && !duplicate) await service.updateMedicalVisit(session.userId, existing.id, data);
       else await service.createMedicalVisit(session.userId, selectedPet.id, data);
       await reconcileAccountNotifications(session.userId, pets).catch(() => undefined);
       Alert.alert('已儲存', '就醫紀錄、時間軸與回診提醒已同步。', [
@@ -170,22 +169,21 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Text style={s.title}>{existing ? '編輯就醫紀錄' : '新增就醫紀錄'}</Text>
+        <Text style={s.title}>{duplicate ? '複製新增就醫紀錄' : existing ? '編輯就醫紀錄' : '新增就醫紀錄'}</Text>
         <Text style={s.notice}>此處保存飼主取得的就醫資訊，不是正式動物醫院病歷。</Text>
         <DatePickerField
           label="就醫日期（必填）"
           value={visitedAt}
-          mode="datetime"
-          onChange={setVisitedAt}
+          mode="date"
+          onChange={(date) => { const next = new Date(visitedAt); next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate()); next.setHours(12, 0, 0, 0); setVisitedAt(next); }}
         />
         {field('看診原因（必填）', reason, setReason, false, 500)}
-        {field('動物醫院名稱', clinic, setClinic, false, 200)}
-        {field('獸醫姓名', vet, setVet, false, 100)}
-        {field('獸醫說明', vetNotes, setVetNotes, true)}
-        {field('治療內容', treatment, setTreatment, true)}
-        {field('一般用藥說明', medNotes, setMedNotes, true)}
+        {field('動物醫院名稱（選填）', clinic, setClinic, false, 200)}
+        {field('獸醫姓名（選填）', vet, setVet, false, 100)}
+        {field('診斷／獸醫說明（選填）', vetNotes, setVetNotes, true)}
+        {field('治療／用藥說明（選填）', treatment, setTreatment, true)}
         <DatePickerField
-          label="下次回診日期"
+          label="下次回診日期（選填）"
           value={followUp || undefined}
           mode="datetime"
           minimumDate={visitedAt}
@@ -210,7 +208,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
             <Switch value={createReminder} onValueChange={setCreateReminder} />
           </View>
         )}
-        <Text style={s.label}>費用</Text>
+        <Text style={s.label}>費用（選填）</Text>
         <TextInput
           style={s.input}
           keyboardType="decimal-pad"
@@ -218,8 +216,9 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           onChangeText={setCost}
           placeholder="0"
         />
-        {field('備註', notes, setNotes, true)}
-        <Text style={s.heading}>藥物</Text>
+        {field('備註（選填）', notes, setNotes, true)}
+        <Text style={s.heading}>用藥紀錄（選填）</Text>
+        <Text style={s.helper}>只有拿藥時才需要新增；不知道藥名可先查看藥袋或附上照片。</Text>
         {!medications.length && <Text style={s.empty}>目前沒有藥物</Text>}
         {medications.map((m, i) => (
           <View key={i} style={s.card}>
@@ -229,15 +228,15 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
                 <Text style={s.removeText}>刪除</Text>
               </TouchableOpacity>
             </View>
-            {field('藥品名稱（必填）', m.name, (v) => updateMed(i, 'name', v), false, 100)}
+            {field('藥袋／藥品名稱（新增用藥時必填）', m.name, (v) => updateMed(i, 'name', v), false, 100)}
             {field(
-              '服用方式',
+              '服用方式（選填）',
               m.instructions,
               (v) => updateMed(i, 'instructions', v),
               false,
               500,
             )}
-            <Text style={s.label}>每日次數（必填）</Text>
+            <Text style={s.label}>每日次數（選填）</Text>
             <TextInput
               style={s.input}
               keyboardType="number-pad"
@@ -255,7 +254,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
               minimumDate={m.startDate ? parseDate(m.startDate) : undefined}
               onChange={(date) => updateMed(i, 'endDate', localDate(date))}
             />
-            <Text style={s.label}>飯前／飯後</Text>
+            <Text style={s.label}>飯前／飯後（選填）</Text>
             <View style={s.mealRow}>
               {(
                 [
@@ -273,7 +272,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
               ))}
             </View>
-            {field('藥物備註', m.notes, (v) => updateMed(i, 'notes', v), true, 500)}
+            {field('藥物備註（選填）', m.notes, (v) => updateMed(i, 'notes', v), true, 500)}
           </View>
         ))}
         <TouchableOpacity
@@ -281,7 +280,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           style={s.outline}
           onPress={() => setMedications((v) => [...v, emptyMedication()])}
         >
-          <Text style={s.outlineText}>＋ 新增藥物</Text>
+          <Text style={s.outlineText}>＋ 新增一筆用藥</Text>
         </TouchableOpacity>
         <AttachmentPicker
           userId={session!.userId}

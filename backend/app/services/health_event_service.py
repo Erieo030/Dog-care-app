@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：處理健康異常 CRUD、ownership、專屬摘要及時間軸一致性。"""
 from datetime import datetime, timezone
 
@@ -165,7 +166,7 @@ def create_event(
     data: HealthEventCreateRequest,
 ) -> dict:
     _ensure_owned_pet(pet_id, user_id)
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     values = _values(data)
     attachment_ids = values.pop("attachmentIds", [])
     document = {"petId": pet_id, **values, "attachmentIds": attachment_ids, "createdAt": now, "updatedAt": now}
@@ -199,7 +200,7 @@ def update_event(
     values = _values(data)
     attachment_ids = values.pop("attachmentIds", [])
     values["attachmentIds"] = sync_source_attachments(existing["petId"], "health_event", event_id, attachment_ids, user_id)
-    values["updatedAt"] = datetime.now(timezone.utc)
+    values["updatedAt"] = now_taipei()
     item = db.health_events.find_one_and_update(
         {"_id": existing["_id"]},
         {"$set": values},

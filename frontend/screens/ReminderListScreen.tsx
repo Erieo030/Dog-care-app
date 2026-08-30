@@ -1,11 +1,11 @@
 /** 用途：顯示毛孩提醒，提供編輯、完成、略過、延後、刪除與通知同步。 */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -140,12 +140,48 @@ export default function ReminderListScreen({ navigation, route }: Props) {
       },
     ]);
 
+  const upcomingDays = route.params?.upcomingDays;
+  const visibleItems = useMemo(() => {
+    const now = Date.now();
+    const todayStart = (() => { const value = new Date(); value.setHours(0, 0, 0, 0); return value.getTime(); })();
+    const start = upcomingDays === 0 ? todayStart : now;
+    const end = upcomingDays === 0
+      ? todayStart + 24 * 60 * 60 * 1000 - 1
+      : now + (upcomingDays ?? 365) * 24 * 60 * 60 * 1000;
+    return items.filter((item) => {
+      const timestamp = new Date(item.scheduledAt).getTime();
+      return (item.status === 'pending' || item.status === 'snoozed') && timestamp >= start && timestamp <= end;
+    });
+  }, [items, upcomingDays]);
+  type ReminderEntry = { kind: 'heading'; id: string; title: string } | { kind: 'item'; id: string; item: Reminder };
+  const listEntries = useMemo<ReminderEntry[]>(() => {
+    const groups = new Map<string, Reminder[]>();
+    [...visibleItems]
+      .sort((left, right) => new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime())
+      .forEach((item) => {
+      const date = new Date(item.scheduledAt);
+      const key = [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((part) => String(part).padStart(2, '0')).join("-");
+      groups.set(key, [...(groups.get(key) || []), item]);
+    });
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Array.from(groups.entries()).flatMap(([key, group]) => {
+      const date = new Date(`${key}T12:00:00`); const diff = Math.round((date.getTime() - today.getTime()) / 86400000);
+      const title = diff === 0 ? '今天' : diff === 1 ? '明天' : date.toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
+      return [{ kind: 'heading' as const, id: `heading-${key}`, title }, ...group.map((item) => ({ kind: 'item' as const, id: item.id, item }))];
+    });
+  }, [visibleItems]);
   const customItem = items.find((item) => item.id === customSnoozeId);
   if (loading) return <ScreenState text="載入提醒中…" loading />;
   if (error) return <Center text={error} action={load} />;
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={listEntries}
+        keyExtractor={(item) => item.id}
+        removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -157,79 +193,56 @@ export default function ReminderListScreen({ navigation, route }: Props) {
             }}
           />
         }
-      >
-        {customItem && (
-          <DatePickerField
-            label="自訂延後時間"
-            mode="datetime"
-            minimumDate={new Date()}
-            onChange={(date) => {
-              const item = customItem;
-              setCustomSnoozeId(null);
-              runSnooze(item, date);
-            }}
-          />
-        )}
-        <TouchableOpacity
-          style={styles.primary}
-          onPress={() => navigation.navigate('CreateReminder')}
-        >
-          <Text style={styles.primaryText}>＋ 新增提醒</Text>
-        </TouchableOpacity>
-        {route.params?.focusReminderId &&
-          !items.some((item) => item.id === route.params?.focusReminderId) && (
+        ListHeaderComponent={<>
+          {customItem && (
+            <DatePickerField
+              label="自訂延後時間"
+              mode="datetime"
+              minimumDate={new Date()}
+              onChange={(date) => {
+                const item = customItem;
+                setCustomSnoozeId(null);
+                runSnooze(item, date);
+              }}
+            />
+          )}
+          <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('CreateReminder')}>
+            <Text style={styles.primaryText}>＋ 新增提醒</Text>
+          </TouchableOpacity>
+          {route.params?.focusReminderId && !items.some((item) => item.id === route.params?.focusReminderId) && (
             <Text style={styles.sourceMissing}>來源提醒可能已刪除或不屬於目前毛孩。</Text>
           )}
-        {!items.length ? (
-          <Center text="尚未建立提醒" />
-        ) : (
-          items.map((item) => {
-            const active = item.status === 'pending' || item.status === 'snoozed';
-            return (
-              <View
-                key={item.id}
-                style={[styles.card, route.params?.focusReminderId === item.id && styles.focusCard]}
-              >
-                <Text style={styles.title}>{item.title}</Text>
+        </>}
+        ListEmptyComponent={<Center text="尚未建立提醒" />}
+        renderItem={({ item: entry }) => {
+          if (entry.kind === 'heading') return <Text style={styles.sectionHeading}>{entry.title}</Text>;
+          const item = entry.item;
+          const active = item.status === 'pending' || item.status === 'snoozed';
+          return (
+            <View style={[styles.card, route.params?.focusReminderId === item.id && styles.focusCard]}>
+              <Text style={styles.title}>{item.title}</Text>
+              <View style={styles.metaRow}>
                 <Text style={styles.meta}>
-                  {new Date(item.scheduledAt).toLocaleString('zh-TW')} · {STATUS_LABEL[item.status]}
+                  {new Date(item.scheduledAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </Text>
-                {!!item.notes && <Text style={styles.notes}>{item.notes}</Text>}
-                <View style={styles.row}>
-                  {active && (
-                    <>
-                      {item.sourceType !== 'medical_visit' && (
-                        <Action
-                          label="編輯"
-                          disabled={busyId !== null}
-                          onPress={() => navigation.navigate('CreateReminder', { reminder: item })}
-                        />
-                      )}
-                      <Action
-                        label="完成"
-                        disabled={busyId !== null}
-                        onPress={() => complete(item.id)}
-                      />
-                      <Action
-                        label="延後"
-                        disabled={busyId !== null}
-                        onPress={() => snooze(item)}
-                      />
-                      <Action label="略過" disabled={busyId !== null} onPress={() => skip(item)} />
-                    </>
-                  )}
-                  <Action
-                    label={busyId === item.id ? '處理中…' : '刪除'}
-                    disabled={busyId !== null}
-                    danger
-                    onPress={() => remove(item)}
-                  />
-                </View>
+                <Text style={[styles.statusBadge, styles[`status_${item.status}` as keyof typeof styles]]}>{STATUS_LABEL[item.status]}</Text>
               </View>
-            );
-          })
-        )}
-      </ScrollView>
+              {!!item.notes && <Text style={styles.notes}>{item.notes}</Text>}
+              <View style={styles.row}>
+                {active && (
+                  <>
+                    {item.sourceType !== 'medical_visit' && <Action label="編輯" disabled={busyId !== null} onPress={() => navigation.navigate('CreateReminder', { reminder: item })} />}
+                    <Action label="完成" disabled={busyId !== null} onPress={() => complete(item.id)} />
+                    <Action label="延後" disabled={busyId !== null} onPress={() => snooze(item)} />
+                    <Action label="略過" disabled={busyId !== null} onPress={() => skip(item)} />
+                  </>
+                )}
+                <Action label={busyId === item.id ? '處理中…' : '刪除'} disabled={busyId !== null} danger onPress={() => remove(item)} />
+              </View>
+            </View>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -301,8 +314,15 @@ const styles = StyleSheet.create({
   },
   focusCard: { borderColor: Colors.primary, borderWidth: 2 },
   sourceMissing: { color: '#C55B5B', textAlign: 'center', marginBottom: 12 },
+  sectionHeading: { color: Colors.text, fontSize: 16, fontWeight: '800', marginTop: 12, marginBottom: 8 },
   title: { color: Colors.text, fontSize: 18, fontWeight: '800' },
-  meta: { color: Colors.subtext, marginTop: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 5 },
+  meta: { color: Colors.subtext },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, fontSize: 12, fontWeight: '700' },
+  status_pending: { color: Colors.primary, backgroundColor: Colors.primarySoft },
+  status_snoozed: { color: '#8A6A32', backgroundColor: '#F7EBCF' },
+  status_completed: { color: Colors.success, backgroundColor: Colors.successSoft },
+  status_skipped: { color: Colors.subtext, backgroundColor: '#EEEAE4' },
   notes: { color: Colors.text, marginTop: 9 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 13 },
   action: {

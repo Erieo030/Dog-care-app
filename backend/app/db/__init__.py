@@ -1,4 +1,4 @@
 """用途：集中匯出 MongoDB 資料庫物件。"""
-from app.db.mongodb import db
+from app.db.mongodb import db, close
 
-__all__ = ["db"]
+__all__ = ["db", "close"]

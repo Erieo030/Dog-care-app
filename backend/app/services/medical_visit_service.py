@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：處理具 ownership 的就醫 CRUD、附件、回診提醒與時間軸一致性。"""
 from datetime import datetime, timezone
 from bson.errors import InvalidId
@@ -24,7 +25,7 @@ def _reminder_state(pet_id:str,visit_id:str)->dict:
     r=db.reminders.find_one(_reminder_query(pet_id,visit_id)); return {"followUpReminderId":str(r["_id"]) if r else None,"followUpReminderStatus":r.get("status") if r else None}
 def _serialize(item:dict)->dict:
     visit_id=str(item["_id"])
-    fields=["visitedAt","reason","clinicName","veterinarianName","veterinarianNotes","treatmentNotes","medicationNotes","followUpAt","cost","notes","medications","createdAt","updatedAt","clientRequestId"]
+    fields=["visitedAt","reason","clinicName","veterinarianName","veterinarianNotes","treatmentNotes","followUpAt","cost","notes","medications","createdAt","updatedAt","clientRequestId"]
     return {"id":visit_id,"petId":item["petId"],**{k:item.get(k) for k in fields},"attachmentIds":item.get("attachmentIds",[]),"attachments":source_attachments(item,SOURCE_TYPE),**_reminder_state(item["petId"],visit_id)}
 def _timeline_values(data:MedicalVisitRequest)->dict:
     clinic=data.clinicName.strip(); title=f"前往{clinic}：{data.reason}" if clinic else f"就醫紀錄：{data.reason}"; description=f"回診日期：{data.followUpAt.strftime('%Y/%m/%d')}" if data.followUpAt else ""; return {"occurredAt":data.visitedAt,"title":title,"description":description}
@@ -34,7 +35,7 @@ def _sync_follow_up_reminder(pet_id:str,visit_id:str,data:MedicalVisitRequest)->
     query=_reminder_query(pet_id,visit_id)
     if not data.createFollowUpReminder or not data.followUpAt: db.reminders.delete_many(query); return
     db.reminders.create_index([("petId",1),("sourceType",1),("sourceId",1)],unique=True,partialFilterExpression={"sourceType":SOURCE_TYPE},name="unique_medical_visit_reminder")
-    now=datetime.now(timezone.utc); title_basis=data.clinicName.strip() or data.reason.strip()
+    now=now_taipei(); title_basis=data.clinicName.strip() or data.reason.strip()
     db.reminders.update_one(query,{"$set":{**query,"title":f"回診：{title_basis}","scheduledAt":data.followUpAt,"recurrenceRule":"none","notes":data.reason,"status":"pending","completedAt":None,"updatedAt":now},"$setOnInsert":{"createdAt":now}},upsert=True)
 def list_visits(pet_id:str,user_id:str)->list[dict]:
     _ensure_owned_pet(pet_id,user_id); return [_serialize(x) for x in db.medical_visits.find({"petId":pet_id}).sort([("visitedAt",-1),("_id",-1)])]
@@ -45,7 +46,7 @@ def create_visit(pet_id:str,user_id:str,data:MedicalVisitRequest)->dict:
         db.medical_visits.create_index([("petId",1),("clientRequestId",1)],unique=True,partialFilterExpression={"clientRequestId":{"$type":"string"}},name="unique_medical_visit_request")
         existing=db.medical_visits.find_one({"petId":pet_id,"clientRequestId":data.clientRequestId})
         if existing:return _serialize(existing)
-    now=datetime.now(timezone.utc); values=data.model_dump(exclude={"createFollowUpReminder"}); attachment_ids=values.pop("attachmentIds",[]); document={"petId":pet_id,**values,"attachmentIds":attachment_ids,"createdAt":now,"updatedAt":now}
+    now=now_taipei(); values=data.model_dump(exclude={"createFollowUpReminder"}); attachment_ids=values.pop("attachmentIds",[]); document={"petId":pet_id,**values,"attachmentIds":attachment_ids,"createdAt":now,"updatedAt":now}
     try: result=db.medical_visits.insert_one(document)
     except DuplicateKeyError:
         existing=db.medical_visits.find_one({"petId":pet_id,"clientRequestId":data.clientRequestId})
@@ -58,6 +59,6 @@ def create_visit(pet_id:str,user_id:str,data:MedicalVisitRequest)->dict:
         db.medical_visits.delete_one({"_id":result.inserted_id}); delete_source_attachments(pet_id,SOURCE_TYPE,visit_id); delete_timeline_item(pet_id,SOURCE_TYPE,visit_id); db.reminders.delete_many(_reminder_query(pet_id,visit_id)); raise
     return _serialize(document)
 def update_visit(visit_id:str,user_id:str,data:MedicalVisitRequest)->dict:
-    existing=_owned_visit(visit_id,user_id); values=data.model_dump(exclude={"createFollowUpReminder","clientRequestId"}); attachment_ids=values.pop("attachmentIds",[]); values["attachmentIds"]=sync_source_attachments(existing["petId"],SOURCE_TYPE,visit_id,attachment_ids,user_id); values["updatedAt"]=datetime.now(timezone.utc); item=db.medical_visits.find_one_and_update({"_id":existing["_id"]},{"$set":values},return_document=True); _sync_timeline(existing["petId"],visit_id,data); _sync_follow_up_reminder(existing["petId"],visit_id,data); return _serialize(item)
+    existing=_owned_visit(visit_id,user_id); values=data.model_dump(exclude={"createFollowUpReminder","clientRequestId"}); attachment_ids=values.pop("attachmentIds",[]); values["attachmentIds"]=sync_source_attachments(existing["petId"],SOURCE_TYPE,visit_id,attachment_ids,user_id); values["updatedAt"]=now_taipei(); item=db.medical_visits.find_one_and_update({"_id":existing["_id"]},{"$set":values},return_document=True); _sync_timeline(existing["petId"],visit_id,data); _sync_follow_up_reminder(existing["petId"],visit_id,data); return _serialize(item)
 def delete_visit(visit_id:str,user_id:str)->None:
     item=_owned_visit(visit_id,user_id); db.medical_visits.delete_one({"_id":item["_id"]}); delete_source_attachments(item["petId"],SOURCE_TYPE,visit_id); delete_timeline_item(item["petId"],SOURCE_TYPE,visit_id); db.reminders.delete_many(_reminder_query(item["petId"],visit_id))

@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：以獨立 collection 提供具 ownership、去重與分頁的統一時間軸。"""
 from datetime import datetime, timezone
 from bson.errors import InvalidId
@@ -52,7 +53,7 @@ def upsert_timeline_item(
     pet_id: str, item_type: str, occurred_at: datetime,
     title: str, source_id: str, description: str = "", attachment_count: int = 0,
 ) -> None:
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     source_type = SOURCE_TYPES[item_type]
     db.timeline.update_one(
         {"petId": pet_id, "type": item_type, "sourceId": source_id},
@@ -102,6 +103,22 @@ def list_timeline(
         {"$sort": {"occurredAt": -1, "createdAt": -1, "_id": -1}},
     ]
     valid_items = [item for item in db.timeline.aggregate(pipeline) if _source_belongs_to_pet(item, pet_id)]
+    # 提醒頁是「已排程」清單；未完成提醒尚未寫入完成時間軸，需在此補成可點擊的時間軸項目。
+    if item_type == "reminder_completed":
+        existing_sources = {item.get("sourceId") for item in valid_items}
+        for reminder in db.reminders.find({"petId": pet_id}):
+            source_id = str(reminder["_id"])
+            if source_id in existing_sources or not reminder.get("scheduledAt"):
+                continue
+            valid_items.append({
+                "_id": reminder["_id"], "petId": pet_id, "type": "reminder_completed",
+                "sourceType": "reminder", "sourceId": source_id,
+                "occurredAt": reminder["scheduledAt"], "title": reminder.get("title", "照護提醒"),
+                "description": "已完成" if reminder.get("status") == "completed" else "待完成",
+                "attachmentCount": 0, "createdAt": reminder.get("createdAt"),
+                "updatedAt": reminder.get("updatedAt"),
+            })
+        valid_items.sort(key=lambda item: (item.get("occurredAt"), item.get("createdAt"), item.get("_id")), reverse=True)
     page = valid_items[skip:skip + limit]
     next_skip = skip + len(page)
     return {

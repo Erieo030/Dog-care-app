@@ -4,6 +4,7 @@ services:
     container_name: app-mongo
     restart: unless-stopped
     environment:
+      TZ: Asia/Taipei
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-erieo}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-erieo030}
       MONGO_INITDB_DATABASE: ${MONGO_DB:-app_dog_db}
@@ -12,15 +13,11 @@ services:
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mongosh --quiet --username $$MONGO_INITDB_ROOT_USERNAME --password $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'",
-        ]
-      interval: 2s
-      timeout: 5s
-      retries: 30
-      start_period: 5s
+      test: ["CMD-SHELL", "mongosh -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand({ping:1})'"]
+      interval: 5s
+      timeout: 15s
+      retries: 10
+      start_period: 15s
 
   mongo-express:
     image: mongo-express
@@ -29,13 +26,13 @@ services:
     ports:
       - "8082:8081"
     environment:
+      TZ: Asia/Taipei
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-erieo}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-erieo030}
       ME_CONFIG_MONGODB_SERVER: mongo
       ME_CONFIG_BASICAUTH: "false"
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
 
 volumes:
   mongo_data:

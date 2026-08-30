@@ -5,6 +5,19 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ci
+          MONGO_INITDB_ROOT_PASSWORD: ci-password
+        options: >-
+          --health-cmd "mongosh --quiet --username ci --password ci-password --authenticationDatabase admin --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -12,7 +25,13 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -r backend/requirements.txt
       - run: python -m compileall -q backend/app
+        env:
+          MONGO_URI: mongodb://ci:ci-password@localhost:27017/?authSource=admin
+          MONGO_DB: pawlog_ci
       - run: PYTHONPATH=backend pytest -q backend/tests
+        env:
+          MONGO_URI: mongodb://ci:ci-password@localhost:27017/?authSource=admin
+          MONGO_DB: pawlog_ci
   frontend:
     runs-on: ubuntu-latest
     steps:

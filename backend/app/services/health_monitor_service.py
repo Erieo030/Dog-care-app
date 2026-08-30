@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 from datetime import datetime, timedelta, timezone
 from app.schemas.ai import AIAlert, HealthMonitorResult
 
@@ -10,7 +11,7 @@ class HealthMonitorConfig:
     CARE_DUE_SOON_DAYS = 7
 
 def _aware(value):
-    if isinstance(value, datetime) and value.tzinfo is None: return value.replace(tzinfo=timezone.utc)
+    if isinstance(value, datetime) and value.tzinfo is None: return value.replace(tzinfo=TAIPEI)
     return value
 def _id(rule, evidence):
     stable = str(evidence.get("lastObservedAt") or evidence.get("endDate") or evidence.get("dueAt") or evidence.get("types") or "current")
@@ -35,7 +36,7 @@ def monitor(context):
     events=context.get("healthEvents",{}).get("recentEvents",[]); types=[x.get("type") for x in events]
     for typ in sorted(set(types)):
         if types.count(typ)>=HealthMonitorConfig.REPEATED_EVENT_COUNT: alerts.append(_alert("repeated_health_event","attention","近期健康異常重複出現",f"最近期間記錄了 {types.count(typ)} 次相同類型的健康異常。",{"type":typ,"count":types.count(typ)}))
-    now=datetime.now(timezone.utc); window=now-timedelta(hours=HealthMonitorConfig.RECENT_SYMPTOM_WINDOW_HOURS)
+    now=now_taipei(); window=now-timedelta(hours=HealthMonitorConfig.RECENT_SYMPTOM_WINDOW_HOURS)
     recent=[x for x in events if _aware(x.get("occurredAt")) and _aware(x["occurredAt"])>=window]
     distinct=sorted({x.get("type") for x in recent if x.get("type")})
     if len(distinct)>=3: alerts.append(_alert("multiple_recent_symptoms","attention","近期有多種健康異常紀錄","最近 72 小時內記錄了多種不同健康異常。",{"windowHours":72,"types":distinct,"count":len(recent),"events":[{"type":x.get("type"),"occurredAt":x.get("occurredAt")} for x in recent]}))
@@ -51,7 +52,7 @@ def monitor(context):
     for item in context.get("medications",{}).get("active",[]):
         end=item.get("endDate")
         if end:
-            try: end_date=datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
+            try: end_date=datetime.fromisoformat(end).replace(tzinfo=TAIPEI)
             except ValueError: end_date=None
             if end_date and now<=end_date<=now+timedelta(days=HealthMonitorConfig.MEDICATION_ENDING_SOON_DAYS): alerts.append(_alert("medication_ending_soon","info","用藥療程即將結束",f"{item.get('name','用藥')} 的紀錄療程即將結束。",{"medicationName":item.get("name",""),"endDate":end,"daysRemaining":(end_date-now).days}))
     for key,label in (("vaccinations","疫苗"),("dewormings","驅蟲")):

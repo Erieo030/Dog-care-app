@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：處理體重 CRUD、摘要同步、資料所有權與時間軸一致性。"""
 from datetime import datetime, timezone
 
@@ -128,7 +129,7 @@ def _sync_weight_timelines(pet_id: str) -> None:
 
 def create_record(pet_id: str, user_id: str, data: WeightRecordRequest) -> dict:
     _ensure_owned_pet(pet_id, user_id)
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     values = data.model_dump()
     attachment_ids = values.pop("attachmentIds", [])
     document = {"petId": pet_id, **values, "attachmentIds": attachment_ids, "createdAt": now, "updatedAt": now}
@@ -155,7 +156,7 @@ def update_record(
     values = data.model_dump()
     attachment_ids = values.pop("attachmentIds", [])
     values["attachmentIds"] = sync_source_attachments(existing["petId"], "weight", record_id, attachment_ids, user_id)
-    values["updatedAt"] = datetime.now(timezone.utc)
+    values["updatedAt"] = now_taipei()
     item = db.weight_records.find_one_and_update(
         {"_id": existing["_id"]},
         {"$set": values},

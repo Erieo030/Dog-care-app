@@ -1,5 +1,5 @@
 /** 用途：跨體重、健康、就醫、提醒與時間軸搜尋，支援後端篩選及分頁。 */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import DatePickerField from '../components/DatePickerField';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,6 +35,7 @@ import {
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'GlobalSearch'>;
 type Period = 'all' | 7 | 30 | 90 | 'custom';
+type SearchListEntry = { kind: 'heading'; id: string; label: string } | { kind: 'item'; id: string; item: SearchResultItem };
 const EMPTY: SearchFilters = {
   query: '',
   types: [],
@@ -60,13 +62,13 @@ const HEALTH_OPTIONS: Array<[SearchHealthCategory, string]> = [
   ['injury', '外傷／誤食'],
   ['other', '其他'],
 ];
-const TYPE_META: Record<SearchResultType, { label: string; icon: string }> = {
-  weight: { label: '體重', icon: '⚖️' },
-  health_event: { label: '健康異常', icon: '❤️' },
-  medical_visit: { label: '就醫', icon: '🏥' },
-  reminder: { label: '提醒', icon: '⏰' },
-  deworming: { label: '驅蟲', icon: '🛡️' },
-  medication: { label: '用藥', icon: '💊' },
+const TYPE_META: Record<SearchResultType, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  weight: { label: '體重', icon: 'scale-outline' },
+  health_event: { label: '健康異常', icon: 'alert-circle-outline' },
+  medical_visit: { label: '就醫', icon: 'business-outline' },
+  reminder: { label: '提醒', icon: 'notifications-outline' },
+  deworming: { label: '驅蟲', icon: 'shield-checkmark-outline' },
+  medication: { label: '用藥', icon: 'medical-outline' },
 };
 export default function GlobalSearchScreen({ navigation }: Props) {
   const { session } = useAuth();
@@ -76,13 +78,23 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [items, setItems] = useState<SearchResultItem[]>([]);
   const [history, setHistory] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const requestId = useRef(0);
+  const groupedEntries = useMemo<SearchListEntry[]>(() => {
+    const groups = new Map<SearchResultType, SearchResultItem[]>();
+    items.forEach((item) => groups.set(item.type, [...(groups.get(item.type) || []), item]));
+    return Array.from(groups.entries()).flatMap(([type, group]) => [
+      { kind: 'heading' as const, id: `group-${type}`, label: TYPE_META[type].label },
+      ...group.map((item) => ({ kind: 'item' as const, id: item.id, item })),
+    ]);
+  }, [items]);
+
   useEffect(() => {
     if (session?.userId) getSearchHistory(session.userId).then(setHistory);
   }, [session?.userId]);
@@ -121,9 +133,14 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   );
   useEffect(() => {
     setItems([]);
+    if (!hasSearched) {
+      setTotal(0);
+      setHasMore(false);
+      return;
+    }
     const timer = setTimeout(() => load(1), 400);
     return () => clearTimeout(timer);
-  }, [load]);
+  }, [hasSearched, load]);
   const applyPeriod = (value: Period) => {
     setPeriod(value);
     if (value === 'custom') return;
@@ -139,7 +156,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const submit = async () => {
     if (session?.userId && filters.query.trim())
       setHistory(await addSearchHistory(session.userId, filters.query));
-    load(1);
+    setHasSearched(true);
   };
   const chooseHistory = (value: string) => setFilters((current) => ({ ...current, query: value }));
   const clear = async () => {
@@ -159,8 +176,18 @@ export default function GlobalSearchScreen({ navigation }: Props) {
       navigation.navigate('MedicationDetail', { recordId: item.sourceId });
     else navigation.navigate('ReminderList', { focusReminderId: item.sourceId });
   };
+  const quickEntries: Array<[keyof typeof Ionicons.glyphMap, string, () => void]> = [
+    ['time-outline', '最近 7 天', () => { applyPeriod(7); setHasSearched(true); }],
+    ['calendar-outline', '最近 30 天', () => { applyPeriod(30); setHasSearched(true); }],
+    ['alert-circle-outline', '健康異常', () => { setFilters((x) => ({ ...x, types: ['health_event'] })); setHasSearched(true); }],
+    ['notifications-outline', '提醒', () => { setFilters((x) => ({ ...x, types: ['reminder'] })); setHasSearched(true); }],
+  ];
   const header = (
     <View>
+      <View style={s.intro}>
+        <Text style={s.pageTitle}>找找毛孩的照護紀錄</Text>
+        <Text style={s.pageSubtitle}>搜尋日期、提醒、健康狀況或體重</Text>
+      </View>
       <View style={s.searchRow}>
         <TextInput
           value={filters.query}
@@ -175,6 +202,24 @@ export default function GlobalSearchScreen({ navigation }: Props) {
           <Text style={s.searchButtonText}>搜尋</Text>
         </TouchableOpacity>
       </View>
+      {!hasSearched && (
+        <View style={s.quickBlock}>
+          <Text style={s.quickTitle}>快速找紀錄</Text>
+          <View style={s.quickGrid}>
+            {quickEntries.map(([icon, label, onPress]) => (
+              <TouchableOpacity key={String(label)} style={s.quickItem} onPress={onPress}>
+                <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={20} color={Colors.success} />
+                <Text style={s.quickText}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={s.emptyPrompt}>
+            <Ionicons name="paw-outline" size={28} color={Colors.primary} />
+            <Text style={s.promptTitle}>輸入關鍵字，開始尋找紀錄</Text>
+            <Text style={s.promptText}>也可以先選上方快速入口，再查看結果。</Text>
+          </View>
+        </View>
+      )}
       {!!history.length && (
         <View style={s.block}>
           <View style={s.blockHead}>
@@ -323,7 +368,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
         onChange={(sort) => setFilters((x) => ({ ...x, sort }))}
       />
       </View>}
-      <View style={s.resultHead}>
+      {hasSearched && <View style={s.resultHead}>
         <Text style={s.resultTitle}>搜尋結果</Text>
         <Text style={s.total}>{total} 筆</Text>
         <TouchableOpacity
@@ -334,8 +379,8 @@ export default function GlobalSearchScreen({ navigation }: Props) {
         >
           <Text style={s.clear}>重設篩選</Text>
         </TouchableOpacity>
-      </View>
-      {error && (
+      </View>}
+      {hasSearched && error && (
         <View style={s.errorBox}>
           <Text style={s.error}>{error}</Text>
           <TouchableOpacity onPress={() => load(1)}>
@@ -348,15 +393,21 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={s.container}>
       <FlatList
-        data={items}
+        data={groupedEntries}
         keyExtractor={(x) => x.id}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         ListHeaderComponent={header}
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
+        renderItem={({ item: entry }) => {
+          if (entry.kind === 'heading') return <Text style={s.resultGroupHeading}>{entry.label}</Text>;
+          const item = entry.item;
+          return (
           <TouchableOpacity style={s.result} onPress={() => open(item)}>
             <View style={s.icon}>
-              <Text>{TYPE_META[item.type].icon}</Text>
+              <Ionicons name={TYPE_META[item.type].icon} size={22} color={Colors.success} />
             </View>
             <View style={s.flex}>
               <View style={s.meta}>
@@ -375,9 +426,10 @@ export default function GlobalSearchScreen({ navigation }: Props) {
             </View>
             <Text style={s.arrow}>›</Text>
           </TouchableOpacity>
-        )}
+          );
+        }}
         ListEmptyComponent={
-          loading ? (
+          !hasSearched ? null : loading ? (
             <View style={s.state}>
               <ActivityIndicator color={Colors.primary} />
               <Text style={s.muted}>搜尋中…</Text>
@@ -449,7 +501,18 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 18, paddingBottom: 55 },
   flex: { flex: 1 },
+  intro: { marginBottom: 14 },
+  pageTitle: { color: Colors.text, fontSize: 24, fontWeight: '900' },
+  pageSubtitle: { color: Colors.subtext, marginTop: 4, fontSize: 14 },
   searchRow: { flexDirection: 'row', gap: 8 },
+  quickBlock: { marginTop: 22 },
+  quickTitle: { color: Colors.text, fontSize: 16, fontWeight: '800', marginBottom: 10 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickItem: { width: '48%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  quickText: { color: Colors.text, fontWeight: '700' },
+  emptyPrompt: { alignItems: 'center', paddingVertical: 34 },
+  promptTitle: { color: Colors.text, fontWeight: '800', marginTop: 8 },
+  promptText: { color: Colors.subtext, fontSize: 13, marginTop: 4 },
   search: {
     flex: 1,
     minHeight: 52,
@@ -515,6 +578,7 @@ const s = StyleSheet.create({
   resultHead: { flexDirection: 'row', alignItems: 'center', marginTop: 26, marginBottom: 8 },
   resultTitle: { color: Colors.text, fontSize: 20, fontWeight: '900', flex: 1 },
   total: { color: Colors.subtext, fontSize: 12, marginRight: 10 },
+  resultGroupHeading: { color: Colors.text, fontSize: 15, fontWeight: '800', marginTop: 14, marginBottom: 7 },
   result: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,7 @@
 /** 用途：以大型快速選項讓使用者在數秒內選擇異常類型。 */
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
@@ -8,17 +9,17 @@ import { HomeStackParamList } from '../navigation/types';
 import { HealthEventType, ObservationHealthEventType } from '../types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'AbnormalType'>;
-const TYPES: Array<[HealthEventType, string, string]> = [
-  ['vomiting', '嘔吐', '🤢'],
-  ['abnormal_stool', '排便異常', '💩'],
-  ['low_appetite', '食慾下降', '🍽️'],
-  ['abnormal_drinking', '喝水異常', '💧'],
-  ['low_energy', '精神下降', '😴'],
-  ['injury', '受傷', '🩹'],
-  ['skin_issue', '皮膚異常', '🔍'],
-  ['eye_ear_issue', '眼睛／耳朵異常', '👀'],
-  ['possible_ingestion', '疑似誤食', '⚠️'],
-  ['other', '其他', '📝'],
+const TYPES: Array<[HealthEventType, string, keyof typeof Ionicons.glyphMap]> = [
+  ['vomiting', '嘔吐', 'alert-circle-outline'],
+  ['abnormal_stool', '排便異常', 'ellipse-outline'],
+  ['low_appetite', '食慾下降', 'restaurant-outline'],
+  ['abnormal_drinking', '喝水異常', 'water-outline'],
+  ['low_energy', '精神下降', 'moon-outline'],
+  ['injury', '受傷', 'bandage-outline'],
+  ['skin_issue', '皮膚異常', 'search-outline'],
+  ['eye_ear_issue', '眼睛／耳朵異常', 'eye-outline'],
+  ['possible_ingestion', '疑似誤食', 'warning-outline'],
+  ['other', '其他', 'create-outline'],
 ];
 
 export default function AbnormalRecordTypeScreen({ navigation }: Props) {
@@ -43,7 +44,7 @@ export default function AbnormalRecordTypeScreen({ navigation }: Props) {
                     : navigation.navigate('CreateHealthEvent', { type, label })
             }
           >
-            <Text style={styles.icon}>{icon}</Text>
+            <View style={styles.icon}><Ionicons name={icon} size={24} color={Colors.primary} /></View>
             <Text style={styles.label}>{label}</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>

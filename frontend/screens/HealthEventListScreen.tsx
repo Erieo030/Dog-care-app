@@ -3,13 +3,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   RefreshControl,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
@@ -44,7 +45,12 @@ export default function HealthEventListScreen({ navigation }: Props) {
       setError('');
       const result = await service.getHealthEvents(session.userId, selectedPet.id);
       if (currentRequest !== requestId.current) return;
-      setItems(result);
+      const cutoff = new Date();
+      cutoff.setHours(0, 0, 0, 0);
+      cutoff.setDate(cutoff.getDate() - 6);
+      setItems(result
+        .filter((item) => new Date(item.occurredAt).getTime() >= cutoff.getTime())
+        .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()));
     } catch (requestError) {
       if (currentRequest !== requestId.current) return;
       setError((requestError as Error).message || '無法載入健康紀錄');
@@ -66,7 +72,13 @@ export default function HealthEventListScreen({ navigation }: Props) {
   if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={error ? [] : items}
+        keyExtractor={(item) => item.id}
+        removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -77,26 +89,22 @@ export default function HealthEventListScreen({ navigation }: Props) {
             }}
           />
         }
-      >
-        {!!error && (
-          <View style={styles.state}>
-            <Text style={styles.error}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retry}
-              onPress={() => {
-                setLoading(true);
-                load();
-              }}
-            >
-              <Text style={styles.retryText}>重新載入</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        {!error && !items.length && <Text style={styles.empty}>尚無健康異常紀錄</Text>}
-        {items.map((item) => (
+        ListHeaderComponent={error ? <View style={styles.state}>
+          <Text style={styles.error}>{error}</Text>
+          <TouchableOpacity style={styles.retry} onPress={() => { setLoading(true); load(); }}>
+            <Text style={styles.retryText}>重新載入</Text>
+          </TouchableOpacity>
+        </View> : null}
+        ListEmptyComponent={!error ? <View style={styles.emptyBox}>
+          <View style={styles.emptyIcon}><Ionicons name="leaf-outline" size={30} color={Colors.primary} /></View>
+          <Text style={styles.empty}>尚無健康異常紀錄</Text>
+          <Text style={styles.emptyHint}>有需要時再記下來，方便之後回想。</Text>
+        </View> : null}
+        renderItem={({ item }) => (
           <TouchableOpacity
-            key={item.id}
             style={styles.card}
+            accessibilityRole="button"
+            accessibilityLabel={`查看健康異常：${HEALTH_EVENT_LABELS[item.type]}`}
             onPress={() => navigation.navigate('HealthEventDetail', { eventId: item.id })}
           >
             <View style={styles.cardHeader}>
@@ -105,16 +113,12 @@ export default function HealthEventListScreen({ navigation }: Props) {
                 {SEVERITY_LABELS[item.severity]}
               </Text>
             </View>
-            <Text style={styles.date}>{new Date(item.occurredAt).toLocaleString('zh-TW')}</Text>
+            <Text style={styles.date}>{new Date(item.occurredAt).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
             <Text style={styles.summary}>{item.summary}</Text>
-            {!!item.notes && (
-              <Text numberOfLines={2} style={styles.notes}>
-                {item.notes}
-              </Text>
-            )}
+            {!!item.notes && <Text numberOfLines={2} style={styles.notes}>{item.notes}</Text>}
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }
@@ -124,6 +128,9 @@ const styles = StyleSheet.create({
   content: { padding: 18, paddingBottom: 50 },
   center: { flex: 1, justifyContent: 'center', backgroundColor: Colors.background },
   state: { alignItems: 'center', padding: 30 },
+  emptyBox: { alignItems: 'center', paddingVertical: 28 },
+  emptyIcon: { width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primarySoft, marginBottom: 8 },
+  emptyHint: { color: '#887A6D', fontSize: 13, marginTop: 6, textAlign: 'center' },
   empty: { color: Colors.subtext, textAlign: 'center', padding: 40 },
   error: { color: '#C55B5B', textAlign: 'center' },
   retry: {

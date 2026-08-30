@@ -18,19 +18,19 @@ export type HomeStackParamList = {
   HomeOverview: undefined;
   DailyLog: { record?: DailyLog; recordId?: string; recordDate?: string } | undefined;
   VaccinationList: undefined;
-  VaccinationForm: { record?: Vaccination } | undefined;
+  VaccinationForm: { record?: Vaccination; duplicate?: boolean } | undefined;
   VaccinationDetail: { recordId: string };
   DewormingList: undefined;
-  DewormingForm: { record?: Deworming } | undefined;
+  DewormingForm: { record?: Deworming; duplicate?: boolean } | undefined;
   DewormingDetail: { recordId: string };
   MedicationList: undefined;
-  MedicationForm: { record?: MedicationCourse } | undefined;
+  MedicationForm: { record?: MedicationCourse; duplicate?: boolean } | undefined;
   MedicationDetail: { recordId: string };
   HealthOverview: undefined;
   TimelineOverview: undefined;
   AddPet: undefined;
   EditPet: undefined;
-  ReminderList: { focusReminderId?: string } | undefined;
+  ReminderList: { focusReminderId?: string; upcomingDays?: number } | undefined;
   CreateReminder: { reminder?: Reminder } | undefined;
   AbnormalType: undefined;
   CreateHealthEvent: { type: HealthEventType; label: string };
@@ -43,7 +43,7 @@ export type HomeStackParamList = {
   WeightList: { focusRecordId?: string } | undefined;
   WeightForm: { record?: WeightRecord };
   MedicalVisitList: undefined;
-  MedicalVisitForm: { visit?: MedicalVisit };
+  MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean };
   MedicalVisitDetail: { visitId: string };
   GlobalSearch: undefined;
   AIChat: undefined;
@@ -52,18 +52,16 @@ export type HomeStackParamList = {
 export type ProfileStackParamList = {
   ProfileOverview: undefined;
   AccountInfo: undefined;
+  AIUsage: undefined;
   PetManagement: undefined;
+  EditPet: undefined;
   NotificationSettings: undefined;
-  ReminderPreferences: undefined;
   ExportCenter: undefined;
   LostPetSettings: undefined;
   LostPetQr: undefined;
-  StorageSettings: undefined;
-  LocalDataSettings: undefined;
   About: undefined;
   PrivacyPolicy: undefined;
   TermsOfUse: undefined;
-  Feedback: undefined;
 };
 export type MainTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;

@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：處理具 ownership 的提醒 CRUD、完成／略過冪等、延後與重複提醒。"""
 from calendar import monthrange
 from datetime import datetime, timedelta, timezone
@@ -57,7 +58,7 @@ def list_reminders(pet_id: str, user_id: str, today: bool = False) -> list[dict]
     _ensure_owned_pet(pet_id, user_id)
     query: dict = {"petId": pet_id}
     if today:
-        now = datetime.now().astimezone()
+        now = now_taipei()
         start = now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         query.update({
             "scheduledAt": {"$gte": start, "$lt": start + timedelta(days=1)},
@@ -79,7 +80,7 @@ def create_reminder(pet_id: str, user_id: str, data: ReminderCreateRequest) -> d
         existing = db.reminders.find_one({"petId": pet_id, "clientRequestId": client_request_id})
         if existing:
             return _serialize(existing)
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     document = {
         "petId": pet_id, **values, "status": "pending", "completedAt": None,
         "createdAt": now, "updatedAt": now,
@@ -100,7 +101,7 @@ def create_reminder(pet_id: str, user_id: str, data: ReminderCreateRequest) -> d
 def update_reminder(reminder_id: str, user_id: str, data: ReminderUpdateRequest) -> dict:
     existing = _owned_reminder(reminder_id, user_id)
     values = data.model_dump(exclude={"clientRequestId"})
-    values["updatedAt"] = datetime.now(timezone.utc)
+    values["updatedAt"] = now_taipei()
     item = db.reminders.find_one_and_update(
         {"_id": existing["_id"]}, {"$set": values}, return_document=ReturnDocument.AFTER,
     )
@@ -150,7 +151,7 @@ def _finish_reminder(reminder_id: str, user_id: str, status: str) -> tuple[dict,
     if existing.get("status") in TERMINAL_STATUSES:
         next_item = db.reminders.find_one({"previousReminderId": reminder_id})
         return _serialize(existing), _serialize(next_item), False
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     values = {"status": status, "completedAt": now if status == "completed" else None, "updatedAt": now}
     item = db.reminders.find_one_and_update(
         {"_id": existing["_id"], "status": {"$nin": TERMINAL_STATUSES}},
@@ -162,6 +163,12 @@ def _finish_reminder(reminder_id: str, user_id: str, status: str) -> tuple[dict,
         return _serialize(current), _serialize(next_item), False
     if status == "completed":
         add_timeline_item(item["petId"], "reminder_completed", now, f"已完成{item['title']}", reminder_id)
+        # 若提醒由健康紀錄建立，將完成事件保留來源，讓紀錄頁可直接回到原紀錄。
+        if item.get("sourceType") and item.get("sourceId"):
+            db.timeline.update_one(
+                {"petId": item["petId"], "type": "reminder_completed", "sourceId": reminder_id},
+                {"$set": {"linkedSourceType": item["sourceType"], "linkedSourceId": item["sourceId"]}},
+            )
     next_item = _next_occurrence(item, reminder_id, now)
     return _serialize(item), _serialize(next_item), True
 
@@ -176,13 +183,13 @@ def skip_reminder(reminder_id: str, user_id: str) -> tuple[dict, dict | None, bo
 
 def snooze_reminder(reminder_id: str, user_id: str, data: ReminderSnoozeRequest) -> dict:
     existing = _owned_reminder(reminder_id, user_id)
-    if data.scheduledAt <= datetime.now(timezone.utc):
+    if data.scheduledAt <= now_taipei():
         raise HTTPException(status_code=422, detail="延後時間必須晚於目前時間")
     if existing.get("status") in TERMINAL_STATUSES:
         raise HTTPException(status_code=409, detail="已完成或略過的提醒不能延後")
     item = db.reminders.find_one_and_update(
         {"_id": existing["_id"]},
-        {"$set": {"scheduledAt": data.scheduledAt, "status": "snoozed", "updatedAt": datetime.now(timezone.utc)}},
+        {"$set": {"scheduledAt": data.scheduledAt, "status": "snoozed", "updatedAt": now_taipei()}},
         return_document=ReturnDocument.AFTER,
     )
     return _serialize(item)

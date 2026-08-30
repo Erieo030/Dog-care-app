@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../constants/Colors';
 import ScreenState from '../components/ScreenState';
 import DatePickerField from '../components/DatePickerField';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,17 +34,14 @@ const labels: Record<DewormingType, string> = {
   heartworm: '心絲蟲預防',
   other: '其他',
 };
+const validDate = (value: unknown): Date | undefined => { if (!value) return undefined; const date = new Date(String(value)); return Number.isNaN(date.getTime()) || date.getFullYear() < 2000 ? undefined : date; };
 const blank = () => ({
   type: 'internal',
   productName: '',
   administeredAt: new Date().toISOString(),
   nextDueAt: '',
   notes: '',
-  manufacturer: '',
   dosageText: '',
-  administrationMethod: '',
-  hospitalName: '',
-  veterinarianName: '',
   createReminder: false,
 });
 export function DewormingListScreen() {
@@ -68,36 +68,30 @@ export function DewormingListScreen() {
   }, [load]);
   if (loading) return <ScreenState loading text="載入中…" />;
   return (
-    <ScrollView contentContainerStyle={s.page} onScrollBeginDrag={() => undefined}>
-      <Text style={s.title}>驅蟲紀錄</Text>
-      {error ? (
-        <TouchableOpacity onPress={load}>
-          <Text style={s.error}>{error}（重試）</Text>
+    <FlatList
+      data={data}
+      keyExtractor={(x) => x.id}
+      removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
+      contentContainerStyle={s.page}
+      ListHeaderComponent={<>
+        <View style={s.listHeader}><View style={s.listHeaderIcon}><Ionicons name="shield-checkmark-outline" size={23} color={Colors.success} /></View><View style={s.listHeaderBody}><Text style={s.title}>驅蟲紀錄</Text><Text style={s.listSubtitle}>查看 {selectedPet?.name || '毛孩'} 的預防紀錄</Text></View></View>
+        {error ? <TouchableOpacity onPress={load}><Text style={s.error}>{error}（重試）</Text></TouchableOpacity> : null}
+        <TouchableOpacity style={s.primary} onPress={() => nav.navigate('DewormingForm')}><Ionicons name="add" size={20} color="#FFF" /><Text style={s.primaryText}>新增驅蟲紀錄</Text></TouchableOpacity>
+        {!data.length ? <View style={s.emptyBox}><View style={s.emptyIcon}><Ionicons name="shield-checkmark-outline" size={27} color={Colors.success} /></View><Text style={s.empty}>目前沒有驅蟲紀錄</Text><Text style={s.emptyHint}>記下每次預防，照護就不容易忘記。</Text></View> : null}
+      </>}
+      renderItem={({ item: x }) => (
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={`查看驅蟲紀錄：${x.productName || '未填寫'}`} style={s.card} onPress={() => nav.navigate('DewormingDetail', { recordId: x.id })}>
+            <View style={s.cardTitleRow}><View style={s.cardIcon}><Ionicons name="shield-checkmark-outline" size={18} color={Colors.success} /></View><Text style={s.name}>{labels[x.type]}</Text><Ionicons name="chevron-forward" size={17} color={Colors.subtext} /></View>
+            <Text style={s.cardText}>{x.productName}</Text>
+            <Text style={s.cardText}>使用日期：{new Date(x.administeredAt).toLocaleDateString('zh-TW')}</Text>
+            {x.nextDueAt ? <Text style={s.cardMeta}>下次：{new Date(x.nextDueAt).toLocaleDateString('zh-TW')}</Text> : null}
+            <Text style={s.cardHint}>{x.reminderId ? '已建立提醒' : '尚未建立提醒'}</Text>
         </TouchableOpacity>
-      ) : null}
-      <TouchableOpacity style={s.primary} onPress={() => nav.navigate('DewormingForm')}>
-        <Text style={s.primaryText}>新增驅蟲紀錄</Text>
-      </TouchableOpacity>
-      {!data.length ? (
-        <Text style={s.empty}>目前沒有驅蟲紀錄</Text>
-      ) : (
-        data.map((x) => (
-          <TouchableOpacity
-            key={x.id}
-            style={s.card}
-            onPress={() => nav.navigate('DewormingDetail', { recordId: x.id })}
-          >
-            <Text style={s.name}>{labels[x.type]}</Text>
-            <Text>{x.productName}</Text>
-            <Text>使用日期：{new Date(x.administeredAt).toLocaleDateString('zh-TW')}</Text>
-            {x.nextDueAt ? (
-              <Text>下次：{new Date(x.nextDueAt).toLocaleDateString('zh-TW')}</Text>
-            ) : null}
-            <Text>{x.reminderId ? '已建立提醒' : '未建立提醒'}</Text>
-          </TouchableOpacity>
-        ))
       )}
-    </ScrollView>
+    />
   );
 }
 type DewormingDraft = {
@@ -106,11 +100,7 @@ type DewormingDraft = {
   administeredAt: string;
   nextDueAt: string;
   notes: string;
-  manufacturer: string;
   dosageText: string;
-  administrationMethod: string;
-  hospitalName: string;
-  veterinarianName: string;
   createReminder: boolean;
   [key: string]: string | boolean | DewormingType;
 };
@@ -121,6 +111,7 @@ export function DewormingFormScreen() {
   const route = useRoute<RouteProp<HomeStackParamList, 'DewormingForm'>>();
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const existing = route.params?.record as Deworming | undefined;
+  const duplicate = route.params?.duplicate === true;
   const [d, setD] = useState<DewormingDraft>(
     (existing ? { ...blank(), ...existing } : blank()) as DewormingDraft,
   );
@@ -133,10 +124,14 @@ export function DewormingFormScreen() {
       Alert.alert('請填寫產品名稱');
       return;
     }
+    const administered = validDate(d.administeredAt);
+    const nextDue = d.nextDueAt ? validDate(d.nextDueAt) : undefined;
+    if (!administered || (d.nextDueAt && !nextDue)) { Alert.alert('日期錯誤', '請選擇有效的使用日期。'); return; }
+    if (nextDue && nextDue < administered) { Alert.alert('日期順序錯誤', '下次日期不能早於使用日期。'); return; }
     setSaving(true);
     try {
-      const payload = { type: d.type, productName: d.productName.trim(), administeredAt: d.administeredAt, nextDueAt: d.nextDueAt || null, notes: d.notes.trim(), manufacturer: d.manufacturer.trim(), dosageText: d.dosageText.trim(), administrationMethod: d.administrationMethod.trim(), hospitalName: d.hospitalName.trim(), veterinarianName: d.veterinarianName.trim(), attachmentIds: Array.isArray(d.attachmentIds) ? d.attachmentIds : [], createReminder: d.createReminder };
-      const r = existing
+      const payload = { type: d.type, productName: d.productName.trim(), administeredAt: d.administeredAt, nextDueAt: d.nextDueAt || null, notes: d.notes.trim(), dosageText: d.dosageText.trim(), attachmentIds: Array.isArray(d.attachmentIds) ? d.attachmentIds : [], createReminder: d.createReminder };
+      const r = existing && !duplicate
         ? await updateDeworming(session.userId, existing.id, payload)
         : await createDeworming(session.userId, selectedPet.id, payload);
       Alert.alert('已儲存', '驅蟲紀錄已更新');
@@ -165,24 +160,17 @@ export function DewormingFormScreen() {
       {[
         ['productName', '產品／藥品名稱（必填）'],
         ['administeredAt', '使用日期（必填）'],
-        ['nextDueAt', '下次日期 ISO'],
-        ['manufacturer', '廠牌'],
-        ['dosageText', '劑量文字'],
-        ['administrationMethod', '使用方式'],
-        ['hospitalName', '醫院'],
-        ['veterinarianName', '獸醫'],
+        ['nextDueAt', '下次日期（選填，需晚於使用日期）'],
+        ['dosageText', '使用劑量（選填）'],
         ['notes', '備註'],
       ].map(([k, l]) => {
         const isDate = k === 'administeredAt' || k === 'nextDueAt';
         if (isDate) return (
-          <DatePickerField key={k} label={l} value={d[k] ? new Date(`${d[k].slice(0, 10)}T12:00:00`) : undefined}
-            onChange={(date) => set(k, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)} maximumDate={k === 'administeredAt' ? new Date() : undefined} />
+          <DatePickerField key={k} label={l} value={validDate(d[k])}
+            onChange={(date) => set(k, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)} minimumDate={k === 'nextDueAt' ? (validDate(d.administeredAt) || new Date()) : undefined} maximumDate={k === 'administeredAt' ? new Date() : undefined} />
         );
         return (<View key={k}><Text style={s.label}>{l}</Text><TextInput style={s.input} placeholder={`請輸入${l.replace('（必填）', '')}`} placeholderTextColor="#8A817B" value={typeof d[k] === 'string' ? d[k] : ''} onChangeText={(v) => set(k, v)} /></View>);
       })}
-      <TouchableOpacity onPress={() => set('createReminder', !d.createReminder)}>
-        <Text style={s.check}>{d.createReminder ? '☑' : '□'} 是否建立下次驅蟲提醒？</Text>
-      </TouchableOpacity>
       <TouchableOpacity style={s.primary} disabled={saving} onPress={save}>
         <Text style={s.primaryText}>{saving ? '儲存中…' : '儲存'}</Text>
       </TouchableOpacity>
@@ -213,17 +201,16 @@ export function DewormingDetailScreen() {
       <Text>使用日期：{new Date(r.administeredAt).toLocaleDateString('zh-TW')}</Text>
       {r.nextDueAt ? <Text>下次：{new Date(r.nextDueAt).toLocaleDateString('zh-TW')}</Text> : null}
       <Text>劑量：{r.dosageText || '未填寫'}</Text>
-      <Text>使用方式：{r.administrationMethod || '未填寫'}</Text>
-      <Text>醫院：{r.hospitalName || '未填寫'}</Text>
-      <Text>獸醫：{r.veterinarianName || '未填寫'}</Text>
       <Text>備註：{r.notes || '未填寫'}</Text>
       <Text>提醒：{r.reminderId ? '已建立' : '未建立'}</Text>
-      <TouchableOpacity
-        style={s.primary}
-        onPress={() => nav.navigate('DewormingForm', { record: r })}
-      >
-        <Text style={s.primaryText}>編輯</Text>
-      </TouchableOpacity>
+      <View style={s.actionRow}>
+        <TouchableOpacity style={[s.primary, s.actionButton]} onPress={() => nav.navigate('DewormingForm', { record: r })}>
+          <Text style={s.primaryText}>編輯紀錄</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.secondary, s.actionButton]} onPress={() => nav.navigate('DewormingForm', { record: r, duplicate: true })}>
+          <Text style={s.secondaryText}>複製新增</Text>
+        </TouchableOpacity>
+      </View>
       <TouchableOpacity
         onPress={() =>
           Alert.alert('刪除驅蟲紀錄', '確定要刪除嗎？', [
@@ -247,19 +234,25 @@ export function DewormingDetailScreen() {
   );
 }
 const s = StyleSheet.create({
+  emptyBox: { alignItems: 'center', paddingVertical: 28 },
+  emptyIcon: { width: 54, height: 54, borderRadius: 18, backgroundColor: Colors.successSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  emptyHint: { color: '#887A6D', fontSize: 13, marginTop: 6, textAlign: 'center' },
   page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#2F3A34' },
+  listHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 }, listHeaderIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.successSoft, alignItems: 'center', justifyContent: 'center', marginRight: 12 }, listHeaderBody: { flex: 1 }, listSubtitle: { color: Colors.subtext, fontSize: 13, marginTop: 3 },
+  title: { fontSize: 24, fontWeight: '800', color: Colors.text },
   section: { fontSize: 16, fontWeight: '800', color: '#3F8064', marginTop: 14, marginBottom: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: '#CFC7C0',
-    borderRadius: 16,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
     marginTop: 12,
     gap: 5,
   },
-  name: { fontSize: 18, fontWeight: '700' },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 }, cardIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.successSoft, alignItems: 'center', justifyContent: 'center', marginRight: 9 },
+  name: { flex: 1, color: Colors.text, fontSize: 18, fontWeight: '700' }, cardText: { color: Colors.text, lineHeight: 20 }, cardMeta: { color: Colors.primary, fontWeight: '700' }, cardHint: { color: Colors.subtext, fontSize: 12 },
   label: { color: '#3B4A43', fontSize: 14, fontWeight: '800', marginBottom: 6, marginTop: 8 },
   input: {
     backgroundColor: '#FFFFFF', color: '#2F3A34', borderWidth: 1,
@@ -279,7 +272,7 @@ const s = StyleSheet.create({
   },
   selected: { backgroundColor: '#b9e5d0' },
   primary: {
-    backgroundColor: '#3f8064',
+    flexDirection: 'row', gap: 7, justifyContent: 'center', backgroundColor: Colors.primary,
     padding: 14,
     minHeight: 52,
     borderRadius: 14,
@@ -287,7 +280,11 @@ const s = StyleSheet.create({
     marginVertical: 10,
   },
   primaryText: { color: '#fff', fontWeight: '700' },
-  empty: { padding: 24, textAlign: 'center' },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  actionButton: { flex: 1, marginVertical: 0 },
+  secondary: { borderWidth: 1, borderColor: '#3f8064', borderRadius: 14, minHeight: 52, padding: 12, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { color: '#3f8064', fontWeight: '700' },
+  empty: { color: Colors.text, fontWeight: '700', textAlign: 'center' },
   error: { color: '#b42318' },
   check: { padding: 12, minHeight: 44, justifyContent: 'center' },
   delete: { color: '#b42318', textAlign: 'center', margin: 20 },

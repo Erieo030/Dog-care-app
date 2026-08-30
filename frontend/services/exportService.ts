@@ -32,7 +32,7 @@ export async function downloadAndShareExport(userId: string, job: ExportJob) {
   if (!(await Sharing.isAvailableAsync())) throw new Error('此裝置不支援系統分享或儲存');
   await Sharing.shareAsync(result.uri, {
     mimeType: job.mimeType,
-    dialogTitle: '分享或儲存 PawLog 匯出檔',
+    dialogTitle: '分享或儲存 MEGO 匯出檔',
   });
   return result.uri;
 }

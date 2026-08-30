@@ -31,7 +31,7 @@ export async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: '照護提醒',
-    description: 'PawLog 毛孩照護與回診提醒',
+    description: 'MEGO 毛孩照護與回診提醒',
     importance: Notifications.AndroidImportance.HIGH,
     sound: 'default',
     vibrationPattern: [0, 250, 250, 250],
@@ -85,7 +85,7 @@ export async function scheduleReminderNotification(
   await ensureAndroidChannel();
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'PawLog 提醒 🐾',
+      title: 'MEGO 提醒 🐾',
       body:
         reminder.type === 'follow_up'
           ? `${petName} 今天需要回診`

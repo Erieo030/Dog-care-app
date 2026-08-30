@@ -170,9 +170,9 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
           ))}
         </View>
         <DatePickerField
-          label="發生時間（必填）"
+          label="發生日期（必填）"
           value={occurredAt}
-          mode="datetime"
+          mode="date"
           maximumDate={new Date()}
           disabled={submitting}
           onChange={setOccurredAt}

@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：聚合單一毛孩首頁健康摘要，避免前端平行下載完整 collection。"""
 from datetime import datetime, timedelta, timezone
 
@@ -27,11 +28,11 @@ def _ensure_indexes() -> None:
     global _INDEXES_READY
     if _INDEXES_READY:
         return
-    db.weight_records.create_index([("petId", 1), ("measuredAt", -1)], name="dashboard_weight_date")
-    db.health_events.create_index([("petId", 1), ("occurredAt", -1)], name="dashboard_health_date")
-    db.medical_visits.create_index([("petId", 1), ("visitedAt", -1)], name="dashboard_medical_date")
-    db.reminders.create_index([("petId", 1), ("scheduledAt", -1), ("status", 1)], name="dashboard_reminder_status_date")
-    db.timeline.create_index([("petId", 1), ("occurredAt", -1)], name="dashboard_timeline_date")
+    db.weight_records.create_index([("userId", 1), ("petId", 1), ("measuredAt", -1)], name="dashboard_weight_date")
+    db.health_events.create_index([("userId", 1), ("petId", 1), ("occurredAt", -1)], name="dashboard_health_date")
+    db.medical_visits.create_index([("userId", 1), ("petId", 1), ("visitedAt", -1)], name="dashboard_medical_date")
+    db.reminders.create_index([("userId", 1), ("petId", 1), ("scheduledAt", -1), ("status", 1)], name="dashboard_reminder_status_date")
+    db.timeline.create_index([("userId", 1), ("petId", 1), ("occurredAt", -1)], name="dashboard_timeline_date")
     _INDEXES_READY = True
 
 
@@ -73,7 +74,7 @@ def _health_category(event_type: str) -> str:
 def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, range_days: int = 30) -> dict:
     pet = _ensure_owned_pet(pet_id, user_id)
     _ensure_indexes()
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     # JS getTimezoneOffset 是 UTC 減本地時間；用它把本地午夜換算成 UTC。
     local_now = now - timedelta(minutes=timezone_offset_minutes)
     local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)

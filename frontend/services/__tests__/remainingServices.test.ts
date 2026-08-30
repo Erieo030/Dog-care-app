@@ -37,11 +37,10 @@ test('daily log service addresses today and create endpoints', async () => {
 test('export service uses envelope and cancellation endpoints', async () => {
   request.mockResolvedValueOnce({ data: { id: 'job-1', status: 'queued' } });
   await createExport('u1', {
-    format: 'json',
+    format: 'pdf',
     scope: 'current_pet',
     petId: 'p1',
     period: 'all',
-    includeImages: false,
   });
   request.mockResolvedValueOnce({ data: { id: 'job-1', status: 'cancelled' } });
   await cancelExport('u1', 'job-1');

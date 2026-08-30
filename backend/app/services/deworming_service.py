@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from app.timezone import now_taipei
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException
@@ -27,9 +27,9 @@ def sync_reminder(item,user_id):
     if reminder_id:
         existing=db.reminders.find_one({"_id":oid(reminder_id),"petId":item["petId"],"sourceType":"deworming","sourceId":str(item["_id"])})
         if existing:
-            update_reminder(reminder_id,user_id,ReminderUpdateRequest(type=existing.get("type","heartworm"),title=title,scheduledAt=item["nextDueAt"],recurrenceRule=existing.get("recurrenceRule","none"),notes=existing.get("notes",""),sourceType="deworming",sourceId=str(item["_id"]),status=existing.get("status","pending")))
+            update_reminder(reminder_id,user_id,ReminderUpdateRequest(type="deworming",title=title,scheduledAt=item["nextDueAt"],recurrenceRule=existing.get("recurrenceRule","none"),notes=existing.get("notes",""),sourceType="deworming",sourceId=str(item["_id"]),status=existing.get("status","pending")))
             return
-    reminder=create_reminder(item["petId"],user_id,ReminderCreateRequest(type="heartworm" if item["type"]=="heartworm" else "deworming_internal" if item["type"]=="internal" else "deworming_external" if item["type"]=="external" else "other",title=title,scheduledAt=item["nextDueAt"],sourceType="deworming",sourceId=str(item["_id"])))
+    reminder=create_reminder(item["petId"],user_id,ReminderCreateRequest(type="deworming",title=title,scheduledAt=item["nextDueAt"],sourceType="deworming",sourceId=str(item["_id"])))
     db.dewormings.update_one({"_id":item["_id"]},{"$set":{"reminderId":reminder["id"]}})
 def list_records(pet_id,user_id):
     pet(pet_id,user_id);return {"records":[serialize(x) for x in db.dewormings.find({"petId":pet_id}).sort([("administeredAt",-1),("_id",-1)])]}
@@ -40,14 +40,14 @@ def get_record(record_id,user_id):
 def create(pet_id,user_id,data:DewormingRequest):
     pet(pet_id,user_id)
     if data.nextDueAt and data.nextDueAt < data.administeredAt: raise HTTPException(422,"下次日期不可早於使用日期")
-    now=datetime.now(timezone.utc);values=data.model_dump();values["createReminder"]=data.createReminder
+    now=now_taipei();values=data.model_dump();values["createReminder"]=data.createReminder
     item={"petId":pet_id,**values,"createdAt":now,"updatedAt":now};item["_id"]=db.dewormings.insert_one(item).inserted_id;sync_timeline(item);sync_reminder(item,user_id);return serialize(db.dewormings.find_one({"_id":item["_id"]}))
 def update(record_id,user_id,data:DewormingRequest):
     item=db.dewormings.find_one({"_id":oid(record_id)})
     if not item:raise HTTPException(404,"找不到驅蟲紀錄")
     pet(item["petId"],user_id)
     if data.nextDueAt and data.nextDueAt < data.administeredAt: raise HTTPException(422,"下次日期不可早於使用日期")
-    values=data.model_dump();values["updatedAt"]=datetime.now(timezone.utc);db.dewormings.update_one({"_id":item["_id"]},{"$set":values});item=db.dewormings.find_one({"_id":item["_id"]});sync_timeline(item);sync_reminder(item,user_id);return serialize(item)
+    values=data.model_dump();values["updatedAt"]=now_taipei();db.dewormings.update_one({"_id":item["_id"]},{"$set":values});item=db.dewormings.find_one({"_id":item["_id"]});sync_timeline(item);sync_reminder(item,user_id);return serialize(item)
 def delete(record_id,user_id):
     item=db.dewormings.find_one({"_id":oid(record_id)})
     if not item:raise HTTPException(404,"找不到驅蟲紀錄")

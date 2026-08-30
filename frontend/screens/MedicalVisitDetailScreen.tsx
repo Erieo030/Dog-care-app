@@ -116,14 +116,13 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
       />
     );
   const rows: [string, string][] = [
-    ['就醫日期', new Date(item.visitedAt).toLocaleString('zh-TW')],
+    ['就醫日期', new Date(item.visitedAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })],
     ['動物醫院', item.clinicName || '未填寫'],
     ['獸醫姓名', item.veterinarianName || '未填寫'],
     ['看診原因', item.reason],
     ['獸醫說明', item.veterinarianNotes || '未填寫'],
-    ['治療內容', item.treatmentNotes || '未填寫'],
-    ['一般用藥說明', item.medicationNotes || '未填寫'],
-    ['下次回診', item.followUpAt ? new Date(item.followUpAt).toLocaleString('zh-TW') : '未安排'],
+    ['治療／用藥說明', item.treatmentNotes || '未填寫'],
+    ['下次回診', item.followUpAt ? new Date(item.followUpAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未安排'],
     [
       '回診提醒',
       item.followUpReminderStatus
@@ -132,8 +131,8 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
     ],
     ['費用', item.cost != null ? `NT$ ${item.cost}` : '未填寫'],
     ['備註', item.notes || '未填寫'],
-    ['建立時間', item.createdAt ? new Date(item.createdAt).toLocaleString('zh-TW') : '未提供'],
-    ['更新時間', item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-TW') : '未提供'],
+    ['建立時間', item.createdAt ? new Date(item.createdAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未提供'],
+    ['更新時間', item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未提供'],
   ];
   return (
     <SafeAreaView style={s.container}>

@@ -5,13 +5,14 @@ import {
   LayoutChangeEvent,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
@@ -23,7 +24,7 @@ import * as service from '../services/weightService';
 import { WeightRecord, WeightSummary } from '../types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'WeightList'>;
-type Period = 1 | 3 | 6 | 'all';
+type Period = 7 | 'all';
 
 const EMPTY_SUMMARY: WeightSummary = {
   latestWeightKg: null,
@@ -33,9 +34,7 @@ const EMPTY_SUMMARY: WeightSummary = {
 };
 
 const PERIODS: Array<{ value: Period; label: string }> = [
-  { value: 1, label: '最近 1 個月' },
-  { value: 3, label: '最近 3 個月' },
-  { value: 6, label: '最近 6 個月' },
+  { value: 7, label: '最近 7 天' },
   { value: 'all', label: '全部' },
 ];
 
@@ -49,7 +48,7 @@ const formatDate = (value: string) =>
 const filterByPeriod = (items: WeightRecord[], period: Period) => {
   if (period === 'all') return items;
   const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - period);
+  cutoff.setDate(cutoff.getDate() - (period - 1));
   return items.filter((item) => new Date(item.measuredAt) >= cutoff);
 };
 
@@ -69,7 +68,7 @@ export default function WeightListScreen({ navigation, route }: Props) {
   const { selectedPet, refreshPets } = usePet();
   const [items, setItems] = useState<WeightRecord[]>([]);
   const [summary, setSummary] = useState<WeightSummary>(EMPTY_SUMMARY);
-  const [period, setPeriod] = useState<Period>(route.params?.focusRecordId ? 'all' : 3);
+  const [period, setPeriod] = useState<Period>(route.params?.focusRecordId ? 'all' : 7);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -147,72 +146,56 @@ export default function WeightListScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={filteredItems}
+        keyExtractor={(item) => item.id}
+        removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      >
-        <TouchableOpacity
-          style={styles.primary}
-          onPress={() => navigation.navigate('WeightForm', {})}
-        >
-          <Text style={styles.primaryText}>＋ 更新體重</Text>
-        </TouchableOpacity>
-
-        <WeightSummaryCard summary={summary} />
-
-        <Text style={styles.heading}>查看期間</Text>
-        <View style={styles.filters}>
-          {PERIODS.map((option) => (
-            <TouchableOpacity
-              key={String(option.value)}
-              style={[styles.filter, period === option.value && styles.filterActive]}
-              onPress={() => setPeriod(option.value)}
-            >
-              <Text style={[styles.filterText, period === option.value && styles.filterTextActive]}>
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.heading}>體重趨勢</Text>
-        <WeightLineChart items={filteredItems} />
-
-        <Text style={styles.heading}>歷史紀錄</Text>
-        {route.params?.focusRecordId &&
-          !items.some((item) => item.id === route.params?.focusRecordId) && (
+        ListHeaderComponent={<>
+          <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('WeightForm', {})}>
+            <Text style={styles.primaryText}>＋ 更新體重</Text>
+          </TouchableOpacity>
+          <WeightSummaryCard summary={summary} />
+          <Text style={styles.heading}>查看期間</Text>
+          <View style={styles.filters}>
+            {PERIODS.map((option) => (
+              <TouchableOpacity key={String(option.value)} style={[styles.filter, period === option.value && styles.filterActive]} onPress={() => setPeriod(option.value)}>
+                <Text style={[styles.filterText, period === option.value && styles.filterTextActive]}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.heading}>體重趨勢</Text>
+          <WeightLineChart items={filteredItems} />
+          <Text style={styles.heading}>歷史紀錄</Text>
+          {route.params?.focusRecordId && !items.some((item) => item.id === route.params?.focusRecordId) && (
             <Text style={styles.sourceMissing}>來源體重紀錄可能已刪除或不屬於目前毛孩。</Text>
           )}
-        {!items.length ? (
-          <Text style={styles.empty}>尚未記錄體重</Text>
-        ) : !filteredItems.length ? (
-          <Text style={styles.empty}>此期間沒有體重紀錄</Text>
-        ) : (
-          filteredItems.map((item) => (
-            <View
-              key={item.id}
-              style={[styles.card, route.params?.focusRecordId === item.id && styles.focusCard]}
-            >
-              <View style={styles.recordContent}>
-                <Text style={styles.weight}>{item.weightKg} kg</Text>
-                <Text style={styles.date}>{formatDate(item.measuredAt)}</Text>
-                <Text style={styles.notes}>{item.notes?.trim() || '無備註'}</Text>
-              </View>
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('WeightForm', { record: item })}
-                  disabled={Boolean(deletingId)}
-                >
-                  <Text style={styles.link}>編輯</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => remove(item)} disabled={Boolean(deletingId)}>
-                  <Text style={styles.delete}>{deletingId === item.id ? '刪除中…' : '刪除'}</Text>
-                </TouchableOpacity>
-              </View>
+          {!items.length ? (
+            <View style={styles.emptyBox}><Ionicons name="scale-outline" size={34} color={Colors.primary} /><Text style={styles.empty}>尚未記錄體重</Text><Text style={styles.emptyHint}>偶爾記一次，就能慢慢看見變化。</Text></View>
+          ) : !filteredItems.length ? <Text style={styles.empty}>此期間沒有體重紀錄</Text> : null}
+        </>}
+        renderItem={({ item }) => (
+          <View style={[styles.card, route.params?.focusRecordId === item.id && styles.focusCard]}>
+            <View style={styles.recordContent}>
+              <Text style={styles.weight}>{item.weightKg} kg</Text>
+              <Text style={styles.date}>{formatDate(item.measuredAt)}</Text>
+              <Text style={styles.notes}>{item.notes?.trim() || '無備註'}</Text>
             </View>
-          ))
+            <View style={styles.actions}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`編輯體重 ${item.weightKg} 公斤`} onPress={() => navigation.navigate('WeightForm', { record: item })} disabled={Boolean(deletingId)}>
+                <Text style={styles.link}>編輯</Text>
+              </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`刪除體重 ${item.weightKg} 公斤`} onPress={() => remove(item)} disabled={Boolean(deletingId)}>
+                <Text style={styles.delete}>{deletingId === item.id ? '刪除中…' : '刪除'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 }
@@ -409,6 +392,9 @@ const styles = StyleSheet.create({
   xLabels: { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 42, marginTop: 3 },
   xLabel: { color: Colors.subtext, fontSize: 10, maxWidth: '48%' },
   xLabelRight: { textAlign: 'right' },
+  emptyBox: { alignItems: 'center', paddingVertical: 28 },
+  emptyIcon: { fontSize: 34, marginBottom: 8 },
+  emptyHint: { color: '#887A6D', fontSize: 13, marginTop: 6, textAlign: 'center' },
   empty: {
     color: Colors.subtext,
     textAlign: 'center',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 export default function ScreenState({ text, loading = false, error = false, action }: Props) {
   return (
     <View style={styles.container}>
+      <View style={styles.icon}><Ionicons name={error ? 'leaf-outline' : 'paw-outline'} size={25} color={error ? Colors.success : Colors.primary} /></View>
       {loading ? <ActivityIndicator color={Colors.primary} /> : null}
       <Text style={[styles.text, error && styles.error]}>{text}</Text>
       {action ? (
@@ -31,8 +33,9 @@ const styles = StyleSheet.create({
     padding: 28,
     backgroundColor: Colors.background,
   },
+  icon: { width: 48, height: 48, borderRadius: 17, marginBottom: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primarySoft },
   text: { color: Colors.subtext, textAlign: 'center', marginTop: 10 },
-  error: { color: '#C55B5B' },
+  error: { color: Colors.danger },
   retry: {
     marginTop: 14,
     borderWidth: 1,

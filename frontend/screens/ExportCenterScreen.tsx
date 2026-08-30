@@ -5,33 +5,20 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import DatePickerField from '../components/DatePickerField';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import * as exportService from '../services/exportService';
-import { CsvExportType, ExportFormat, ExportJob, ExportPeriod, ExportScope } from '../types';
-const formats: [ExportFormat, string][] = [
-  ['pdf', 'PDF 健康報告'],
-  ['csv', 'CSV 資料表'],
-  ['json', 'JSON 完整備份'],
-];
+import { ExportJob, ExportPeriod, ExportScope } from '../types';
 const periods: [ExportPeriod, string][] = [
   ['30_days', '最近 30 天'],
   ['90_days', '最近 90 天'],
   ['all', '全部'],
-  ['custom', '自訂日期'],
-];
-const csvTypes: [CsvExportType, string][] = [
-  ['weight', '體重'],
-  ['health_event', '健康事件'],
-  ['medical_visit', '就醫紀錄'],
-  ['reminder', '提醒'],
 ];
 const Choice = ({
   active,
@@ -49,14 +36,8 @@ const Choice = ({
 export default function ExportCenterScreen() {
   const { session } = useAuth();
   const { selectedPet } = usePet();
-  const [format, setFormat] = useState<ExportFormat>('pdf');
   const [scope, setScope] = useState<ExportScope>('current_pet');
   const [period, setPeriod] = useState<ExportPeriod>('30_days');
-  const [csvType, setCsvType] = useState<CsvExportType>('weight');
-  const [includeImages, setIncludeImages] = useState(false);
-  const [includeAiSummary, setIncludeAiSummary] = useState(true);
-  const [start, setStart] = useState(new Date(Date.now() - 30 * 86400000));
-  const [end, setEnd] = useState(new Date());
   const [job, setJob] = useState<ExportJob | null>(null);
   const [sharing, setSharing] = useState(false);
   const requestRef = useRef<(() => Promise<void>) | undefined>(undefined);
@@ -68,15 +49,11 @@ export default function ExportCenterScreen() {
     try {
       setJob(null);
       const result = await exportService.createExport(session.userId, {
-        format,
+        format: 'pdf',
         scope,
         petId: scope === 'current_pet' ? selectedPet?.id : undefined,
         period,
-        startAt: period === 'custom' ? start.toISOString() : undefined,
-        endAt: period === 'custom' ? end.toISOString() : undefined,
-        csvType: format === 'csv' ? csvType : undefined,
-        includeImages: format !== 'csv' && includeImages,
-        includeAiSummary: format === 'pdf' && includeAiSummary,
+        includeAiSummary: true,
       });
       setJob(result);
     } catch (e) {
@@ -103,6 +80,7 @@ export default function ExportCenterScreen() {
     try {
       setSharing(true);
       await exportService.downloadAndShareExport(session.userId, job);
+      Alert.alert('分享成功 🐾', '照護報告已準備好，帶著 MEGO 一起照顧毛孩吧！');
     } catch (e) {
       Alert.alert('檔案處理失敗', (e as Error).message);
     } finally {
@@ -116,23 +94,11 @@ export default function ExportCenterScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.lead}>將 PawLog 紀錄整理成健康報告或可攜式資料檔。</Text>
-        <Text style={styles.label}>格式</Text>
-        <View style={styles.wrap}>
-          {formats.map(([v, l]) => (
-            <Choice key={v} active={format === v} label={l} onPress={() => setFormat(v)} />
-          ))}
+        <Text style={styles.lead}>把毛孩的照護資料整理成容易保存與分享的檔案。</Text>
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeading}><View style={styles.infoIcon}><Ionicons name="document-text-outline" size={20} color={Colors.primary} /></View><Text style={styles.infoTitle}>PDF 健康照護報告</Text></View>
+          <Text style={styles.muted}>適合日常查看、保存，或帶給獸醫參考。</Text>
         </View>
-        {format === 'csv' && (
-          <>
-            <Text style={styles.label}>CSV 資料</Text>
-            <View style={styles.wrap}>
-              {csvTypes.map(([v, l]) => (
-                <Choice key={v} active={csvType === v} label={l} onPress={() => setCsvType(v)} />
-              ))}
-            </View>
-          </>
-        )}
         <Text style={styles.label}>毛孩範圍</Text>
         <View style={styles.wrap}>
           <Choice
@@ -152,29 +118,6 @@ export default function ExportCenterScreen() {
             <Choice key={v} active={period === v} label={l} onPress={() => setPeriod(v)} />
           ))}
         </View>
-        {period === 'custom' && (
-          <View style={styles.dateRow}>
-            <DatePickerField label="開始日期" value={start} onChange={setStart} maximumDate={new Date()} />
-            <DatePickerField label="結束日期" value={end} onChange={setEnd} maximumDate={new Date()} />
-          </View>
-        )}
-        {format === 'pdf' && (
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>包含智慧健康摘要</Text>
-            <Switch value={includeAiSummary} onValueChange={setIncludeAiSummary} />
-          </View>
-        )}
-        {format !== 'csv' && (
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.labelInline}>包含圖片</Text>
-              <Text style={styles.muted}>
-                本機附件會加入報告或 ZIP；舊裝置 URI 只保留 metadata。
-              </Text>
-            </View>
-            <Switch value={includeImages} onValueChange={setIncludeImages} />
-          </View>
-        )}
         <TouchableOpacity
           disabled={!!busy}
           onPress={run}
@@ -225,7 +168,7 @@ export default function ExportCenterScreen() {
           </View>
         )}
         <Text style={styles.notice}>
-          JSON 備份預留未來匯入相容性；目前尚未提供 Import、Restore 或雲端備份。
+          報告會整理毛孩資料、健康紀錄、提醒與就醫資訊，不包含圖片。
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -233,10 +176,14 @@ export default function ExportCenterScreen() {
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 40 },
-  lead: { fontSize: 16, color: Colors.subtext, lineHeight: 23 },
+  content: { padding: 20, paddingBottom: 40 },
+  lead: { fontSize: 15, color: Colors.subtext, lineHeight: 22, marginBottom: 4 },
   label: { fontSize: 16, fontWeight: '800', color: Colors.text, marginTop: 22, marginBottom: 9 },
   labelInline: { fontSize: 16, fontWeight: '800', color: Colors.text },
+  infoCard: { padding: 16, borderRadius: 18, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, marginTop: 18 },
+  infoHeading: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  infoIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 9 },
+  infoTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
     paddingVertical: 11,
@@ -281,8 +228,8 @@ const styles = StyleSheet.create({
   statusTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: 10 },
   track: { height: 8, backgroundColor: Colors.border, borderRadius: 5, overflow: 'hidden' },
   fill: { height: 8, backgroundColor: Colors.primary },
-  danger: { color: '#C94C4C', fontWeight: '700', marginTop: 12 },
-  error: { color: '#C94C4C' },
+  danger: { color: Colors.danger, fontWeight: '700', marginTop: 12 },
+  error: { color: Colors.danger },
   link: { color: Colors.primary, fontWeight: '800' },
   actions: { flexDirection: 'row', gap: 10 },
   secondary: {

@@ -1,6 +1,7 @@
 /** 用途：組合全部功能 Stack 與四個主要底部分頁。 */
 import React from 'react';
-import { Platform, Text } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,25 +17,21 @@ import ObservationHealthEventScreen from '../screens/ObservationHealthEventScree
 import HealthEventDetailScreen from '../screens/HealthEventDetailScreen';
 import HealthEventEditScreen from '../screens/HealthEventEditScreen';
 import HealthEventListScreen from '../screens/HealthEventListScreen';
-import HealthHubScreen from '../screens/HealthHubScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AIChatScreen from '../screens/AIChatScreen';
-import VetVisitBriefScreen from '../screens/VetVisitBriefScreen';
+import AIAssistantHubScreen from '../screens/AIAssistantHubScreen';
+import PreVetSummaryScreen from '../screens/PreVetSummaryScreen';
 import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import { AddPetScreen, EditPetScreen } from '../screens/ManagePetScreen';
 import MedicalVisitDetailScreen from '../screens/MedicalVisitDetailScreen';
 import MedicalVisitFormScreen from '../screens/MedicalVisitFormScreen';
 import MedicalVisitListScreen from '../screens/MedicalVisitListScreen';
-import ProfileScreen, { AccountInfoScreen } from '../screens/ProfileScreen';
+import SettingsHomeScreen, { AccountInfoScreen, AIUsageScreen } from '../screens/SettingsHomeScreen';
 import {
   AboutScreen,
-  FeedbackScreen,
-  LocalDataSettingsScreen,
   NotificationSettingsScreen,
   PetManagementScreen,
   PrivacyPolicyScreen,
-  ReminderPreferencesScreen,
-  StorageSettingsScreen,
   TermsOfUseScreen,
 } from '../screens/SettingsScreens';
 import ExportCenterScreen from '../screens/ExportCenterScreen';
@@ -59,8 +56,17 @@ import {
   MedicationDetailScreen,
 } from '../screens/MedicationScreens';
 import { HomeStackParamList, MainTabParamList, ProfileStackParamList } from './types';
+import { Colors } from '../constants/Colors';
+import { BottomNavigationDock } from '../components/navigation/BottomNavigationDock';
 
 const Tabs = createBottomTabNavigator<MainTabParamList>();
+
+const styles = StyleSheet.create({
+  tabLabel: { alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  tabLabelText: { fontSize: 13, fontWeight: '600' },
+  tabLabelActive: { fontWeight: '700' },
+  activeIndicator: { width: 22, height: 3, borderRadius: 2, marginTop: 3, backgroundColor: Colors.primary },
+});
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 const HealthStackNav = createNativeStackNavigator<HomeStackParamList>();
 const TimelineStackNav = createNativeStackNavigator<HomeStackParamList>();
@@ -72,7 +78,13 @@ const iosSwipeStackOptions = {
   gestureEnabled: Platform.OS === 'ios',
   fullScreenSwipeEnabled: Platform.OS === 'ios',
   gestureResponseDistance: { start: 200 },
-  headerBackVisible: Platform.OS !== 'ios',
+  headerBackVisible: true,
+  headerBackButtonDisplayMode: 'minimal',
+  headerStyle: { backgroundColor: Colors.background },
+  headerTintColor: Colors.text,
+  headerTitleStyle: { color: Colors.text },
+  headerShadowVisible: false,
+  contentStyle: { backgroundColor: Colors.background },
 } as NativeStackNavigationOptions & { fullScreenSwipeEnabled?: boolean };
 
 const healthEventScreens = (Screen: typeof Stack) => (
@@ -118,7 +130,7 @@ const sharedHealthScreens = (Screen: typeof Stack) => (
     <Screen.Screen
       name="VaccinationList"
       component={VaccinationListScreen}
-      options={{ title: '疫苗紀錄' }}
+      options={{ title: '' }}
     />
     <Screen.Screen
       name="VaccinationForm"
@@ -133,7 +145,7 @@ const sharedHealthScreens = (Screen: typeof Stack) => (
     <Screen.Screen
       name="DewormingList"
       component={DewormingListScreen}
-      options={{ title: '驅蟲紀錄' }}
+      options={{ title: '' }}
     />
     <Screen.Screen
       name="DewormingForm"
@@ -148,7 +160,7 @@ const sharedHealthScreens = (Screen: typeof Stack) => (
     <Screen.Screen
       name="MedicationList"
       component={MedicationListScreen}
-      options={{ title: '用藥管理' }}
+      options={{ title: '' }}
     />
     <Screen.Screen
       name="MedicationForm"
@@ -164,7 +176,7 @@ const sharedHealthScreens = (Screen: typeof Stack) => (
     <Screen.Screen
       name="MedicalVisitList"
       component={MedicalVisitListScreen}
-      options={{ title: '就醫紀錄' }}
+      options={{ title: '' }}
     />
     <Screen.Screen
       name="MedicalVisitForm"
@@ -184,20 +196,20 @@ function HomeStack() {
     <Stack.Navigator id="HomeStack" screenOptions={iosSwipeStackOptions}
     >
       <Stack.Screen name="HomeOverview" component={HomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AIChat" component={AIChatScreen} options={{ title: 'PawLog AI 助手' }} />
-      <Stack.Screen name="VetVisitBrief" component={VetVisitBriefScreen} options={{ title: '就醫前摘要' }} />
+      <Stack.Screen name="AIChat" component={AIChatScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="VetVisitBrief" component={PreVetSummaryScreen} options={{ title: '就醫前摘要' }} />
       <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: '今日紀錄' }} />
       <Stack.Screen
         name="GlobalSearch"
         component={GlobalSearchScreen}
         options={{ title: '搜尋與篩選' }}
       />
-      <Stack.Screen name="AddPet" component={AddPetScreen} />
-      <Stack.Screen name="EditPet" component={EditPetScreen} />
-      <Stack.Screen name="ReminderList" component={ReminderListScreen} />
-      <Stack.Screen name="CreateReminder" component={CreateReminderScreen} />
-      <Stack.Screen name="AbnormalType" component={AbnormalRecordTypeScreen} />
-      <Stack.Screen name="CreateHealthEvent" component={CreateHealthEventScreen} />
+      <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: '新增毛孩' }} />
+      <Stack.Screen name="EditPet" component={EditPetScreen} options={{ title: '編輯毛孩資料' }} />
+      <Stack.Screen name="ReminderList" component={ReminderListScreen} options={{ title: '提醒' }} />
+      <Stack.Screen name="CreateReminder" component={CreateReminderScreen} options={{ title: '新增提醒' }} />
+      <Stack.Screen name="AbnormalType" component={AbnormalRecordTypeScreen} options={{ title: '記錄異常' }} />
+      <Stack.Screen name="CreateHealthEvent" component={CreateHealthEventScreen} options={{ title: '新增健康紀錄' }} />
       {sharedHealthScreens(Stack)}
     </Stack.Navigator>
   );
@@ -207,13 +219,9 @@ function HealthStack() {
   return (
     <HealthStackNav.Navigator id="HealthStack" screenOptions={iosSwipeStackOptions}
     >
-      <HealthStackNav.Screen
-        name="HealthOverview"
-        component={HealthHubScreen}
-        options={{ headerShown: false }}
-      />
-      <HealthStackNav.Screen name="AIChat" component={AIChatScreen} options={{ title: 'PawLog AI 助手' }} />
-      <HealthStackNav.Screen name="VetVisitBrief" component={VetVisitBriefScreen} options={{ title: '就醫前摘要' }} />
+      <HealthStackNav.Screen name="HealthOverview" component={AIAssistantHubScreen} options={{ headerShown: false }} />
+      <HealthStackNav.Screen name="AIChat" component={AIChatScreen} options={{ headerShown: false }} />
+      <HealthStackNav.Screen name="VetVisitBrief" component={PreVetSummaryScreen} options={{ title: '就醫前摘要' }} />
       {sharedHealthScreens(HealthStackNav)}
     </HealthStackNav.Navigator>
   );
@@ -256,8 +264,18 @@ function ProfileStack() {
     >
       <ProfileStackNav.Screen
         name="ProfileOverview"
-        component={ProfileScreen}
+        component={SettingsHomeScreen}
         options={{ headerShown: false }}
+      />
+      <ProfileStackNav.Screen
+        name="AIUsage"
+        component={AIUsageScreen}
+        options={{ title: 'AI 助手額度' }}
+      />
+      <ProfileStackNav.Screen
+        name="EditPet"
+        component={EditPetScreen}
+        options={{ title: '編輯毛孩資料' }}
       />
       <ProfileStackNav.Screen
         name="AccountInfo"
@@ -267,47 +285,32 @@ function ProfileStack() {
       <ProfileStackNav.Screen
         name="PetManagement"
         component={PetManagementScreen}
-        options={{ title: '毛孩管理' }}
+        options={{ title: '我的毛孩' }}
       />
       <ProfileStackNav.Screen
         name="NotificationSettings"
         component={NotificationSettingsScreen}
-        options={{ title: '通知設定' }}
-      />
-      <ProfileStackNav.Screen
-        name="ReminderPreferences"
-        component={ReminderPreferencesScreen}
-        options={{ title: '提醒偏好' }}
+        options={{ title: '照護提醒' }}
       />
       <ProfileStackNav.Screen
         name="ExportCenter"
         component={ExportCenterScreen}
-        options={{ title: '匯出中心' }}
+        options={{ title: '匯出照護紀錄' }}
       />
       <ProfileStackNav.Screen
         name="LostPetSettings"
         component={LostPetSettingsScreen}
-        options={{ title: '走失協尋 QR' }}
+        options={{ title: '毛孩身份 QR' }}
       />
       <ProfileStackNav.Screen
         name="LostPetQr"
         component={LostPetQrScreen}
-        options={{ title: '協尋 QR Code' }}
-      />
-      <ProfileStackNav.Screen
-        name="StorageSettings"
-        component={StorageSettingsScreen}
-        options={{ title: '儲存空間' }}
-      />
-      <ProfileStackNav.Screen
-        name="LocalDataSettings"
-        component={LocalDataSettingsScreen}
-        options={{ title: '本機資料與偏好' }}
+        options={{ title: '毛孩身份 QR' }}
       />
       <ProfileStackNav.Screen
         name="About"
         component={AboutScreen}
-        options={{ title: '關於 PawLog' }}
+        options={{ title: '關於 MEGO' }}
       />
       <ProfileStackNav.Screen
         name="PrivacyPolicy"
@@ -319,16 +322,20 @@ function ProfileStack() {
         component={TermsOfUseScreen}
         options={{ title: '使用條款' }}
       />
-      <ProfileStackNav.Screen
-        name="Feedback"
-        component={FeedbackScreen}
-        options={{ title: '問題回報' }}
-      />
     </ProfileStackNav.Navigator>
   );
 }
 
-const icon = (value: string) => () => <Text style={{ fontSize: 20 }}>{value}</Text>;
+const icon = (name: keyof typeof Ionicons.glyphMap) => ({ color, size }: { color: string; size: number }) => (
+  <Ionicons name={name} color={color} size={Math.min(size, 25)} style={{ marginBottom: -2 }} />
+);
+
+const tabLabel = (text: string) => ({ focused, color }: { focused: boolean; color: string }) => (
+  <View style={styles.tabLabel}>
+    <Text style={[styles.tabLabelText, focused && styles.tabLabelActive, { color }]}>{text}</Text>
+    {focused && <View style={styles.activeIndicator} />}
+  </View>
+);
 
 export default function MainTabs() {
   const theme = useTheme();
@@ -340,33 +347,42 @@ export default function MainTabs() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.text,
         tabBarStyle: {
-          height: 66,
-          paddingTop: 6,
+          height: 72,
+          paddingTop: 3,
           paddingBottom: 8,
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          borderTopColor: 'transparent',
+          shadowOpacity: 0,
+          elevation: 0,
         },
+        tabBarBackground: () => <BottomNavigationDock />,
       }}
     >
       <Tabs.Screen
         name="Home"
         component={HomeStack}
-        options={{ title: '首頁', tabBarIcon: icon('🏠') }}
+        options={{ tabBarIcon: icon('home-outline'), tabBarLabel: tabLabel('首頁') }}
       />
       <Tabs.Screen
         name="Timeline"
         component={TimelineStack}
-        options={{ title: '紀錄', tabBarIcon: icon('📝') }}
+        options={{ tabBarIcon: icon('journal-outline'), tabBarLabel: tabLabel('紀錄') }}
       />
       <Tabs.Screen
         name="Health"
         component={HealthStack}
-        options={{ title: 'AI 助手', tabBarIcon: icon('✨') }}
+        options={{ tabBarIcon: icon('chatbubble-ellipses-outline'), tabBarLabel: tabLabel('AI 助手') }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Health', { screen: 'HealthOverview' });
+          },
+        })}
       />
       <Tabs.Screen
         name="Profile"
         component={ProfileStack}
-        options={{ title: '設定', tabBarIcon: icon('⚙️') }}
+        options={{ tabBarIcon: icon('settings-outline'), tabBarLabel: tabLabel('設定') }}
       />
     </Tabs.Navigator>
   );

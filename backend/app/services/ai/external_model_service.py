@@ -1,4 +1,6 @@
-"""外部模型服務 client；模型不在 PawLog Backend 執行。"""
+"""外部模型服務 client；模型不在 MEGO Backend 執行。"""
+import json
+import logging
 import os
 from typing import Any
 try:
@@ -7,16 +9,38 @@ except ImportError:
     httpx = None
 from .provider import ProviderError
 
-AI_MODELS = {"TEXT": "gemma-4-26b-a4b", "SPEECH_TO_TEXT": "whisper-large-v3"}
+AI_MODELS = {"TEXT": "gemma-4-26b-a4b"}
+logger = logging.getLogger(__name__)
+
+
+def _content_text(content: Any) -> str:
+    if isinstance(content, list):
+        return "".join(str(part.get("text", "")) for part in content if isinstance(part, dict)).strip()
+    return str(content or "").strip()
+
+
+def _parse_structured_content(content: Any) -> dict[str, Any]:
+    text = _content_text(content)
+    if not text:
+        raise ProviderError("External model service returned empty content")
+    fence = chr(96) * 3
+    cleaned = text.replace(fence + "json", "").replace(fence + "JSON", "").replace(fence, "").strip()
+    try:
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict):
+            return parsed
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("External model returned non-JSON content; using text fallback (length=%s)", len(cleaned))
+    return {"answer": cleaned, "_unstructured": True}
+
 
 class ExternalModelService:
     name = "external_model_service"
     def __init__(self, base_url: str | None = None, api_key: str | None = None, timeout: float | None = None):
         self.base_url = (base_url or os.getenv("AI_MODEL_API_URL", os.getenv("MODEL_SERVICE_BASE_URL", ""))).rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("AI_MODEL_API_KEY", os.getenv("MODEL_SERVICE_API_KEY", "")).strip()
-        self.timeout = timeout or float(os.getenv("AI_MODEL_TIMEOUT_SECONDS", os.getenv("MODEL_SERVICE_TIMEOUT_SECONDS", "20")))
+        self.timeout = timeout or float(os.getenv("AI_MODEL_TIMEOUT_SECONDS", os.getenv("MODEL_SERVICE_TIMEOUT_SECONDS", "45")))
         self.text_model = os.getenv("AI_MODEL_NAME", os.getenv("MODEL_SERVICE_TEXT_MODEL", AI_MODELS["TEXT"]))
-        self.speech_model = os.getenv("AI_SPEECH_MODEL_NAME", os.getenv("MODEL_SERVICE_SPEECH_MODEL", AI_MODELS["SPEECH_TO_TEXT"]))
 
     @property
     def available(self) -> bool:
@@ -40,23 +64,10 @@ class ExternalModelService:
             raise ProviderError("External model service request failed") from exc
         if response.status_code >= 400: raise ProviderError(f"External model service HTTP {response.status_code}", response.status_code)
         try:
-            body=response.json(); content=body["choices"][0]["message"]["content"]
-            import json
-            text=str(content).strip().removeprefix("```json").removesuffix("```").strip()
-            parsed=json.loads(text)
-            if not isinstance(parsed, dict): raise ValueError("structured output is not an object")
-            return parsed, body.get("model")
-        except Exception as exc:
-            raise ProviderError("External model service returned invalid JSON") from exc
-
-    async def transcribe_audio(self, filename: str, content: bytes, content_type: str | None = None) -> str:
-        if not self.available: raise ProviderError("External model service is not configured")
-        files={"file": (filename, content, content_type or "application/octet-stream")}; data={"model": self.speech_model}
-        try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(self.timeout, connect=min(5, self.timeout))) as client:
-                response=await client.post(self._endpoint("/audio/transcriptions"), data=data, files=files, headers=self._headers())
-        except (httpx.TimeoutException, httpx.RequestError) as exc:
-            raise ProviderError("External transcription service request failed") from exc
-        if response.status_code >= 400: raise ProviderError(f"External transcription service HTTP {response.status_code}", response.status_code)
-        try: return str(response.json()["text"]).strip()
-        except Exception as exc: raise ProviderError("External transcription response invalid") from exc
+            body=response.json()
+            content=body["choices"][0]["message"].get("content")
+            return _parse_structured_content(content), body.get("model")
+        except ProviderError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProviderError("External model service response shape invalid") from exc

@@ -4,14 +4,9 @@ import { RecurrenceRule, ReminderType } from '../types';
 export const TONIGHT_HOUR = 20;
 export const REMINDER_TYPES: Array<[ReminderType, string, RecurrenceRule]> = [
   ['vaccine', '疫苗', 'yearly'],
-  ['deworming_internal', '體內驅蟲', 'quarterly'],
-  ['deworming_external', '體外驅蟲', 'monthly'],
-  ['heartworm', '心絲蟲預防', 'monthly'],
-  ['medication', '吃藥', 'none'],
+  ['deworming', '驅蟲', 'quarterly'],
+  ['medication', '用藥', 'none'],
   ['follow_up', '回診', 'none'],
-  ['bath', '洗澡', 'none'],
-  ['grooming', '美容', 'none'],
-  ['restock', '補貨', 'none'],
   ['other', '其他', 'none'],
 ];
 export const RECURRENCE_RULES: Array<[RecurrenceRule, string]> = [

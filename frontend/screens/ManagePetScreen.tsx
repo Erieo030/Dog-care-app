@@ -9,7 +9,7 @@ import PetFormScreen from './PetFormScreen';
 import { PetData } from '../types';
 
 type AddProps = NativeStackScreenProps<HomeStackParamList, 'AddPet'>;
-type EditProps = NativeStackScreenProps<HomeStackParamList, 'EditPet'>;
+type EditProps = { navigation: { goBack: () => void } };
 
 const toFormData = (data: PetData) => ({
   name: data.name,

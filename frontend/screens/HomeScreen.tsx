@@ -1,55 +1,42 @@
 /** 用途：首頁健康儀表板，整合目前毛孩的摘要、統計、圖表、時間軸與快速新增。 */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   Image,
-  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import HealthEventPieChart from '../components/dashboard/HealthEventPieChart';
-import WeightTrendChart from '../components/dashboard/WeightTrendChart';
-import OrdinalTrendChart from '../components/dashboard/OrdinalTrendChart';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
-import { HEALTH_EVENT_LABELS } from '../constants/HealthEvents';
-import { openTimelineSource, TIMELINE_META } from '../constants/Timeline';
+import { HomeBackgroundScene } from '../components/home/HomeBackgroundScene';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
-import { HomeStackParamList, MainTabParamList } from '../navigation/types';
+import { HomeStackParamList } from '../navigation/types';
 import { getHealthDashboard } from '../services/dashboardService';
-import { getHealthMonitor, getHealthSummary, HealthMonitorResult, HealthSummaryResponse } from '../services/aiService';
-import {
-  cancelReminderNotifications,
-  reconcileAccountNotifications,
-} from '../services/notificationService';
-import { completeReminder } from '../services/reminderService';
-import { HealthDashboard, ReminderType } from '../types';
+import { getTodayReminders } from '../services/reminderService';
+import { getHealthMonitor, HealthMonitorResult } from '../services/aiService';
+import { reconcileAccountNotifications } from '../services/notificationService';
+import { HealthDashboard } from '../types';
 
 type Navigation = NativeStackNavigationProp<HomeStackParamList>;
 type WeightPeriod = 7 | 30 | 90;
-const REMINDER_ICONS: Record<ReminderType, string> = {
-  vaccine: '💉',
-  deworming_internal: '🛡️',
-  deworming_external: '🛡️',
-  heartworm: '❤️',
-  medication: '💊',
-  follow_up: '🩺',
-  bath: '🛁',
-  grooming: '✂️',
-  restock: '📦',
-  other: '⏰',
-};
-const GENDER_LABELS: Record<string, string> = { male: '公', female: '母', unknown: '未設定' };
-const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+const SECTION_GAP = 14;
+const ACTION_DIAMETER = 52;
+const ACTION_ICON_SIZE = 24;
+const ACTION_LABEL_GAP = 9;
+const HOME_HORIZONTAL_PADDING = 16;
+const QUICK_ACTION_HEADER_GAP = 16;
+const HOME_BOTTOM_CLEARANCE = 104;
 const calculateAge = (value?: string) => {
   if (!value) return '年齡未設定';
   const birth = new Date(value);
@@ -66,6 +53,9 @@ const calculateAge = (value?: string) => {
 
 export default function HomeScreen() {
   const navigation = useNavigation<Navigation>();
+  const { height: viewportHeight } = useWindowDimensions();
+  const topScenicZone = Math.max(48, Math.min(Math.round(viewportHeight * 0.05), 72));
+  const homeContentTopOffset = topScenicZone;
   const { session } = useAuth();
   const {
     pets,
@@ -77,19 +67,15 @@ export default function HomeScreen() {
   } = usePet();
   const [data, setData] = useState<HealthDashboard | null>(null);
   const [monitor, setMonitor] = useState<HealthMonitorResult | null>(null);
-  const [healthSummary, setHealthSummary] = useState<HealthSummaryResponse | null>(null);
-  const [healthTrend, setHealthTrend] = useState<'water' | 'food' | 'stool' | 'energy'>('water');
+  const [todayReminderCount, setTodayReminderCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [period, setPeriod] = useState<WeightPeriod>(30);
-  const [fabOpen, setFabOpen] = useState(false);
+  const [period] = useState<WeightPeriod>(30);
   const petRef = useRef<string | null>(null);
   const load = useCallback(async () => {
     if (!session?.userId || !selectedPet) {
       setData(null);
       setLoading(false);
-      setRefreshing(false);
       return;
     }
     const petId = selectedPet.id;
@@ -97,22 +83,33 @@ export default function HomeScreen() {
       petRef.current = petId;
       setData(null);
       setMonitor(null);
-      setHealthSummary(null);
+      setTodayReminderCount(0);
       setLoading(true);
     }
     try {
       setError('');
+      // 首屏只等待 Dashboard；AI 健康監測屬於次要資訊，背景載入不阻塞首頁。
       const result = await getHealthDashboard(session.userId, petId, period);
-      const monitorResult = await getHealthMonitor(session.userId, petId, period).catch(() => null);
-      const summaryResult = await getHealthSummary(session.userId, petId, period).catch(() => null);
-      if (petRef.current === petId) { setData(result); setMonitor(monitorResult); setHealthSummary(summaryResult); }
+      if (petRef.current !== petId) return;
+      setData(result);
+      setLoading(false);
+
+      getTodayReminders(session.userId, petId)
+        .then((reminders) => {
+          setTodayReminderCount(reminders.filter((item) => item.status === 'pending' || item.status === 'snoozed').length);
+        })
+        .catch(() => undefined);
+
+      getHealthMonitor(session.userId, petId, period)
+        .then((monitorResult) => {
+          if (petRef.current === petId) setMonitor(monitorResult);
+        })
+        .catch(() => undefined);
     } catch (e) {
-      if (petRef.current === petId) setError((e as Error).message || '健康總覽載入失敗');
-    } finally {
       if (petRef.current === petId) {
+        setError((e as Error).message || '今天的照護載入失敗');
         setLoading(false);
-        setRefreshing(false);
-      }
+        }
     }
   }, [session?.userId, selectedPet, period]);
   useFocusEffect(
@@ -123,601 +120,123 @@ export default function HomeScreen() {
     }, [load, session?.userId, pets]),
   );
   const refresh = async () => {
-    setRefreshing(true);
     await Promise.all([refreshPets(), load()]);
   };
-  const finish = async (id: string) => {
-    if (!session?.userId) return;
-    try {
-      await completeReminder(session.userId, id);
-      await cancelReminderNotifications(id).catch(() => undefined);
-      await reconcileAccountNotifications(session.userId, pets).catch(() => undefined);
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
+  const openHomeRoute = useCallback((route: string) => {
+    if (route === 'ReminderList') {
+      navigation.navigate('ReminderList', { upcomingDays: 7 });
+      return;
     }
-  };
-  const trend = useMemo(() => {
-    const cutoff = Date.now() - period * 86400000;
-    return data?.weight.trend.filter((item) => new Date(item.measuredAt).getTime() >= cutoff) ?? [];
-  }, [data?.weight.trend, period]);
-  const openDailyLog = () => {
-    setFabOpen(false);
-    navigation.navigate('DailyLog');
-  };
-  const go = (route: 'WeightForm' | 'AbnormalType' | 'MedicalVisitForm' | 'CreateReminder') => {
-    setFabOpen(false);
-    if (route === 'WeightForm') navigation.navigate(route, {});
-    else if (route === 'MedicalVisitForm') navigation.navigate(route, {});
-    else if (route === 'CreateReminder') navigation.navigate(route, undefined);
-    else navigation.navigate(route);
-  };
-  if (petLoading || loading) return <Center loading title="正在整理健康總覽…" />;
+    navigation.navigate(route as never);
+  }, [navigation]);
+  const openTodaySummary = useCallback(() => {
+    const hasReminders = todayReminderCount > 0;
+    const hasHealthObservations = Boolean(monitor?.alerts.length);
+    if (hasReminders && hasHealthObservations) {
+      Alert.alert('今天的照護', '你有待辦事項與健康觀察，想先查看哪一項？', [
+        { text: '待辦事項', onPress: () => navigation.navigate('ReminderList', { upcomingDays: 0 }) },
+        { text: '健康觀察', onPress: () => navigation.navigate('HealthEventList') },
+        { text: '取消', style: 'cancel' },
+      ]);
+    } else if (hasHealthObservations) {
+      navigation.navigate('HealthEventList');
+    } else {
+      navigation.navigate('ReminderList', { upcomingDays: 0 });
+    }
+  }, [monitor?.alerts.length, navigation, todayReminderCount]);
+  if (petLoading || loading) return <Center loading title="正在整理今天的照護…" />;
   if (petError || error || !selectedPet || !data)
     return <Center title={petError || error || '尚無毛孩資料'} action={refresh} />;
-  const weight = data.weight;
-  const diff = weight.differenceKg;
   return (
     <SafeAreaView style={s.container}>
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={s.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      >
-        <View style={s.titleRow}>
-          <View style={s.flex}>
-            <Text style={s.eyebrow}>PAWLOG HEALTH</Text>
-            <Text style={s.pageTitle}>健康總覽</Text>
-            <Text style={s.pageSubtitle}>今天的照護重點，一眼看完。</Text>
+      <HomeBackgroundScene />
+      <View style={[s.content, { paddingTop: homeContentTopOffset }]}>
+        <View style={s.headerSurface}>
+          <View style={s.titleRow}>
+            <View style={s.flex}>
+              <View style={s.brandMark}><Image source={require("../assets/home-scene/logo.png")} style={s.logo} /><Text style={s.eyebrow}>MEGO</Text></View>
+              <Text style={s.pageTitle}>今天也陪 {data.pet.name} 好好生活</Text>
+            </View>
+            <TouchableOpacity accessibilityLabel="全域搜尋" style={s.globalSearch} onPress={() => navigation.navigate("GlobalSearch")}>
+              <Ionicons name="search-outline" size={21} color={Colors.text} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            accessibilityLabel="全域搜尋"
-            style={s.globalSearch}
-            onPress={() => navigation.navigate('GlobalSearch')}
-          >
-            <Text style={s.globalSearchIcon}>⌕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Card>
-          <View style={s.petRow}>
-            {data.pet.avatarUrl ? (
-              <Image source={{ uri: data.pet.avatarUrl }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarFallback}>
-                <Text style={s.avatarEmoji}>🐶</Text>
-              </View>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="編輯目前毛孩" style={s.petSummary} onPress={() => navigation.navigate("EditPet")}>
+            {data.pet.avatarUrl ? <Image source={{ uri: data.pet.avatarUrl }} style={s.avatarSmall} /> : (
+              <View style={s.avatarFallbackSmall}><Ionicons name="paw-outline" size={22} color={Colors.primary} /></View>
             )}
             <View style={s.flex}>
-              <Text style={s.petName}>{data.pet.name}</Text>
-              <Text style={s.muted}>
-                {data.pet.breed || '品種未設定'} ·{' '}
-                {GENDER_LABELS[data.pet.gender] || data.pet.gender || '性別未設定'} ·{' '}
-                {calculateAge(data.pet.birthDate)}
-              </Text>
+              <Text style={s.petNameSmall} numberOfLines={1}>{data.pet.name}</Text>
+              <Text style={s.mutedSmall} numberOfLines={1}>{data.pet.breed || "品種未設定"} · {calculateAge(data.pet.birthDate)}</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('EditPet')}>
-              <Text style={s.link}>編輯</Text>
-            </TouchableOpacity>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.subtext} />
+          </TouchableOpacity>
           {pets.length > 1 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={s.petSwitch}>
-                {pets.map((p) => (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[s.chip, p.id === selectedPet.id && s.chipActive]}
-                    onPress={() => selectPet(p.id)}
-                  >
-                    <Text style={[s.chipText, p.id === selectedPet.id && s.chipTextActive]}>
-                      {p.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.petSwitchCompact}>
+              {pets.map((pet) => (
+                <TouchableOpacity key={pet.id} accessibilityRole="button" accessibilityLabel={`切換到${pet.name}`} style={[s.chip, pet.id === selectedPet.id && s.chipActive]} onPress={() => selectPet(pet.id)}>
+                  <Text style={[s.chipText, pet.id === selectedPet.id && s.chipTextActive]}>{pet.name}</Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           )}
-        </Card>
-
-        <Section
-          title="今日提醒"
-          action="查看全部"
-          onAction={() => navigation.navigate('ReminderList')}
-        >
-          <View style={s.metricRow}>
-            <Metric value={data.todayReminders.total} label="今日" />
-            <Metric value={data.todayReminders.completed} label="完成" tone="good" />
-            <Metric value={data.todayReminders.pending} label="未完成" tone="warn" />
-          </View>
-          {!data.todayReminders.items.length ? (
-            <Empty text="今天沒有待辦事項" />
-          ) : (
-            data.todayReminders.items.map((item) => (
-              <View key={item.id} style={s.listRow}>
-                <Text style={s.listIcon}>{REMINDER_ICONS[item.type]}</Text>
-                <View style={s.flex}>
-                  <Text style={[s.listTitle, item.status === 'completed' && s.done]}>
-                    {item.title}
-                  </Text>
-                  <Text style={s.mutedSmall}>
-                    {new Date(item.scheduledAt).toLocaleTimeString('zh-TW', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </View>
-                {item.status === 'completed' ? (
-                  <Text style={s.doneLabel}>已完成</Text>
-                ) : (
-                  <TouchableOpacity style={s.smallButton} onPress={() => finish(item.id)}>
-                    <Text style={s.smallButtonText}>完成</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))
-          )}
-        </Section>
-
-        <Section
-          title="最近體重"
-          onAction={() => navigation.navigate('WeightList')}
-          action="查看紀錄"
-        >
-          {!weight.latest ? (
-            <Empty text="尚未記錄體重" />
-          ) : (
-            <>
-              <View style={s.weightRow}>
-                <View>
-                  <Text style={s.bigValue}>
-                    {weight.latest.weightKg} <Text style={s.unit}>kg</Text>
-                  </Text>
-                  <Text style={s.mutedSmall}>{formatDate(weight.latest.measuredAt)} 測量</Text>
-                </View>
-                <View style={s.weightDiff}>
-                  {weight.previous && (
-                    <Text style={s.previous}>上一筆 {weight.previous.weightKg} kg</Text>
-                  )}
-                  <Text
-                    style={[
-                      s.change,
-                      weight.change === 'increased' && s.up,
-                      weight.change === 'decreased' && s.down,
-                    ]}
-                  >
-                    {diff == null
-                      ? '尚無前次資料'
-                      : weight.change === 'unchanged'
-                        ? '維持不變'
-                        : `${weight.change === 'increased' ? '↑ 增加' : '↓ 減少'} ${Math.abs(diff)} kg`}
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
-        </Section>
-
-        <Section
-          title="最近健康事件"
-          action="全部紀錄"
-          onAction={() => navigation.navigate('HealthEventList')}
-        >
-          {!data.recentHealthEvents.length ? (
-            <Empty text="目前沒有健康異常紀錄" />
-          ) : (
-            data.recentHealthEvents.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={s.listRow}
-                onPress={() => navigation.navigate('HealthEventDetail', { eventId: item.id })}
-              >
-                <View
-                  style={[
-                    s.severityDot,
-                    item.severity === 'severe' && s.severe,
-                    item.severity === 'moderate' && s.moderate,
-                  ]}
-                />
-                <View style={s.flex}>
-                  <Text style={s.listTitle}>{item.summary}</Text>
-                  <Text style={s.mutedSmall}>
-                    {HEALTH_EVENT_LABELS[item.type]} · {formatDate(item.occurredAt)}
-                  </Text>
-                </View>
-                <Text style={s.arrow}>›</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </Section>
-
-        <Section
-          title="目前用藥"
-          action="查看全部"
-          onAction={() => navigation.navigate('MedicationList')}
-        >
-          {!data.currentMedications.length ? (
-            <Empty text="目前沒有服用中的藥物" />
-          ) : (
-            data.currentMedications.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={s.listRow}
-                onPress={() => navigation.navigate('MedicationDetail', { recordId: item.id })}
-              >
-                <Text style={s.listIcon}>💊</Text>
-                <View style={s.flex}>
-                  <Text style={s.listTitle}>{item.name}</Text>
-                  <Text style={s.mutedSmall}>
-                    {item.endDate ? `至 ${item.endDate}` : '長期使用'}
-                  </Text>
-                </View>
-                <Text style={s.arrow}>›</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </Section>
-
-        <Section
-          title="最近疫苗"
-          action="查看全部"
-          onAction={() => navigation.navigate('VaccinationList')}
-        >
-          {!data.recentVaccination ? (
-            <Empty text="目前沒有疫苗紀錄" />
-          ) : (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('VaccinationDetail', { recordId: data.recentVaccination!.id })
-              }
-            >
-              <Text style={s.medicalReason}>{data.recentVaccination.vaccineName}</Text>
-              <Info
-                label="日期"
-                value={new Date(data.recentVaccination.administeredAt).toLocaleDateString('zh-TW')}
-              />
-              <Info label="醫院" value={data.recentVaccination.hospitalName || '未填寫醫院'} />
-              {data.recentVaccination.nextDueAt ? (
-                <Info
-                  label="下次"
-                  value={new Date(data.recentVaccination.nextDueAt).toLocaleDateString('zh-TW')}
-                />
-              ) : null}
-            </TouchableOpacity>
-          )}
-        </Section>
-
-        <Section
-          title="最近就醫"
-          action="全部紀錄"
-          onAction={() => navigation.navigate('MedicalVisitList')}
-        >
-          {!data.recentMedicalVisit ? (
-            <Empty text="目前沒有就醫紀錄" />
-          ) : (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('MedicalVisitDetail', { visitId: data.recentMedicalVisit!.id })
-              }
-            >
-              <Text style={s.medicalReason}>{data.recentMedicalVisit.reason}</Text>
-              <Info
-                label="日期"
-                value={new Date(data.recentMedicalVisit.visitedAt).toLocaleDateString('zh-TW')}
-              />
-              <Info label="醫院" value={data.recentMedicalVisit.clinicName || '未填寫醫院'} />
-              <Info label="醫師" value={data.recentMedicalVisit.veterinarianName || '未填寫醫師'} />
-              <Text style={s.disclaimer}>顯示飼主保存的看診原因，不是醫療診斷。</Text>
-            </TouchableOpacity>
-          )}
-        </Section>
-
-        <Section title="近 30 天健康統計">
-          <View style={s.statsGrid}>
-            <Stat value={data.statistics30Days.healthEventCount} label="健康事件" />
-            <Stat value={data.statistics30Days.medicalVisitCount} label="就醫次數" />
-            <Stat value={data.statistics30Days.reminderCount} label="提醒數" />
-            <Stat value={`${data.statistics30Days.reminderCompletionRate}%`} label="完成率" />
-          </View>
-        </Section>
-
-        <Section
-          title="今日健康紀錄"
-          action={data.todayDailyLog ? '更新紀錄' : '快速記錄'}
-          onAction={() => navigation.navigate('DailyLog', data.todayDailyLog ? { recordId: data.todayDailyLog.id } : undefined)}
-        >
-          {!data.todayDailyLog ? (
-            <Empty text="今天還沒有日常紀錄" />
-          ) : (
-            <View>
-              <Text style={s.muted}>喝水：{data.todayDailyLog.waterLevel || '未記錄'}</Text>
-              <Text style={s.muted}>食量：{data.todayDailyLog.foodLevel || '未記錄'}</Text>
-              <Text style={s.muted}>精神：{data.todayDailyLog.energyLevel || '未記錄'}</Text>
-              <Text style={s.muted}>便便：{data.todayDailyLog.stoolLevel ?? '未記錄'}</Text>
-            </View>
-          )}
-        </Section>
-
-        {healthSummary && (
-          <Section title="AI 健康摘要" action="準備看醫生" onAction={() => navigation.navigate('VetVisitBrief')}>
-            <Text style={s.observationTitle}>{healthSummary.headline}</Text>
-            <Text style={s.muted}>{healthSummary.summary}</Text>
-            {healthSummary.highlights.slice(0, 3).map((item) => <Text key={item} style={s.mutedSmall}>• {item}</Text>)}
-            {healthSummary.fallbackUsed && <Text style={s.sectionHint}>目前使用基本紀錄摘要</Text>}
-            <Text style={s.sectionHint}>{healthSummary.disclaimer}</Text>
-          </Section>
-        )}
-
-        <Section title="健康觀察">
-          {!monitor?.alerts.length ? (
-            <Text style={s.sectionHint}>目前沒有偵測到需要特別注意的紀錄趨勢。</Text>
-          ) : (
-            monitor.alerts.slice(0, 3).map((alert) => (
-              <View key={alert.id} style={s.observationRow}>
-                <Text style={s.observationTitle}>{alert.title}</Text>
-                <Text style={s.mutedSmall}>{alert.message}</Text>
-              </View>
-            ))
-          )}
-          <Text style={s.sectionHint}>PawLog 僅根據已記錄資料整理趨勢，不提供疾病診斷。</Text>
-        </Section>
-
-        <Section title="日常健康趨勢">
-          <View style={s.periods}>
-            {([7, 30, 90] as WeightPeriod[]).map((value) => (
-              <TouchableOpacity
-                key={value}
-                style={[s.period, period === value && s.periodActive]}
-                onPress={() => setPeriod(value)}
-              >
-                <Text style={[s.periodText, period === value && s.periodTextActive]}>
-                  {value} 天
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={s.periods}>
-            {(
-              [
-                ['water', '喝水'],
-                ['food', '食量'],
-                ['stool', '便便'],
-                ['energy', '精神'],
-              ] as const
-            ).map(([key, label]) => (
-              <TouchableOpacity
-                key={key}
-                style={[s.period, healthTrend === key && s.periodActive]}
-                onPress={() => setHealthTrend(key)}
-              >
-                <Text style={[s.periodText, healthTrend === key && s.periodTextActive]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {healthTrend === 'water' ? (
-            <OrdinalTrendChart
-              items={data.dailyLogTrends.water}
-              field="waterLevel"
-              labels={{
-                very_low: '很少',
-                low: '偏少',
-                normal: '正常',
-                high: '偏多',
-                very_high: '很多',
-              }}
-            />
-          ) : healthTrend === 'food' ? (
-            <OrdinalTrendChart
-              items={data.dailyLogTrends.food}
-              field="foodLevel"
-              labels={{
-                very_low: '很少',
-                low: '偏少',
-                normal: '正常',
-                high: '偏多',
-                very_high: '很多',
-              }}
-            />
-          ) : healthTrend === 'stool' ? (
-            <>
-              <OrdinalTrendChart
-                items={data.dailyLogTrends.stool}
-                field="stoolLevel"
-                labels={{ '1': '很硬', '2': '偏硬', '3': '正常', '4': '偏軟', '5': '水狀' }}
-              />
-              <Text style={s.sectionHint}>此尺度表示便便型態，不代表健康分數。</Text>
-            </>
-          ) : (
-            <EnergySummary counts={data.energySummary.counts} total={data.energySummary.total} />
-          )}
-        </Section>
-
-        <Section
-          title="體重趨勢"
-          action="完整趨勢"
-          onAction={() => navigation.navigate('WeightList')}
-        >
-          <View style={s.periods}>
-            {([7, 30, 90] as WeightPeriod[]).map((value) => (
-              <TouchableOpacity
-                key={value}
-                style={[s.period, period === value && s.periodActive]}
-                onPress={() => setPeriod(value)}
-              >
-                <Text style={[s.periodText, period === value && s.periodTextActive]}>
-                  {value} 天
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <WeightTrendChart items={trend} />
-        </Section>
-
-        <Section title="健康事件統計">
-          <Text style={s.sectionHint}>最近 30 天，依紀錄類型分類</Text>
-          <HealthEventPieChart data={data.healthEventCategories30Days} />
-        </Section>
-
-        <Section
-          title="近期時間軸"
-          action="查看全部"
-          onAction={() =>
-            navigation.getParent<BottomTabNavigationProp<MainTabParamList>>()?.navigate('Timeline')
-          }
-        >
-          {!data.timeline.length ? (
-            <Empty text="目前還沒有近期紀錄" />
-          ) : (
-            data.timeline.map((item) => {
-              const meta = TIMELINE_META[item.type];
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={s.listRow}
-                  onPress={() => openTimelineSource(navigation, item)}
-                >
-                  <View style={s.timelineIcon}>
-                    <Text>{meta.icon}</Text>
-                  </View>
-                  <View style={s.flex}>
-                    <Text style={s.listTitle}>{item.title}</Text>
-                    <Text style={s.mutedSmall}>
-                      {formatDate(item.occurredAt)}
-                      {item.attachmentCount > 0 ? ` · 📷 ${item.attachmentCount} 張` : ''}
-                    </Text>
-                  </View>
-                  <Text style={s.arrow}>›</Text>
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </Section>
-      </ScrollView>
-      {fabOpen && (
-        <View style={s.fabMenu}>
-          <FabAction
-            label="用藥管理"
-            icon="💊"
-            onPress={() => {
-              setFabOpen(false);
-              navigation.navigate('MedicationList');
-            }}
-          />
-          <FabAction
-            label="驅蟲紀錄"
-            icon="🛡️"
-            onPress={() => {
-              setFabOpen(false);
-              navigation.navigate('DewormingList');
-            }}
-          />
-          <FabAction
-            label="疫苗紀錄"
-            icon="💉"
-            onPress={() => {
-              setFabOpen(false);
-              navigation.navigate('VaccinationList');
-            }}
-          />
-          <FabAction label="今日紀錄" icon="📝" onPress={openDailyLog} />
-          <FabAction label="新增提醒" icon="⏰" onPress={() => go('CreateReminder')} />
-          <FabAction label="新增就醫" icon="🏥" onPress={() => go('MedicalVisitForm')} />
-          <FabAction label="記錄異常" icon="⚠️" onPress={() => go('AbnormalType')} />
-          <FabAction label="更新體重" icon="⚖️" onPress={() => go('WeightForm')} />
         </View>
-      )}
-      <TouchableOpacity
-        accessibilityLabel={fabOpen ? '關閉快速新增' : '快速新增'}
-        style={s.fab}
-        onPress={() => setFabOpen((v) => !v)}
-      >
-        <Text style={s.fabText}>{fabOpen ? '×' : '＋'}</Text>
-      </TouchableOpacity>
+
+        <CareShortcuts onOpen={openHomeRoute} />
+
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="查看今天待做" style={s.todayOverlay} onPress={openTodaySummary}>
+          <View style={s.todayHeader}><Text style={s.overlayTitle}>今天待做</Text><Text style={s.link}>查看 ›</Text></View>
+          <View style={s.todayStatusRow}>
+            <Ionicons name={(todayReminderCount || monitor?.alerts.length) ? 'alert-circle-outline' : 'checkmark-circle-outline'} size={18} color={(todayReminderCount || monitor?.alerts.length) ? Colors.primary : '#4E8A6C'} />
+            <Text style={s.todayStatusText}>{todayReminderCount ? `${todayReminderCount} 個待辦${monitor?.alerts.length ? ` · ${monitor.alerts.length} 個健康觀察` : ""}` : monitor?.alerts.length ? `${monitor.alerts.length} 個健康觀察` : "今天沒有待辦"}</Text>
+          </View>
+          <Text style={s.overlayHint}>點擊查看與管理提醒</Text>
+        </TouchableOpacity>
+
+        <View style={s.managementHead}>
+          <HomeSectionHeader title="健康管理" />
+        </View>
+        <View style={s.managementRow}>
+          <ManagementAction icon="medkit-outline" label="疫苗" onPress={() => navigation.navigate('VaccinationList')} />
+          <ManagementAction icon="shield-checkmark-outline" label="驅蟲" onPress={() => navigation.navigate('DewormingList')} />
+          <ManagementAction icon="medical-outline" label="用藥" onPress={() => navigation.navigate('MedicationList')} />
+          <ManagementAction icon="business-outline" label="就醫" onPress={() => navigation.navigate('MedicalVisitList')} />
+        </View>
+
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="開啟 MEGO AI 助手" style={s.aiPill} onPress={() => { const parent = navigation.getParent(); if (parent) parent.navigate('Health', { screen: 'HealthOverview' }); }}>
+          <Ionicons name="sparkles-outline" size={20} color={Colors.primary} />
+          <View style={s.flex}><Text style={s.aiPillTitle}>MEGO AI</Text><Text style={s.aiPillText}>想知道 {data.pet.name} 最近的狀況嗎？</Text></View>
+          <Ionicons name="chevron-forward" size={18} color={Colors.subtext} />
+        </TouchableOpacity>
+
+      </View>
     </SafeAreaView>
   );
 }
-function EnergySummary({ counts, total }: { counts: Record<string, number>; total: number }) {
-  if (!total) return <Text style={s.empty}>此期間尚無精神紀錄</Text>;
-  const labels: Record<string, string> = {
-    very_energetic: '很有精神',
-    normal: '正常',
-    slightly_low: '稍微沒精神',
-    clearly_low: '明顯沒精神',
-    very_low: '很差',
-  };
-  return (
-    <View>
-      {Object.entries(counts).map(([k, v]) => (
-        <Text key={k} style={s.muted}>
-          {labels[k] || k}：{v} 次
-        </Text>
-      ))}
-    </View>
-  );
+function HomeSectionHeader({ title }: { title: string }) {
+  return <Text style={s.shortcutHeading}>{title}</Text>;
 }
-function Card({ children }: { children: React.ReactNode }) {
-  return <View style={s.card}>{children}</View>;
+function CareShortcuts({ onOpen }: { onOpen: (route: string) => void }) {
+  const shortcuts = React.useMemo<[keyof typeof Ionicons.glyphMap, string, string][]>(() => [
+    ['journal-outline', '日常', 'DailyLog'],
+    ['alert-circle-outline', '記錄異常', 'AbnormalType'],
+    ['scale-outline', '體重', 'WeightList'],
+    ['notifications-outline', '提醒', 'ReminderList'],
+  ], []);
+  return <View><HomeSectionHeader title="今天想做什麼？" /><View style={s.shortcutRow}>{shortcuts.map(([icon, label, route]) => <CareShortcut key={route} icon={icon} label={label} route={route} onOpen={onOpen} />)}</View></View>;
 }
-function Section({
-  title,
-  action,
-  onAction,
-  children,
-}: {
-  title: string;
-  action?: string;
-  onAction?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <View>
-      <View style={s.sectionHead}>
-        <Text style={s.sectionTitle}>{title}</Text>
-        {action && (
-          <TouchableOpacity onPress={onAction}>
-            <Text style={s.link}>{action}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      <Card>{children}</Card>
-    </View>
-  );
-}
-function Metric({ value, label, tone }: { value: number; label: string; tone?: 'good' | 'warn' }) {
-  return (
-    <View style={s.metric}>
-      <Text style={[s.metricValue, tone === 'good' && s.good, tone === 'warn' && s.warn]}>
-        {value}
-      </Text>
-      <Text style={s.mutedSmall}>{label}</Text>
-    </View>
-  );
-}
-function Stat({ value, label }: { value: number | string; label: string }) {
-  return (
-    <View style={s.stat}>
-      <Text style={s.statValue}>{value}</Text>
-      <Text style={s.mutedSmall}>{label}</Text>
-    </View>
-  );
-}
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={s.info}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value}</Text>
-    </View>
-  );
-}
-function Empty({ text }: { text: string }) {
-  return (
-    <View style={s.empty}>
-      <Text style={s.emptyIcon}>🐾</Text>
-      <Text style={s.muted}>{text}</Text>
-    </View>
-  );
-}
+
+const ManagementAction = React.memo(function ManagementAction({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+  return <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} style={s.managementAction} onPress={onPress}><View style={s.managementIcon}><Ionicons name={icon} size={ACTION_ICON_SIZE} color={Colors.success} /></View><View style={s.actionLabelProtection}><Text style={s.managementLabel}>{label}</Text></View></TouchableOpacity>;
+});
+
+const CareShortcut = React.memo(function CareShortcut({ icon, label, route, onOpen }: { icon: keyof typeof Ionicons.glyphMap; label: string; route: string; onOpen: (route: string) => void }) {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  const handlePress = React.useCallback(() => onOpen(route), [onOpen, route]);
+  return <Animated.View style={[s.shortcutWrap, { transform: [{ scale }] }]}><TouchableOpacity accessibilityRole="button" accessibilityLabel={label} hitSlop={6} style={s.shortcut} onPress={handlePress} onPressIn={() => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true }).start()} onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}><View style={s.primaryIcon}><Ionicons name={icon} size={ACTION_ICON_SIZE} color={Colors.success} /></View><View style={s.actionLabelProtection}><Text style={s.shortcutLabel}>{label}</Text></View></TouchableOpacity></Animated.View>;
+});
+
 function Center({
   title,
   loading,
@@ -732,42 +251,52 @@ function Center({
       {loading && <ActivityIndicator size="large" color={Colors.primary} />}
       <Text style={s.centerTitle}>{title}</Text>
       {action && (
-        <TouchableOpacity style={s.retry} onPress={action}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="重新整理首頁資料" style={s.retry} onPress={action}>
           <Text style={s.retryText}>重新整理</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
-function FabAction({ label, icon, onPress }: { label: string; icon: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={s.fabAction} onPress={onPress}>
-      <Text style={s.fabLabel}>{label}</Text>
-      <View style={s.fabMini}>
-        <Text>{icon}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
+  headerSurface: { backgroundColor: 'rgba(255,250,242,0.28)', borderRadius: 22, padding: 4, marginBottom: 4 },
   globalSearch: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,250,242,0.72)',
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  globalSearchIcon: { fontSize: 29, color: Colors.text },
-  content: { padding: 18, paddingBottom: 115 },
+  content: { paddingHorizontal: HOME_HORIZONTAL_PADDING, paddingBottom: HOME_BOTTOM_CLEARANCE, zIndex: 1 },
   flex: { flex: 1 },
+  brandMark: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
+  logo: { width: 30, height: 28, resizeMode: 'contain' },
   eyebrow: { color: Colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
-  pageTitle: { color: Colors.text, fontSize: 30, fontWeight: '900', marginTop: 4 },
+  pageTitle: { color: Colors.text, fontSize: 21, lineHeight: 25, fontWeight: '900', marginTop: 3, textShadowColor: 'rgba(255,250,242,0.72)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   pageSubtitle: { color: Colors.subtext, marginTop: 4, marginBottom: 18 },
+  detailsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, marginBottom: 8 },
+  detailsToggleIcon: { color: Colors.primary, fontSize: 20, fontWeight: '900', marginRight: 6 },
+  detailsToggleText: { color: Colors.primary, fontSize: 14, fontWeight: '800' },
+  shortcutHeading: { color: Colors.text, fontSize: 18, fontWeight: '800', textShadowColor: 'rgba(255,255,255,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
+  todayOverlay: { backgroundColor: 'rgba(255,250,242,0.88)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.62)', paddingVertical: 8, paddingHorizontal: 10, marginTop: 8, marginBottom: 6 },
+  todayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  overlayTitle: { color: Colors.text, fontSize: 16, fontWeight: '900' },
+  todayStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  todayStatusText: { color: Colors.text, fontSize: 12, fontWeight: '700', flex: 1 },
+  overlayHint: { color: Colors.subtext, fontSize: 11, marginTop: 3 },
+  aiPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,250,242,0.84)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.62)', paddingVertical: 8, paddingHorizontal: 10, marginTop: SECTION_GAP + 8 },
+  aiPillTitle: { color: Colors.text, fontWeight: '900' },
+  aiPillText: { color: '#554B43', fontSize: 11, marginTop: 1 },
+  shortcutRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: QUICK_ACTION_HEADER_GAP, marginBottom: 5, gap: 6 },
+  shortcutWrap: { flex: 1, minWidth: 0 },
+  shortcut: { width: '100%', minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: ACTION_LABEL_GAP },
+  primaryIcon: { width: ACTION_DIAMETER, height: ACTION_DIAMETER, borderRadius: ACTION_DIAMETER / 2, backgroundColor: 'rgba(239,248,239,0.94)', borderWidth: 1, borderColor: 'rgba(95,146,116,0.30)', alignItems: 'center', justifyContent: 'center' },
+  shortcutLabel: { color: Colors.text, fontSize: 11, fontWeight: '600' },
+  actionLabelProtection: { backgroundColor: 'rgba(250,247,239,0.72)', borderRadius: 9, paddingHorizontal: 8, paddingVertical: 2 },
   card: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
@@ -776,6 +305,16 @@ const s = StyleSheet.create({
     padding: 16,
   },
   petRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  petSummary: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,250,242,0.62)', borderRadius: 14, paddingVertical: 3, paddingHorizontal: 8, marginTop: 8, marginBottom: 12, maxWidth: '74%', minHeight: 46 },
+  avatarSmall: { width: 32, height: 32, borderRadius: 16 },
+  avatarFallbackSmall: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
+  petNameSmall: { fontSize: 16, fontWeight: '900', color: Colors.text },
+  petSwitchCompact: { gap: 6, paddingBottom: 2 },
+  managementHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SECTION_GAP + 10, marginBottom: 4 },
+  managementRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2, marginBottom: 2 },
+  managementAction: { flex: 1, alignItems: 'center', gap: ACTION_LABEL_GAP },
+  managementIcon: { width: ACTION_DIAMETER, height: ACTION_DIAMETER, borderRadius: ACTION_DIAMETER / 2, backgroundColor: 'rgba(239,248,239,0.94)', alignItems: 'center', justifyContent: 'center' },
+  managementLabel: { color: Colors.text, fontSize: 11, fontWeight: '600' },
   avatar: { width: 68, height: 68, borderRadius: 34 },
   avatarFallback: {
     width: 68,
@@ -785,7 +324,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarEmoji: { fontSize: 34 },
   petName: { fontSize: 23, fontWeight: '900', color: Colors.text },
   muted: { color: Colors.subtext, lineHeight: 20 },
   observationRow: { padding: 12, borderRadius: 12, backgroundColor: '#F5F7F4', marginBottom: 8 },
@@ -807,10 +345,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 23,
-    marginBottom: 9,
+    marginTop: 10,
+    marginBottom: 5,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
   sectionHint: { color: Colors.subtext, fontSize: 12, marginBottom: 12 },
   metricRow: { flexDirection: 'row' },
   metric: { flex: 1, alignItems: 'center', paddingVertical: 5 },
@@ -882,7 +420,7 @@ const s = StyleSheet.create({
     marginRight: 10,
   },
   empty: { alignItems: 'center', paddingVertical: 24 },
-  emptyIcon: { fontSize: 25, marginBottom: 6 },
+  emptyIcon: { marginBottom: 6 },
   center: {
     flex: 1,
     alignItems: 'center',

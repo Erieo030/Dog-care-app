@@ -10,8 +10,8 @@ client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=5000)
 db = client[settings.mongo_db]
 
 # Daily Log 以毛孩與裝置本地日期避免同日重複，並支援歷史排序。
-db.daily_logs.create_index([ ("petId", 1), ("localDate", 1) ], unique=True)
-db.daily_logs.create_index([ ("petId", 1), ("loggedAt", -1) ])
+db.daily_logs.create_index([ ("userId", 1), ("petId", 1), ("localDate", 1) ], unique=True)
+db.daily_logs.create_index([ ("userId", 1), ("petId", 1), ("loggedAt", -1) ])
 
 # 常用毛孩查詢索引；建立索引具冪等性，啟動時可安全重複執行。
 def _ensure_index(collection, keys, name):
@@ -28,7 +28,7 @@ for collection in (
     db.daily_logs, db.weight_records, db.health_events, db.medical_visits,
     db.vaccinations, db.dewormings, db.medications, db.reminders, db.timeline,
 ):
-    _ensure_index(collection, [("petId", 1)], "pet_owner_lookup")
+    _ensure_index(collection, [("userId", 1), ("petId", 1)], "user_pet_lookup")
 
 for collection, field, name in (
     (db.weight_records, "measuredAt", "dashboard_weight_date"),
@@ -40,5 +40,10 @@ for collection, field, name in (
     (db.reminders, "scheduledAt", "dashboard_reminder_date_status"),
     (db.timeline, "occurredAt", "dashboard_timeline_date"),
 ):
-    _ensure_index(collection, [ ("petId", 1), (field, -1) ], name)
+    _ensure_index(collection, [("userId", 1), ("petId", 1), (field, -1)], name)
 _ensure_index(db.attachments, [("petId", 1), ("sourceType", 1), ("sourceId", 1)], "search_attachment_source")
+
+
+def close() -> None:
+    """關閉 MongoDB 連線，供應用程式 shutdown 使用。"""
+    client.close()

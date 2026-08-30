@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 """用途：定義健康異常共用欄位，並驗證各專屬快速紀錄 details。"""
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -71,8 +72,8 @@ class HealthEventCreateRequest(BaseModel):
             return self
         if len(self.notes) > 500:
             raise ValueError("快速異常紀錄備註不可超過 500 字")
-        occurred_at = self.occurredAt if self.occurredAt.tzinfo else self.occurredAt.replace(tzinfo=timezone.utc)
-        if occurred_at.astimezone(timezone.utc) > datetime.now(timezone.utc):
+        occurred_at = self.occurredAt if self.occurredAt.tzinfo else self.occurredAt.replace(tzinfo=TAIPEI)
+        if occurred_at.astimezone(timezone.utc) > now_taipei():
             raise ValueError("異常發生時間不可晚於現在")
         # 專屬 details 採白名單模型，避免任意巢狀資料進入 MongoDB。
         self.details = details_model.model_validate(self.details).model_dump(exclude_none=True)

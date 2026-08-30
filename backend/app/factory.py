@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.services.export_service import recover_jobs
+from app.services.export_service import recover_jobs, shutdown as shutdown_exports
+from app.db import close as close_mongodb
 
 def _error_message(detail):
     if isinstance(detail, str):
@@ -57,4 +58,6 @@ def create_app() -> FastAPI:
 
     application.include_router(api_router)
     recover_jobs()
+    application.router.add_event_handler("shutdown", shutdown_exports)
+    application.router.add_event_handler("shutdown", close_mongodb)
     return application

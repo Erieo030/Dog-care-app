@@ -5,6 +5,7 @@ export interface LostProfile {
   hasToken?: boolean;
   publicToken?: string;
   contactName: string;
+  contactEmail?: string;
   contactPhone: string;
   alternatePhone?: string;
   contactMessage?: string;
@@ -14,6 +15,11 @@ export interface LostProfile {
   showCoatColor: boolean;
   showDistinctiveFeatures: boolean;
   showAvatar: boolean;
+  showContactName: boolean;
+  showContactEmail: boolean;
+  showContactPhone: boolean;
+  showAlternatePhone: boolean;
+  showContactMessage: boolean;
   lostMode: boolean;
   lostSince?: string | null;
   lostLocationText?: string;
@@ -27,6 +33,7 @@ export const saveLostProfile = (u: string, p: string, d: Partial<LostProfile>) =
   const payload = {
     enabled: d.enabled ?? false,
     contactName: d.contactName ?? '',
+    contactEmail: d.contactEmail ?? '',
     contactPhone: d.contactPhone ?? '',
     alternatePhone: d.alternatePhone ?? '',
     contactMessage: d.contactMessage ?? '',
@@ -36,6 +43,11 @@ export const saveLostProfile = (u: string, p: string, d: Partial<LostProfile>) =
     showCoatColor: d.showCoatColor ?? true,
     showDistinctiveFeatures: d.showDistinctiveFeatures ?? true,
     showAvatar: d.showAvatar ?? true,
+    showContactName: d.showContactName ?? true,
+    showContactEmail: d.showContactEmail ?? false,
+    showContactPhone: d.showContactPhone ?? true,
+    showAlternatePhone: d.showAlternatePhone ?? false,
+    showContactMessage: d.showContactMessage ?? true,
     lostMode: d.lostMode ?? false,
     lostSince: d.lostSince ?? null,
     lostLocationText: d.lostLocationText ?? '',

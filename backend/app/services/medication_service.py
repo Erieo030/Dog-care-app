@@ -1,3 +1,4 @@
+from app.timezone import now_taipei, TAIPEI
 from datetime import datetime,timezone
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
@@ -22,9 +23,9 @@ def source_visit(visit_id,pet_id,uid):
  pet(pet_id,uid)
 def sync_timeline(x,event="start"):
  title={"start":f"開始{x['name']}用藥療程","completed":f"完成{x['name']}用藥療程","stopped":f"停止{x['name']}用藥療程"}[event]
- upsert_timeline_item(x["petId"],"medication",datetime.now(timezone.utc),title,str(x["_id"]),x.get("instructions", ""))
+ upsert_timeline_item(x["petId"],"medication",now_taipei(),title,str(x["_id"]),x.get("instructions", ""))
 def reminder_date(item,time):
- return datetime.fromisoformat(f"{item['startDate']}T{time}:00").replace(tzinfo=timezone.utc)
+ return datetime.fromisoformat(f"{item['startDate']}T{time}:00").replace(tzinfo=TAIPEI)
 def sync_reminders(item,uid):
  existing=list(db.reminders.find({"petId":item["petId"],"sourceType":"medication","sourceId":str(item["_id"])}))
  desired=set(item.get("reminderTimes",[])) if item.get("reminderEnabled") and item.get("status")=="active" else set()
@@ -47,15 +48,15 @@ def get(rid,uid):
  if not x:raise HTTPException(404,"找不到用藥紀錄")
  pet(x["petId"],uid);return ser(x)
 def create(pid,uid,d:MedicationRequest):
- pet(pid,uid);source_visit(d.medicalVisitId,pid,uid);now=datetime.now(timezone.utc);x={"petId":pid,**d.model_dump(),"createdAt":now,"updatedAt":now};x["_id"]=db.medications.insert_one(x).inserted_id;sync_reminders(x,uid);sync_timeline(x);return ser(x)
+ pet(pid,uid);source_visit(d.medicalVisitId,pid,uid);now=now_taipei();x={"petId":pid,**d.model_dump(),"createdAt":now,"updatedAt":now};x["_id"]=db.medications.insert_one(x).inserted_id;sync_reminders(x,uid);sync_timeline(x);return ser(x)
 def update(rid,uid,d:MedicationRequest):
  x=db.medications.find_one({"_id":oid(rid)})
  if not x:raise HTTPException(404,"找不到用藥紀錄")
- pet(x["petId"],uid);source_visit(d.medicalVisitId,x["petId"],uid);v=d.model_dump();v["updatedAt"]=datetime.now(timezone.utc);db.medications.update_one({"_id":x["_id"]},{"$set":v});x=db.medications.find_one({"_id":x["_id"]});sync_reminders(x,uid);return ser(x)
+ pet(x["petId"],uid);source_visit(d.medicalVisitId,x["petId"],uid);v=d.model_dump();v["updatedAt"]=now_taipei();db.medications.update_one({"_id":x["_id"]},{"$set":v});x=db.medications.find_one({"_id":x["_id"]});sync_reminders(x,uid);return ser(x)
 def change_status(rid,uid,status):
  x=db.medications.find_one({"_id":oid(rid)})
  if not x:raise HTTPException(404,"找不到用藥紀錄")
- pet(x["petId"],uid);db.medications.update_one({"_id":x["_id"]},{"$set":{"status":status,"reminderEnabled":False,"updatedAt":datetime.now(timezone.utc)}});x=db.medications.find_one({"_id":x["_id"]});sync_reminders(x,uid);sync_timeline(x,status);return ser(x)
+ pet(x["petId"],uid);db.medications.update_one({"_id":x["_id"]},{"$set":{"status":status,"reminderEnabled":False,"updatedAt":now_taipei()}});x=db.medications.find_one({"_id":x["_id"]});sync_reminders(x,uid);sync_timeline(x,status);return ser(x)
 def delete(rid,uid):
  x=db.medications.find_one({"_id":oid(rid)})
  if not x:raise HTTPException(404,"找不到用藥紀錄")

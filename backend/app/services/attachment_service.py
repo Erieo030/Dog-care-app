@@ -1,5 +1,6 @@
 """用途：管理統一健康附件 metadata、local storage、ownership 與來源生命週期。"""
 from __future__ import annotations
+from app.timezone import now_taipei, TAIPEI
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -97,7 +98,7 @@ def _serialize(item: dict) -> dict:
 
 
 def _cleanup_pending() -> None:
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    cutoff = now_taipei() - timedelta(hours=24)
     for item in db.attachments.find({"sourceId": None, "createdAt": {"$lt": cutoff}}):
         storage.delete(item["storageKey"])
         db.attachments.delete_one({"_id": item["_id"]})
@@ -118,7 +119,7 @@ async def upload_attachment(
     declared = (file.content_type or "").lower()
     if detected not in ALLOWED_MIME or declared not in ALLOWED_MIME or detected != declared:
         raise HTTPException(status_code=415, detail="只支援 JPG、JPEG、PNG 圖片")
-    now = datetime.now(timezone.utc)
+    now = now_taipei()
     key = f"{now:%Y/%m}/{uuid4().hex}{ALLOWED_MIME[detected]}"
     storage.save(key, content)
     document = {
@@ -169,7 +170,7 @@ def delete_attachment(attachment_id: str, user_id: str) -> None:
         timeline_source_type = "weight_record" if source_type == "weight" else source_type
         db.timeline.update_many(
             {"petId": item["petId"], "sourceType": timeline_source_type, "sourceId": source_id},
-            {"$set": {"attachmentCount": count, "updatedAt": datetime.now(timezone.utc)}},
+            {"$set": {"attachmentCount": count, "updatedAt": now_taipei()}},
         )
 
 
@@ -199,7 +200,7 @@ def sync_source_attachments(
     if object_ids:
         db.attachments.update_many(
             {"_id": {"$in": object_ids}},
-            {"$set": {"sourceType": source_type, "sourceId": source_id, "updatedAt": datetime.now(timezone.utc)}},
+            {"$set": {"sourceType": source_type, "sourceId": source_id, "updatedAt": now_taipei()}},
         )
     return unique_ids
 

@@ -2,14 +2,17 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   RefreshControl,
   SafeAreaView,
+  FlatList,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../constants/Colors';
@@ -27,9 +30,9 @@ const FILTERS: Array<[Filter, string]> = [
   ['reminder_completed', '提醒'],
   ['health_event', '健康異常'],
   ['weight', '體重'],
-  ['medical_visit', '就醫'],
 ];
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
+const DAY_MS = 24 * 60 * 60 * 1000;
 export default function TimelineScreen({ navigation }: Props) {
   const { session } = useAuth();
   const { selectedPet } = usePet();
@@ -67,15 +70,29 @@ export default function TimelineScreen({ navigation }: Props) {
           type: nextFilter === 'all' ? undefined : nextFilter,
         });
         if (current !== requestId.current) return;
+        const now = Date.now();
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const rangeStart = nextFilter === 'all' || nextFilter === 'reminder_completed'
+          ? todayStart.getTime()
+          : todayStart.getTime() - 6 * DAY_MS;
+        const filteredItems = page.items
+          .filter((item) => {
+            const timestamp = new Date(item.occurredAt).getTime();
+            return Number.isFinite(timestamp) && timestamp >= rangeStart && (
+              nextFilter === 'all' || nextFilter === 'reminder_completed' || timestamp <= now
+            );
+          })
+          .sort((left, right) => {
+            const direction = nextFilter === 'all' || nextFilter === 'reminder_completed' ? 1 : -1;
+            return direction * (new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime());
+          });
         setItems((previous) =>
           reset
-            ? page.items
-            : [
-                ...previous,
-                ...page.items.filter((item) => !previous.some((old) => old.id === item.id)),
-              ],
+            ? filteredItems
+            : [...previous, ...filteredItems.filter((item) => !previous.some((old) => old.id === item.id))],
         );
-        setHasMore(page.hasMore);
+        setHasMore(false);
         setNextSkip(page.nextSkip);
       } catch (e) {
         if (current !== requestId.current) return;
@@ -119,99 +136,47 @@ export default function TimelineScreen({ navigation }: Props) {
   if (loading) return <ScreenState loading text="正在載入時間軸…" />;
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView
+      <FlatList
+        data={filterChanging || error ? [] : items}
+        keyExtractor={(item) => item.id}
+        removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={5}
         contentContainerStyle={s.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              setNextSkip(0);
-              load(true, filter);
-            }}
-          />
-        }
-      >
-        <Text style={s.title}>{selectedPet?.name} 的時間軸</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.filters}
-        >
-          {FILTERS.map(([value, label]) => (
-            <TouchableOpacity
-              key={value}
-              disabled={filterChanging}
-              style={[s.filter, filter === value && s.filterActive]}
-              onPress={() => changeFilter(value)}
-            >
-              <Text style={[s.filterText, filter === value && s.filterTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        {filterChanging && (
-          <View style={s.inline}>
-            <ActivityIndicator color={Colors.primary} />
-            <Text style={s.stateText}>切換篩選中…</Text>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setNextSkip(0); load(true, filter); }} />}
+        ListHeaderComponent={<>
+          <View style={s.petHeader}>
+            {selectedPet?.avatarUrl ? <Image source={{ uri: selectedPet.avatarUrl }} style={s.petAvatar} /> : <View style={s.petAvatarFallback}><Ionicons name="paw-outline" size={21} color={Colors.primary} /></View>}
+            <View style={s.flex}><Text style={s.eyebrow}>照護紀錄</Text><Text style={s.title}>{selectedPet?.name} 的生活足跡</Text></View>
           </View>
-        )}
-        {!!error && (
-          <Center
-            text={error}
-            action={() => {
-              setLoading(true);
-              load(true, filter);
-            }}
-          />
-        )}
-        {!error && !filterChanging && !items.length && (
-          <Text style={s.empty}>
-            {filter === 'all' ? '目前還沒有時間軸紀錄' : '此類型目前沒有紀錄'}
-          </Text>
-        )}
-        {items.map((item) => (
-          <TimelineCard
-            key={item.id}
-            item={item}
-            onPress={() => openTimelineSource(navigation, item)}
-          />
-        ))}
-        {!!moreError && (
-          <View style={s.moreState}>
-            <Text style={s.error}>{moreError}</Text>
-            <TouchableOpacity onPress={() => load(false, filter)}>
-              <Text style={s.retryText}>重試載入更多</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        {hasMore && (
-          <TouchableOpacity
-            disabled={loadingMore}
-            style={[s.more, loadingMore && s.disabled]}
-            onPress={() => load(false, filter)}
-          >
-            {loadingMore ? (
-              <ActivityIndicator color={Colors.primary} />
-            ) : (
-              <Text style={s.moreText}>載入更多</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
+            {FILTERS.map(([value, label]) => <TouchableOpacity key={value} disabled={filterChanging} style={[s.filter, filter === value && s.filterActive]} onPress={() => changeFilter(value)}><Text style={[s.filterText, filter === value && s.filterTextActive]}>{label}</Text></TouchableOpacity>)}
+          </ScrollView>
+          {filterChanging && <View style={s.inline}><ActivityIndicator color={Colors.primary} /><Text style={s.stateText}>切換篩選中…</Text></View>}
+          {!!error && <Center text={error} action={() => { setLoading(true); load(true, filter); }} />}
+        </>}
+        ListEmptyComponent={!error && !filterChanging ? <View style={s.emptyBox}><View style={s.emptyIcon}><Ionicons name="paw-outline" size={28} color={Colors.primary} /></View><Text style={s.empty}>{filter === 'all' ? '目前還沒有時間軸紀錄' : '此類型目前沒有紀錄'}</Text><Text style={s.emptyHint}>每一次小小的照顧，都會慢慢留下足跡。</Text></View> : null}
+        renderItem={({ item }) => <TimelineCard item={item} onPress={() => openTimelineSource(navigation, item)} />}
+        ListFooterComponent={<>
+          {!!moreError && <View style={s.moreState}><Text style={s.error}>{moreError}</Text><TouchableOpacity onPress={() => load(false, filter)}><Text style={s.retryText}>重試載入更多</Text></TouchableOpacity></View>}
+          {hasMore && <TouchableOpacity disabled={loadingMore} style={[s.more, loadingMore && s.disabled]} onPress={() => load(false, filter)}>{loadingMore ? <ActivityIndicator color={Colors.primary} /> : <Text style={s.moreText}>載入更多</Text>}</TouchableOpacity>}
+        </>}
+      />
     </SafeAreaView>
   );
 }
-function TimelineCard({ item, onPress }: { item: TimelineItem; onPress: () => void }) {
-  const meta = TIMELINE_META[item.type];
+const TimelineCard = React.memo(function TimelineCard({ item, onPress }: { item: TimelineItem; onPress: () => void }) {
+  const meta = TIMELINE_META[item.type] ?? TIMELINE_META.life_event;
   return (
-    <TouchableOpacity style={s.card} onPress={onPress}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={`查看紀錄：${meta.label}`} style={s.card} onPress={onPress}>
       <View style={s.icon}>
-        <Text style={s.iconText}>{meta.icon}</Text>
+        <Ionicons name={meta.icon as keyof typeof Ionicons.glyphMap} size={19} color={Colors.success} />
       </View>
       <View style={s.flex}>
         <View style={s.cardMeta}>
           <Text style={s.kind}>{meta.label}</Text>
-          <Text style={s.date}>{new Date(item.occurredAt).toLocaleString('zh-TW')}</Text>
+          <Text style={s.date}>{new Date(item.occurredAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</Text>
         </View>
         <Text style={s.itemTitle}>{item.title}</Text>
         {!!item.description && <Text style={s.description}>{item.description}</Text>}
@@ -222,7 +187,7 @@ function TimelineCard({ item, onPress }: { item: TimelineItem; onPress: () => vo
       <Text style={s.arrow}>›</Text>
     </TouchableOpacity>
   );
-}
+});
 function Center({
   text,
   loading,
@@ -248,7 +213,11 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 18, paddingBottom: 50 },
   flex: { flex: 1 },
-  title: { color: Colors.text, fontSize: 25, fontWeight: '800', marginBottom: 14 },
+  petHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  petAvatar: { width: 48, height: 48, borderRadius: 16, marginRight: 12 },
+  petAvatarFallback: { width: 48, height: 48, borderRadius: 16, marginRight: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primarySoft },
+  eyebrow: { color: Colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
+  title: { color: Colors.text, fontSize: 23, fontWeight: '800', marginTop: 2 },
   filters: { gap: 8, paddingBottom: 16 },
   filter: {
     borderWidth: 1,
@@ -277,7 +246,10 @@ const s = StyleSheet.create({
     padding: 15,
   },
   stateText: { color: Colors.subtext, textAlign: 'center', marginTop: 8 },
-  empty: { color: Colors.subtext, textAlign: 'center', padding: 45 },
+  emptyBox: { alignItems: 'center', paddingVertical: 38 },
+  emptyIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: Colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  emptyHint: { color: Colors.subtext, fontSize: 13, marginTop: 8, textAlign: 'center' },
+  empty: { color: Colors.text, fontWeight: '700', textAlign: 'center' },
   error: { color: '#C55B5B', textAlign: 'center' },
   retry: {
     marginTop: 14,
@@ -302,12 +274,11 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFF3D5',
+    backgroundColor: Colors.successSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
   },
-  iconText: { color: Colors.text, fontSize: 18, fontWeight: '800' },
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   kind: { color: Colors.primary, fontSize: 12, fontWeight: '800' },
   date: { color: Colors.subtext, fontSize: 11 },

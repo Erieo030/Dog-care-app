@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../constants/Colors';
 import ScreenState from '../components/ScreenState';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
@@ -44,7 +46,12 @@ const physical: [DailyPhysicalStatus, string][] = [
   ['pregnant', '懷孕'],
   ['other', '其他'],
 ];
-const dateKey = () => new Date().toISOString().slice(0, 10);
+const dateKey = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+};
 type Props = NativeStackScreenProps<HomeStackParamList, 'DailyLog'>;
 export default function DailyLogScreen({ route }: Props) {
   const { session } = useAuth();
@@ -129,7 +136,6 @@ export default function DailyLogScreen({ route }: Props) {
   if (loading) return <ScreenState loading text="載入中…" />;
   return (
     <ScrollView contentContainerStyle={s.page}>
-      <Text style={s.title}>今日紀錄</Text>
       {error ? (
         <TouchableOpacity onPress={load}>
           <Text style={s.error}>{error}（點擊重試）</Text>
@@ -195,7 +201,7 @@ export default function DailyLogScreen({ route }: Props) {
           <Text style={s.delete}>刪除今日紀錄</Text>
         </TouchableOpacity>
       ) : null}
-      <Text style={s.label}>歷史紀錄</Text>
+      <Text style={[s.label, s.historyHeading]}>過往紀錄</Text>
       {history.map((x) => (
         <TouchableOpacity
           key={x.id}
@@ -205,8 +211,11 @@ export default function DailyLogScreen({ route }: Props) {
             setDraft(x);
           }}
         >
-          <Text>{x.localDate}</Text>
-          <Text>{x.notes || '已記錄觀察項目'}</Text>
+          <View style={s.historyDate}>
+            <Ionicons name="calendar-outline" size={17} color={Colors.primary} />
+            <Text style={s.historyDateText}>{x.localDate}</Text>
+          </View>
+          <Text style={s.historyNote} numberOfLines={1}>{x.notes || '已記錄觀察項目'}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -238,20 +247,21 @@ function Options({
 const s = StyleSheet.create({
   page: { padding: 18, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 14 },
-  label: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 14, color: Colors.text },
+  label: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 8, color: Colors.text },
+  historyHeading: { marginTop: 24, marginBottom: 10 },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 14,
     minHeight: 44,
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#eee',
+    backgroundColor: Colors.successSoft,
   },
-  selected: { backgroundColor: '#b9e5d0' },
+  selected: { backgroundColor: Colors.primarySoft },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 14,
     minHeight: 52,
@@ -260,21 +270,30 @@ const s = StyleSheet.create({
   notes: { minHeight: 80, textAlignVertical: 'top' },
   save: {
     marginTop: 22,
-    backgroundColor: '#3f8064',
+    backgroundColor: Colors.primary,
     padding: 14,
     minHeight: 52,
     borderRadius: 14,
     alignItems: 'center',
   },
   saveText: { color: '#fff', fontWeight: '700' },
-  error: { color: '#b42318', marginBottom: 8 },
-  delete: { color: '#b42318', textAlign: 'center', margin: 18 },
+  error: { color: Colors.danger, marginBottom: 8 },
+  delete: { color: Colors.danger, textAlign: 'center', margin: 18 },
   row: {
-    minHeight: 52,
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    minHeight: 56,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    marginBottom: 8,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
+  historyDate: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  historyDateText: { color: Colors.text, fontWeight: '700' },
+  historyNote: { flex: 1, color: Colors.subtext, textAlign: 'right' },
 });

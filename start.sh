@@ -4,6 +4,9 @@
 
 set -Eeuo pipefail
 
+# 後端與開發服務統一使用台灣時區（UTC+8）。
+export TZ="${TZ:-Asia/Taipei}"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
@@ -57,10 +60,13 @@ set_env_value() {
 
 wait_for_mongo() {
   local status=""
+  local container_status=""
   for _ in {1..60}; do
     status="$(docker inspect --format '{{.State.Health.Status}}' app-mongo 2>/dev/null || true)"
     [[ "$status" == "healthy" ]] && return 0
-    [[ "$status" == "unhealthy" ]] && return 1
+    container_status="$(docker inspect --format '{{.State.Status}}' app-mongo 2>/dev/null || true)"
+    [[ "$container_status" == "exited" || "$container_status" == "dead" ]] && return 1
+    # MongoDB 啟動／WiredTiger recovery 期間可能短暫呈現 unhealthy，繼續等待。
     sleep 1
   done
   return 1

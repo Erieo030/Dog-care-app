@@ -7,6 +7,6 @@ export const getHealthDashboard = async (userId: string, petId: string, range = 
     timezoneOffsetMinutes: String(new Date().getTimezoneOffset()),
   });
   return await apiData<HealthDashboard>(
-    `/api/pets/${petId}/dashboard?${query.toString()}&range=${range}`,
+    `/api/pets/${petId}/dashboard?${query.toString()}&range=${range}&_=${Date.now()}`,
   );
 };

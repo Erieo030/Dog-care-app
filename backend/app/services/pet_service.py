@@ -1,7 +1,10 @@
+from app.timezone import now_taipei, TAIPEI
 """毛孩資料的 CRUD 商業邏輯，隔離 MongoDB 細節與 HTTP 路由。"""
 
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
+import secrets
+from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.db import db
@@ -47,9 +50,15 @@ def serialize_pet(pet: dict) -> dict:
 
 
 def list_pets(user_id: str) -> list[dict]:
-    """取得指定使用者的全部毛孩，供登入與毛孩切換使用。"""
+    """取得指定使用者的全部毛孩，並補建舊資料的固定身份 QR。"""
     _ensure_user(user_id)
-    return [serialize_pet(pet) for pet in db.pets.find({"userId": user_id})]
+    user = db.users.find_one({"_id": _object_id(user_id, "使用者 ID ")}, {"email": 1}) or {}
+    pets = list(db.pets.find({"userId": user_id}))
+    for pet in pets:
+        if not db.lost_pet_profiles.find_one({"petId": str(pet["_id"])}):
+            now = now_taipei()
+            db.lost_pet_profiles.insert_one({"petId": str(pet["_id"]), "publicToken": secrets.token_urlsafe(32), "enabled": True, "lostMode": False, "contactEmail": user.get("email", ""), "showBreed": True, "showSex": True, "showNeutered": False, "showCoatColor": True, "showDistinctiveFeatures": True, "showAvatar": True, "showContactName": True, "showContactEmail": False, "showContactPhone": True, "showAlternatePhone": False, "showContactMessage": True, "createdAt": now, "updatedAt": now})
+    return [serialize_pet(pet) for pet in pets]
 
 
 def create_pet(data: PetCreateRequest) -> dict:
@@ -58,6 +67,14 @@ def create_pet(data: PetCreateRequest) -> dict:
     document = data.model_dump()
     result = db.pets.insert_one(document)
     document["_id"] = result.inserted_id
+    user = db.users.find_one({"_id": _object_id(data.userId, "使用者 ID ")}, {"email": 1}) or {}
+    db.lost_pet_profiles.insert_one({
+        "petId": str(result.inserted_id), "publicToken": secrets.token_urlsafe(32),
+        "enabled": True, "lostMode": False, "contactEmail": user.get("email", ""),
+        "showBreed": True, "showSex": True, "showNeutered": False,
+        "showCoatColor": True, "showDistinctiveFeatures": True, "showAvatar": True, "showContactName": True, "showContactEmail": False, "showContactPhone": True, "showAlternatePhone": False, "showContactMessage": True,
+        "createdAt": now_taipei(), "updatedAt": now_taipei(),
+    })
     return {
         "success": True,
         "message": "寵物資料已儲存",
