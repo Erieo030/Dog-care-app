@@ -1,5 +1,5 @@
 from app.timezone import now_taipei, TAIPEI
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from app.schemas.ai import AIAlert, HealthMonitorResult
 
 class HealthMonitorConfig:
@@ -13,6 +13,12 @@ class HealthMonitorConfig:
 def _aware(value):
     if isinstance(value, datetime) and value.tzinfo is None: return value.replace(tzinfo=TAIPEI)
     return value
+def _end_of_taipei_day(value):
+    """用藥結束日是日期欄位，當天整日都應視為仍在療程內。"""
+    try:
+        return datetime.combine(datetime.fromisoformat(value).date(), time.max, tzinfo=TAIPEI)
+    except (TypeError, ValueError):
+        return None
 def _id(rule, evidence):
     stable = str(evidence.get("lastObservedAt") or evidence.get("endDate") or evidence.get("dueAt") or evidence.get("types") or "current")
     return f"{rule}:{stable}"
@@ -52,8 +58,7 @@ def monitor(context):
     for item in context.get("medications",{}).get("active",[]):
         end=item.get("endDate")
         if end:
-            try: end_date=datetime.fromisoformat(end).replace(tzinfo=TAIPEI)
-            except ValueError: end_date=None
+            end_date=_end_of_taipei_day(end)
             if end_date and now<=end_date<=now+timedelta(days=HealthMonitorConfig.MEDICATION_ENDING_SOON_DAYS): alerts.append(_alert("medication_ending_soon","info","用藥療程即將結束",f"{item.get('name','用藥')} 的紀錄療程即將結束。",{"medicationName":item.get("name",""),"endDate":end,"daysRemaining":(end_date-now).days}))
     for key,label in (("vaccinations","疫苗"),("dewormings","驅蟲")):
         latest=context.get(key,{}).get("latest")
