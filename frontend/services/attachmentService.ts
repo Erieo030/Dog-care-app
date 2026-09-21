@@ -74,13 +74,11 @@ export async function pickAndUploadAttachments(input: {
   for (const asset of selected) {
     const prepared = await compress(asset);
     const form = new FormData();
-    form.append('file', {
-      uri: prepared.uri,
-      name:
-        asset.fileName ||
-        `pawlog-${Date.now()}.${prepared.mimeType === 'image/png' ? 'png' : 'jpg'}`,
-      type: prepared.mimeType,
-    } as unknown as Blob);
+    form.append(
+      'file',
+      new FileSystem.File(prepared.uri),
+      asset.fileName || `pawlog-${Date.now()}.${prepared.mimeType === 'image/png' ? 'png' : 'jpg'}`,
+    );
     form.append('width', String(prepared.width));
     form.append('height', String(prepared.height));
     const response = await fetch(
@@ -103,8 +101,7 @@ export async function pickAndUploadAttachments(input: {
 }
 
 export const attachmentUri = (item: Attachment, userId: string, retry = 0) => {
-  if (/^file:|^content:|^https?:/.test(item.contentPath))
-    return item.contentPath;
+  if (/^file:|^content:|^https?:/.test(item.contentPath)) return item.contentPath;
   return `${API_BASE_URL}${item.contentPath}?userId=${encodeURIComponent(userId)}&retry=${retry}`;
 };
 

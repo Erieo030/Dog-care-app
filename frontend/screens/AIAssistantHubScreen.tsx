@@ -83,7 +83,16 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
           <View style={styles.petHeaderText}><Text style={styles.eyebrow}>MEGO AI 助手</Text><Text style={styles.title}>和 {selectedPet?.name || '毛孩'} 一起整理</Text></View>
         </View>
         <Text style={styles.subtitle}>把散落的照護紀錄，整理成容易理解的答案。</Text>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="開始新的 MEGO AI 對話" style={styles.startButton} onPress={openAssistant}><View style={styles.startButtonLabel}><View style={styles.startButtonIcon}><Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} /></View><View><Text style={styles.startButtonText}>開始新的對話</Text><Text style={styles.startButtonHint}>和 {selectedPet?.name || "毛孩"} 一起整理照護</Text></View></View><Text style={styles.startButtonArrow}>›</Text></TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="開始新的 MEGO AI 對話" style={styles.startButton} onPress={openAssistant}>
+          <View style={styles.startButtonLabel}>
+            <View style={styles.startButtonIcon}><Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} /></View>
+            <View style={styles.petHeaderText}>
+              <Text style={styles.startButtonText}>開始新的對話</Text>
+              <Text style={styles.startButtonHint}>和 {selectedPet?.name || '毛孩'} 一起整理照護</Text>
+            </View>
+          </View>
+          <Text style={styles.startButtonArrow}>›</Text>
+        </TouchableOpacity>
         <Text style={styles.sectionTitle}>最近對話</Text>
         {sessionsLoading ? <View style={styles.loadingRow}><ActivityIndicator size="small" color={Colors.primary} /><Text style={styles.loadingText}>正在整理最近對話…</Text></View> : sessionsError ? <View style={styles.loadError}><Text style={styles.empty}>最近對話暫時載入失敗</Text><TouchableOpacity accessibilityRole="button" style={styles.retryButton} onPress={refreshSessions}><Text style={styles.retryText}>再試一次</Text></TouchableOpacity></View> : sessions.length ? sessions.map((item) => <SessionSwipeRow key={item.id} item={item} onOpen={async () => { if (!session?.userId || !selectedPet?.id) return; await activateAISession(session.userId, selectedPet.id, item); navigation.navigate('AIChat'); }} onDelete={() => Alert.alert('刪除對話？', `將刪除「${item.title}」，此動作無法復原。`, [{ text: '取消', style: 'cancel' }, { text: '刪除', style: 'destructive', onPress: async () => { if (!session?.userId || !selectedPet?.id) return; await deleteAISession(session.userId, selectedPet.id, item.id); setSessions((items) => items.filter((entry) => entry.id !== item.id)); } }])} />) : <View style={styles.emptyState}><View style={styles.emptyIcon}><Ionicons name="paw-outline" size={24} color={Colors.primary} /></View><Text style={styles.empty}>還沒有對話，從一次照護提問開始吧。</Text></View>}
 
@@ -103,8 +112,8 @@ const styles = StyleSheet.create({
   title: { color: Colors.text, fontSize: 25, fontWeight: '800', marginTop: 2 },
   subtitle: { color: Colors.subtext, lineHeight: 21, marginBottom: 14 },
   sectionTitle: { color: Colors.text, fontSize: 18, fontWeight: '800', marginTop: 24, marginBottom: 10 },
-  sessionWrap: { height: 68, overflow: 'hidden', borderRadius: 18, marginBottom: 8 },
-  sessionForeground: { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.surface },
+  sessionWrap: { minHeight: 68, overflow: 'hidden', borderRadius: 18, marginBottom: 8 },
+  sessionForeground: { backgroundColor: Colors.surface },
   deleteAction: { position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_WIDTH, backgroundColor: Colors.danger, alignItems: 'center', justifyContent: 'center' }, deleteText: { color: '#FFF', fontWeight: '700' },
   session: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   sessionIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.successSoft, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -113,7 +122,7 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
 
   startButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.primary, borderRadius: 18, paddingHorizontal: 16, minHeight: 68, marginTop: 8 },
-  startButtonLabel: { flexDirection: 'row', alignItems: 'center' },
+  startButtonLabel: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingRight: 8 },
   startButtonIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: '#FFF4E8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   startButtonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   startButtonHint: { color: '#F8DCC8', fontSize: 12, marginTop: 3 },

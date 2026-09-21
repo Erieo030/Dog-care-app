@@ -4,6 +4,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 
@@ -21,7 +22,6 @@ import HomeScreen from '../screens/HomeScreen';
 import AIChatScreen from '../screens/AIChatScreen';
 import AIAssistantHubScreen from '../screens/AIAssistantHubScreen';
 import PreVetSummaryScreen from '../screens/PreVetSummaryScreen';
-import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import { AddPetScreen, EditPetScreen } from '../screens/ManagePetScreen';
 import MedicalVisitDetailScreen from '../screens/MedicalVisitDetailScreen';
 import MedicalVisitFormScreen from '../screens/MedicalVisitFormScreen';
@@ -199,11 +199,6 @@ function HomeStack() {
       <Stack.Screen name="AIChat" component={AIChatScreen} options={{ headerShown: false }} />
       <Stack.Screen name="VetVisitBrief" component={PreVetSummaryScreen} options={{ title: '就醫前摘要' }} />
       <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: '今日紀錄' }} />
-      <Stack.Screen
-        name="GlobalSearch"
-        component={GlobalSearchScreen}
-        options={{ title: '搜尋與篩選' }}
-      />
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: '新增毛孩' }} />
       <Stack.Screen name="EditPet" component={EditPetScreen} options={{ title: '編輯毛孩資料' }} />
       <Stack.Screen name="ReminderList" component={ReminderListScreen} options={{ title: '提醒' }} />
@@ -339,6 +334,7 @@ const tabLabel = (text: string) => ({ focused, color }: { focused: boolean; colo
 
 export default function MainTabs() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs.Navigator
       id="MainTabs"
@@ -347,10 +343,10 @@ export default function MainTabs() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.text,
         tabBarStyle: {
-          height: 72,
-          paddingTop: 3,
-          paddingBottom: 8,
-          backgroundColor: 'transparent',
+          height: 64 + Math.max(insets.bottom, 12),
+          paddingTop: 6,
+          paddingBottom: Math.max(insets.bottom, 12),
+          backgroundColor: Colors.background,
           borderTopWidth: 0,
           borderTopColor: 'transparent',
           shadowOpacity: 0,

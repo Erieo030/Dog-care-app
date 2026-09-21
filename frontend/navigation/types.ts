@@ -45,7 +45,6 @@ export type HomeStackParamList = {
   MedicalVisitList: undefined;
   MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean };
   MedicalVisitDetail: { visitId: string };
-  GlobalSearch: undefined;
   AIChat: undefined;
   VetVisitBrief: undefined;
 };

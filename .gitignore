@@ -108,8 +108,7 @@ Thumbs.db
 *.orig.*
 *.rej
 
-# Local project guidance and planning documents
-adjust.txt
-AGENTS.md
-ARCHITECTURE.md
-ROADMAP.md
+# Local planning documents
+FUNCTIONAL_LOGIC.md
+PROJECT.md
+SYSTEM_FLOW.md

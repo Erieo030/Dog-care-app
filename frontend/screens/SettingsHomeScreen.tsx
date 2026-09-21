@@ -48,7 +48,7 @@ const Row = ({
   <Animated.View style={{ transform: [{ scale }] }}>
   <TouchableOpacity accessibilityRole="button" accessibilityLabel={value ? `${title} ${value}` : title} style={s.row} onPress={onPress} onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start()} onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}>
     <View style={s.rowIcon}>{imageUri ? <Image source={{ uri: imageUri }} style={s.rowAvatar} /> : <Ionicons name={icon} size={19} color={danger ? Colors.danger : Colors.success} />}</View>
-    <Text numberOfLines={1} ellipsizeMode="tail" style={[s.title, danger && s.danger]}>{title}</Text>
+    <Text style={[s.title, danger && s.danger]}>{title}</Text>
     <View style={s.accessory}>
       {value ? <Text numberOfLines={1} ellipsizeMode="tail" style={[s.value, danger && s.danger]}>{value}</Text> : null}
       <Text style={[s.chevron, danger && s.danger]}>›</Text>
@@ -211,7 +211,7 @@ const s = StyleSheet.create({
   rowIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.successSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' },
   rowAvatar: { width: 32, height: 32, resizeMode: 'cover' },
   title: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.text },
-  accessory: { maxWidth: '58%', flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
+  accessory: { maxWidth: '42%', flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
   value: { flexShrink: 1, fontSize: 13, color: Colors.subtext, textAlign: 'right' },
   chevron: { marginLeft: 8, fontSize: 22, lineHeight: 22, color: Colors.subtext },
   danger: { color: Colors.danger },

@@ -337,7 +337,7 @@ const s = StyleSheet.create({
     minHeight: 52,
     marginBottom: 10,
   },
-  options: { flexDirection: 'row', gap: 8, marginVertical: 10 },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 10 },
   chip: {
     paddingHorizontal: 14,
     minHeight: 44,

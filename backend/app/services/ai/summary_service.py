@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import time
+from hashlib import sha256
 from datetime import datetime, timezone
 from typing import Any
 from pydantic import ValidationError
@@ -45,10 +46,22 @@ class HealthSummaryService:
         summary = "目前紀錄較少，持續記錄後可以產生更完整的健康摘要。" if not highlights else "；".join(highlights) + "。"
         return HealthSummaryResponse(periodDays=days, headline=f"近 {days} 天健康紀錄摘要", summary=summary, highlights=highlights, attentionItems=[a.message for a in monitor.alerts], upcomingCare=care[:6], dataCoverage=f"已整理近 {days} 天可取得的 MEGO 紀錄。", disclaimer=DISCLAIMER, provider="deterministic", generatedAt=now_taipei(), fallbackUsed=True)
 
+    def _cache_key(self, context: AIContext, monitor: HealthMonitorResult, purpose: str) -> str:
+        payload = self._prompt_context(context, monitor)
+        payload["periodDays"] = context.period.days
+        fingerprint = sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()
+        return f"{purpose}:{context.pet.get('petId', context.pet.get('name', ''))}:{fingerprint}"
+
+    def get_cached(self, context: AIContext, monitor: HealthMonitorResult, purpose: str = "general") -> HealthSummaryResponse | None:
+        cached = self._cache.get(self._cache_key(context, monitor, purpose))
+        if cached and time.monotonic() - cached[0] < self.ttl_seconds:
+            return cached[1]
+        return None
+
     async def generate(self, context: AIContext, monitor: HealthMonitorResult, force_refresh: bool = False, purpose: str = "general") -> HealthSummaryResponse:
-        key=f"{purpose}:{context.pet.get('petId', context.pet.get('name',''))}:{context.period.days}"
-        cached=self._cache.get(key)
-        if cached and not force_refresh and time.monotonic()-cached[0] < self.ttl_seconds: return cached[1]
+        key=self._cache_key(context, monitor, purpose)
+        cached=self.get_cached(context, monitor, purpose)
+        if cached and not force_refresh: return cached
         fallback=self._fallback(context, monitor)
         if not self._has_data(context) or not getattr(self.provider, "available", True):
             self._cache[key]=(time.monotonic(), fallback); return fallback

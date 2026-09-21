@@ -1,5 +1,9 @@
 /** 用途：提供統一 API Client，集中處理網址、JSON、逾時與錯誤訊息。 */
-const rawBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBLIC_API_URL ?? '';
+// 選填網址留白時，使用啟動腳本提供的網址；保留直接存取供 Expo 靜態替換。
+const rawBaseUrl =
+  (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim() ||
+  (process.env.EXPO_PUBLIC_API_URL || '').trim() ||
+  '';
 
 export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 

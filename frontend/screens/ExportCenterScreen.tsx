@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   infoCard: { padding: 16, borderRadius: 18, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, marginTop: 18 },
   infoHeading: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   infoIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 9 },
-  infoTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
+  infoTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: Colors.text },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
     paddingVertical: 11,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   choiceActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   choiceText: { color: Colors.text, fontWeight: '600' },
   choiceTextActive: { color: '#fff' },
-  dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', marginTop: 14 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

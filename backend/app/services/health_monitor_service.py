@@ -26,7 +26,7 @@ def _streak(summary, key, low, high):
     return None
 def monitor(context):
     alerts=[]; logs=context.get("dailyLogs",{}); n=HealthMonitorConfig.STREAK_COUNT
-    for key,low,high in (("food",{"low","very_low"},set()),("water",{"low","very_low"},{"high","very_high"}),("energy",{"slightly_low","clearly_low","very_low"},set())):
+    for key,low,high in (("food",{"low"},set()),("water",{"low"},{"high"}),("energy",{"low"},set())):
         a=_streak(logs,key,low,high)
         if a: alerts.append(a)
     stool=logs.get("stool",{}).get("recent",[])

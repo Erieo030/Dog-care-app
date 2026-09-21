@@ -373,57 +373,6 @@ export interface HealthDashboard {
   timeline: TimelineItem[];
   generatedAt: string;
 }
-export type SearchResultType =
-  | 'weight'
-  | 'health_event'
-  | 'medical_visit'
-  | 'reminder'
-  | 'deworming'
-  | 'medication';
-export type SearchSort = 'newest' | 'oldest' | 'az' | 'za';
-export type SearchAttachmentFilter = 'any' | 'with' | 'without';
-export type SearchReminderStatus = 'any' | 'completed' | 'pending' | 'overdue';
-export type SearchHealthCategory =
-  | 'digestive'
-  | 'skin'
-  | 'respiratory'
-  | 'eye'
-  | 'injury'
-  | 'other';
-export interface SearchFilters {
-  query: string;
-  startAt?: string;
-  endAt?: string;
-  types: SearchResultType[];
-  healthCategories: SearchHealthCategory[];
-  clinic: string;
-  veterinarian: string;
-  minWeight?: number;
-  maxWeight?: number;
-  attachment: SearchAttachmentFilter;
-  reminderStatus: SearchReminderStatus;
-  sort: SearchSort;
-}
-export interface SearchResultItem {
-  id: string;
-  type: SearchResultType;
-  occurredAt: string;
-  title: string;
-  description: string;
-  sourceId: string;
-  sourceType: TimelineSourceType;
-  linkedSourceType?: TimelineSourceType;
-  linkedSourceId?: string;
-  attachmentCount: number;
-  metadata: Record<string, string | number | null | undefined>;
-}
-export interface SearchPage {
-  items: SearchResultItem[];
-  page: number;
-  pageSize: number;
-  total: number;
-  hasMore: boolean;
-}
 export type ExportFormat = 'pdf';
 export type ExportScope = 'current_pet' | 'all_pets';
 export type ExportPeriod = '30_days' | '90_days' | 'all' | 'custom';
@@ -448,20 +397,8 @@ export interface ExportJob {
   updatedAt: string;
 }
 
-export type DailyWaterLevel = 'very_low' | 'low' | 'normal' | 'high' | 'very_high';
-export type DailyEnergyLevel =
-  | 'very_energetic'
-  | 'normal'
-  | 'slightly_low'
-  | 'clearly_low'
-  | 'very_low';
-export type DailyPhysicalStatus =
-  | 'normal'
-  | 'heat'
-  | 'period'
-  | 'post_surgery'
-  | 'pregnant'
-  | 'other';
+export type DailyWaterLevel = 'low' | 'normal' | 'high';
+export type DailyEnergyLevel = 'normal' | 'low';
 export interface DailyLog {
   id: string;
   petId: string;
@@ -469,12 +406,7 @@ export interface DailyLog {
   localDate: string;
   waterLevel?: DailyWaterLevel;
   foodLevel?: DailyWaterLevel;
-  snack?: boolean;
-  snackName?: string;
-  snackNotes?: string;
   energyLevel?: DailyEnergyLevel;
-  physicalStatus?: DailyPhysicalStatus;
-  physicalStatusNote?: string;
   stoolLevel?: number;
   notes?: string;
   createdAt?: string;

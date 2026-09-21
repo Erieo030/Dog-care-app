@@ -150,7 +150,7 @@ export default function AttachmentPicker({
 const s = StyleSheet.create({
   wrap: { marginTop: 16 },
   title: { fontWeight: '700', color: Colors.text, marginBottom: 8 },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   button: {
     minHeight: 44,
     flexDirection: 'row',
@@ -163,7 +163,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  buttonText: { color: Colors.text, fontWeight: '600' },
+  buttonText: { color: Colors.text, fontWeight: '600', flexShrink: 1 },
   status: { flexDirection: 'row', gap: 8, marginTop: 10 },
   error: { marginTop: 10, padding: 10, backgroundColor: '#FFF1F0', borderRadius: 10 },
   errorText: { color: '#A33' },

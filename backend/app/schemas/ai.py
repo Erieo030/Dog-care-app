@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
-RangeDays = Literal[7, 30, 90]
+RangeDays = Literal[7, 15, 30, 90]
 class AIPeriod(BaseModel):
     days: RangeDays
     startAt: datetime

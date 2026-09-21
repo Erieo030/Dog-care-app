@@ -1,14 +1,16 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export function BottomNavigationDock() {
-  return <View pointerEvents="none" accessible={false} style={styles.dock} />;
+  const insets = useSafeAreaInsets();
+  return <View pointerEvents="none" accessible={false} style={[styles.dock, { bottom: Math.max(insets.bottom - 4, 8) }]} />;
 }
 
 const styles = StyleSheet.create({
   dock: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     left: 20,
     right: 20,
     top: 2,

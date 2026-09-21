@@ -23,28 +23,15 @@ import {
   getTodayDailyLog,
   updateDailyLog,
 } from '../services/dailyLogService';
-import { DailyLog, DailyEnergyLevel, DailyPhysicalStatus, DailyWaterLevel } from '../types';
+import { DailyLog, DailyEnergyLevel, DailyWaterLevel } from '../types';
 const water: [DailyWaterLevel, string][] = [
-  ['very_low', '很少'],
   ['low', '偏少'],
   ['normal', '正常'],
   ['high', '偏多'],
-  ['very_high', '很多'],
 ];
 const energy: [DailyEnergyLevel, string][] = [
-  ['very_energetic', '很有精神'],
   ['normal', '正常'],
-  ['slightly_low', '稍微沒精神'],
-  ['clearly_low', '明顯沒精神'],
-  ['very_low', '很差'],
-];
-const physical: [DailyPhysicalStatus, string][] = [
-  ['normal', '正常'],
-  ['heat', '發情'],
-  ['period', '生理期'],
-  ['post_surgery', '術後'],
-  ['pregnant', '懷孕'],
-  ['other', '其他'],
+  ['low', '沒精神'],
 ];
 const dateKey = () => {
   const now = new Date();
@@ -145,38 +132,12 @@ export default function DailyLogScreen({ route }: Props) {
       <Options values={water} value={draft.waterLevel} onPick={(v) => set('waterLevel', v)} />
       <Text style={s.label}>飼料量</Text>
       <Options values={water} value={draft.foodLevel} onPick={(v) => set('foodLevel', v)} />
-      <Text style={s.label}>今天有吃零食嗎？</Text>
-      <Options
-        values={
-          [
-            [false, '沒有'],
-            [true, '有'],
-          ] as [boolean, string][]
-        }
-        value={draft.snack}
-        onPick={(v) => set('snack', v)}
-      />
-      {draft.snack ? (
-        <TextInput
-          style={s.input}
-          placeholder="零食名稱"
-          value={draft.snackName || ''}
-          onChangeText={(v) => set('snackName', v)}
-        />
-      ) : null}
       <Text style={s.label}>精神狀態</Text>
       <Options values={energy} value={draft.energyLevel} onPick={(v) => set('energyLevel', v)} />
-      <Text style={s.label}>生理狀態</Text>
-      <Options
-        values={physical}
-        value={draft.physicalStatus}
-        onPick={(v) => set('physicalStatus', v)}
-      />
       <Text style={s.label}>大便狀況</Text>
       <Options
         values={
           [
-            [1, '1 很硬'],
             [2, '2 偏硬'],
             [3, '3 正常'],
             [4, '4 偏軟'],

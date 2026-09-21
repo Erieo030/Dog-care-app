@@ -16,5 +16,22 @@ export interface AIUsage { dailyLimit:number|null; used:number; remaining:number
 export interface ChatResponse { answer:string; intent:string; sources:ChatSource[]; fallbackUsed:boolean; provider:string; model?:string|null; generationMode:string; conversationId?:string|null; suggestions:string[]; usage?:AIUsage; errorCode?:string; errorMessage?:string; }
 export const sendAIChat = (userId:string, petId:string, message:string, range=30, conversationId?:string, role='general') => apiData<ChatResponse>(`/api/pets/${petId}/ai/chat?userId=${encodeURIComponent(userId)}`, { method:'POST', body: JSON.stringify({ message, range, conversationId, role }), headers: { 'Content-Type':'application/json' } }, AI_REQUEST_TIMEOUT_MS);
 
-export interface VetVisitBrief { pet:Record<string,unknown>; period:{days:number;startAt:string;endAt:string}; keyObservations:string[]; weightSummary:Record<string,unknown>; dailyLogSummary:Record<string,unknown>; recentHealthEvents:Record<string,unknown>[]; activeMedications:Record<string,unknown>[]; recentMedicalVisits:Record<string,unknown>[]; vaccination:Record<string,unknown>; deworming:Record<string,unknown>; monitorAlerts:Record<string,unknown>[]; dataCoverage:Record<string,number>; generatedSummary:string; disclaimer:string; generatedAt:string; generationMode:string; sources:ChatSource[]; }
-export const getVetVisitBrief = (userId:string, petId:string, range=7) => apiData<VetVisitBrief>(`/api/pets/${petId}/ai/vet-brief?userId=${encodeURIComponent(userId)}&range=${range}`, {}, AI_REQUEST_TIMEOUT_MS);
+export type VetBriefSection = 'health' | 'weight' | 'daily' | 'medications' | 'medical' | 'vaccinations' | 'dewormings' | 'reminders';
+export interface VetWeightPoint { measuredAt:string; weightKg:number; }
+export interface VetHealthEvent { id:string; type:string; occurredAt:string; severity:string; summary:string; notes?:string; }
+export interface VetMedication { name:string; instructions?:string; timesPerDay?:number; startDate?:string; endDate?:string; mealTiming?:string; }
+export interface VetMedicalVisit { id:string; visitedAt:string; reason:string; clinicName?:string; treatmentNotes?:string; followUpAt?:string; }
+export interface VetReminder { title:string; scheduledAt:string; }
+export interface VetVisitBrief {
+  pet:{ name?:string; breed?:string; sex?:string; birthDate?:string; isNeutered?:boolean; allergies?:string; chronicDiseases?:string; };
+  period:{days:number;startAt:string;endAt:string}; keyObservations:string[];
+  weightSummary:{latestWeightKg?:number|null; previousWeightKg?:number|null; differenceKg?:number|null; recordCount:number; series:VetWeightPoint[]};
+  dailyLogSummary:{recordCount:number; water?:{latest?:string}; food?:{latest?:string}; energy?:{latest?:string}; stool?:{latest?:number}};
+  recentHealthEvents:VetHealthEvent[]; activeMedications:VetMedication[]; recentMedicalVisits:VetMedicalVisit[];
+  vaccination:{latest?:{vaccineName?:string; administeredAt?:string; nextDueAt?:string}|null}; deworming:{latest?:{type?:string; productName?:string; administeredAt?:string; nextDueAt?:string}|null};
+  monitorAlerts:HealthMonitorAlert[]; dataCoverage:Record<string,number>; generatedSummary:string; disclaimer:string; generatedAt:string; generationMode:'deterministic'|'llm'|'fallback'; sources:ChatSource[]; scopeNotes:string[]; vetQuestions:string[]; upcomingReminders:VetReminder[];
+}
+export const getVetVisitBrief = (userId:string, petId:string, range=7, includeNarrative=false, sections:VetBriefSection[] = []) => {
+  const selected = sections.length ? `&sections=${encodeURIComponent(sections.join(','))}` : '';
+  return apiData<VetVisitBrief>(`/api/pets/${petId}/ai/vet-brief?userId=${encodeURIComponent(userId)}&range=${range}&includeNarrative=${includeNarrative}${selected}`, {}, includeNarrative ? 20000 : AI_REQUEST_TIMEOUT_MS);
+};

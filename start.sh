@@ -169,6 +169,7 @@ LAN_IP="$(detect_lan_ip)"
 [[ -n "$LAN_IP" ]] || fail "Unable to detect a LAN IP address"
 export EXPO_PUBLIC_API_URL="${API_BASE_URL_OVERRIDE:-http://${LAN_IP}:${BACKEND_PORT}}"
 if [[ -z "$(read_env_value "$FRONTEND_DIR/.env" EXPO_PUBLIC_API_BASE_URL)" ]]; then
+  set_env_value "$FRONTEND_DIR/.env" "EXPO_PUBLIC_API_BASE_URL" "$EXPO_PUBLIC_API_URL"
   set_env_value "$FRONTEND_DIR/.env" "EXPO_PUBLIC_API_URL" "$EXPO_PUBLIC_API_URL"
 fi
 
@@ -185,4 +186,4 @@ printf '%s\n' "Scan the Expo QR code shown below."
 printf '%s\n\n' "Press Ctrl+C to stop Expo and FastAPI."
 
 cd "$FRONTEND_DIR"
-EXPO_NO_DOCTOR=1 npx expo start "--${EXPO_CONNECTION}" -c
+npx expo start --go "--${EXPO_CONNECTION}" -c

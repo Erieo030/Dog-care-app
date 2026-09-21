@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.db import db
 from app.schemas.daily_log import DailyLogCreateRequest,DailyLogUpdateRequest
 from app.services.timeline_service import delete_timeline_item,upsert_timeline_item
-W={"very_low":"很少","low":"偏少","normal":"正常","high":"偏多","very_high":"很多"};E={"very_energetic":"很有精神","normal":"正常","slightly_low":"稍微沒精神","clearly_low":"明顯沒精神","very_low":"很差"};S={1:"很硬",2:"偏硬",3:"正常",4:"偏軟",5:"水狀"}
+W={"low":"偏少","normal":"正常","high":"偏多"};E={"normal":"正常","low":"沒精神"};S={2:"偏硬",3:"正常",4:"偏軟",5:"水狀"}
 def oid(v):
  try:return ObjectId(v)
  except InvalidId:raise HTTPException(400,"ID 格式錯誤")
@@ -19,7 +19,6 @@ def summary(x):
  p=[]
  if x.get("waterLevel"):p.append("喝水"+W[x["waterLevel"]])
  if x.get("foodLevel"):p.append("食量"+W[x["foodLevel"]])
- if x.get("snack") is True:p.append("有零食")
  if x.get("energyLevel"):p.append("精神"+E[x["energyLevel"]])
  if x.get("stoolLevel"):p.append(f"便便 Level {x['stoolLevel']}（{S[x['stoolLevel']]}）")
  return "・".join(p) or "尚未填寫觀察項目"

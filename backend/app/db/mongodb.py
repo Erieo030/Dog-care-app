@@ -41,6 +41,19 @@ for collection, field, name in (
     (db.timeline, "occurredAt", "dashboard_timeline_date"),
 ):
     _ensure_index(collection, [("userId", 1), ("petId", 1), (field, -1)], name)
+
+# AI context 以 petId 查詢，補齊和實際查詢條件一致的索引，避免資料量增加後掃描整個 collection。
+for collection, field, name in (
+    (db.weight_records, "measuredAt", "ai_weight_pet_date"),
+    (db.daily_logs, "loggedAt", "ai_daily_pet_date"),
+    (db.health_events, "occurredAt", "ai_health_pet_date"),
+    (db.medical_visits, "visitedAt", "ai_medical_pet_date"),
+    (db.vaccinations, "administeredAt", "ai_vaccination_pet_date"),
+    (db.dewormings, "administeredAt", "ai_deworming_pet_date"),
+    (db.reminders, "scheduledAt", "ai_reminder_pet_date"),
+):
+    _ensure_index(collection, [("petId", 1), (field, -1)], name)
+_ensure_index(db.medications, [("petId", 1), ("status", 1), ("startDate", -1)], "ai_medication_pet_status")
 _ensure_index(db.attachments, [("petId", 1), ("sourceType", 1), ("sourceId", 1)], "search_attachment_source")
 
 

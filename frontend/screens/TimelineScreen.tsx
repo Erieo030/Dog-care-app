@@ -279,7 +279,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 11,
   },
-  cardMeta: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  cardMeta: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
   kind: { color: Colors.primary, fontSize: 12, fontWeight: '800' },
   date: { color: Colors.subtext, fontSize: 11 },
   itemTitle: { color: Colors.text, fontWeight: '800', marginTop: 5, lineHeight: 20 },

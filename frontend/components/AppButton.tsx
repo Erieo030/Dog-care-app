@@ -33,7 +33,9 @@ export const AppButton = ({ title, onPress, style }: AppButtonProps) => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.primary,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
@@ -52,6 +54,9 @@ const styles = StyleSheet.create({
     }),
   },
   text: {
+    flexShrink: 1,
+    textAlign: 'center',
+    lineHeight: 22,
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',

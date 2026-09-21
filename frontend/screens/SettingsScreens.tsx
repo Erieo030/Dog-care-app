@@ -79,7 +79,7 @@ const Row = ({
     accessibilityLabel={value ? `${title} ${value}` : title}
   >
     {icon ? <Ionicons name={icon} size={20} color={danger ? palette.danger : palette.primary} style={s.rowIcon} /> : null}
-    <Text numberOfLines={1} ellipsizeMode="tail" style={[s.rowTitle, danger && s.danger]}>{title}</Text>
+    <Text style={[s.rowTitle, danger && s.danger]}>{title}</Text>
     <View style={s.accessory}>
       {value ? <Text numberOfLines={1} ellipsizeMode="tail" style={[s.value, danger && s.danger]}>{value}</Text> : null}
       {onPress ? <Text style={[s.chevron, danger && s.danger]}>›</Text> : null}
@@ -233,7 +233,7 @@ export function PrivacyPolicyScreen() {
       <Text style={s.heading}>MEGO 隱私政策</Text>
       <Text style={s.paragraph}>MEGO 會依本政策處理你為照護毛孩而提供的資料，包括帳號資訊、毛孩基本資料、健康事件、體重、用藥、疫苗、驅蟲、就醫紀錄、提醒、附件與照片。</Text>
       <Text style={s.heading}>資料用途</Text>
-      <Text style={s.paragraph}>這些資料只用於建立時間軸、提供提醒、搜尋與篩選、產生匯出報告，以及在你主動使用 AI 助手時整理照護資訊。AI 回覆僅供紀錄整理與一般資訊參考，不代表醫療診斷。</Text>
+      <Text style={s.paragraph}>這些資料只用於建立時間軸、提供提醒、產生匯出報告，以及在你主動使用 AI 助手時整理照護資訊。AI 回覆僅供紀錄整理與一般資訊參考，不代表醫療診斷。</Text>
       <Text style={s.heading}>資料分享與安全</Text>
       <Text style={s.paragraph}>MEGO 不會將你的資料用於廣告販售。使用 AI、同步或匯出功能時，必要資料可能傳送至提供該功能的服務；我們會依部署環境採取適當的存取控制與傳輸保護。請勿在紀錄中輸入不必要的敏感資訊。</Text>
       <Text style={s.heading}>你的權利</Text>
@@ -246,7 +246,7 @@ export function TermsOfUseScreen() {
   return (
     <Page>
       <Text style={s.heading}>使用條款</Text>
-      <Text style={s.paragraph}>使用 MEGO 即表示你同意使用本 App 建立與管理毛孩資料、健康紀錄、提醒、搜尋、匯出及相關功能。你應提供真實且不侵害他人權利的內容，並妥善保管帳號登入資訊。</Text>
+      <Text style={s.paragraph}>使用 MEGO 即表示你同意使用本 App 建立與管理毛孩資料、健康紀錄、提醒、匯出及相關功能。你應提供真實且不侵害他人權利的內容，並妥善保管帳號登入資訊。</Text>
       <Text style={s.heading}>健康資訊限制</Text>
       <Text style={s.paragraph}>MEGO 是照護紀錄與整理工具，不提供疾病診斷、獸醫診斷替代、藥物處方或緊急醫療服務。用藥、疫苗、驅蟲與提醒內容請由飼主確認；毛孩出現嚴重或持續惡化症狀時，應立即聯絡合格動物醫院。</Text>
       <Text style={s.heading}>AI 助手與資料</Text>
@@ -278,7 +278,7 @@ const s = StyleSheet.create({
   },
   rowIcon: { marginRight: 10 },
   rowTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: palette.text },
-  accessory: { maxWidth: '58%', flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
+  accessory: { maxWidth: '42%', flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
   value: { flexShrink: 1, color: palette.sub, fontSize: 13, textAlign: 'right' },
   chevron: { marginLeft: 8, color: palette.sub, fontSize: 22, lineHeight: 22 },
   note: { color: palette.sub, lineHeight: 19, fontSize: 13, marginVertical: 14 },

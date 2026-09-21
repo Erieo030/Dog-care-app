@@ -13,7 +13,6 @@ MEGO 是紀錄與整理工具，不提供疾病診斷、處方或用藥指示。
 - 提醒支援新增、編輯、完成、延後、略過、刪除與重複週期。
 - 首頁顯示今日待做、未來 7 天待辦與健康觀察。
 - 時間軸整合提醒、健康異常、體重與照護事件。
-- 搜尋與條件篩選紀錄。
 - 健康照護報告匯出為不含圖片的 PDF。
 - 毛孩身份 QR：以隨機公開 Token 顯示飼主選擇的毛孩與聯絡資料。
 - iOS／Android Expo App；手機通知使用本機通知。
@@ -21,13 +20,17 @@ MEGO 是紀錄與整理工具，不提供疾病診斷、處方或用藥指示。
 
 ## 技術棧
 
-- 前端：React 19、React Native 0.81、Expo 54、TypeScript、React Navigation 7、Ionicons、AsyncStorage。
+- 前端：React 19.2.3、React Native 0.86.3、Expo SDK 57、TypeScript 6、React Navigation 7、Ionicons、AsyncStorage。
 - 後端：Python 3、FastAPI、Pydantic 2、PyMongo、Uvicorn、ReportLab。
 - 資料庫：MongoDB 7。
 - 開發環境：Docker Compose、Mongo Express、Expo Metro。
 - 測試／品質：TypeScript、ESLint、Prettier、Jest、Python unittest／pytest、GitHub Actions。
 
 ## 安裝方式
+
+使用 Node.js 22.13 以上的 22.x 版本；CI 使用 Node 22。iPhone 需 iOS 16.4 以上，Expo Go 必須支援 SDK 57。
+
+升級後先停止舊 Metro，在 `frontend/` 執行 `npm ci`，再回根目錄執行 `./start.sh`。`npm start` 與 `start.sh` 預設以 Expo Go 開啟；開發版 App 使用 `npm run start:dev-client`，且須重新建置。Linux 無法執行本機 Xcode iOS 編譯；原生 iOS build 需 macOS、Xcode 與 CocoaPods，或 EAS Build。
 
 ```bash
 git clone <repository-url>
@@ -58,6 +61,8 @@ AI_MODEL_API_URL=
 AI_MODEL_API_KEY=
 AI_MODEL_NAME=gemma-4-26b-a4b
 AI_MODEL_TIMEOUT_SECONDS=45
+# 就醫前摘要的「AI 補充整理」最多等待 15 秒；初始摘要不呼叫模型
+AI_VET_BRIEF_TIMEOUT_SECONDS=15
 
 # 預設關閉每日限制
 AI_DAILY_REQUEST_LIMIT_ENABLED=false
@@ -71,11 +76,12 @@ Frontend 可使用 `frontend/.env`：
 
 ```env
 EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
+EXPO_PUBLIC_API_BASE_URL=
 EXPO_PUBLIC_LOST_PET_BASE_URL=https://你的公開網域
 EXPO_PUBLIC_ENABLE_AI=true
 ```
 
-API Key 只能放後端；`EXPO_PUBLIC_*` 變數不可放秘密。
+`EXPO_PUBLIC_API_BASE_URL` 留白時，會使用 `EXPO_PUBLIC_API_URL`。`./start.sh` 會依區網 IP 同步更新 API URL。API Key 只能放後端；`EXPO_PUBLIC_*` 變數不可放秘密。
 
 ## 使用方式
 
@@ -128,11 +134,7 @@ Dog-care-app/
 │   ├── tests/             # 後端 smoke tests
 │   ├── main.py            # ASGI 啟動入口
 │   └── docker-compose.yml  # MongoDB／Mongo Express
-├── start.sh
-├── AGENTS.md
-├── ARCHITECTURE.md
-├── ROADMAP.md
-└── adjust.txt
+└── start.sh           # 本機啟動 MongoDB、FastAPI 與 Expo
 ```
 
 `dog-care/` 是本機 Python 虛擬環境，不納入 Git。
@@ -158,7 +160,7 @@ curl "http://localhost:8000/api/pets/<pet_id>/ai/health-monitor?userId=<user_id>
 curl "http://localhost:8000/api/public/lost-pets/<public_token>/page"
 ```
 
-主要 endpoint 分組：Auth、Pets、Daily Logs、Health Events、Weights、Medical Visits、Vaccinations、Dewormings、Medications、Reminders、Timeline、Search、Exports、AI、Lost Pet QR。完整參數與 schema 以 Swagger 為準。
+主要 endpoint 分組：Auth、Pets、Daily Logs、Health Events、Weights、Medical Visits、Vaccinations、Dewormings、Medications、Reminders、Timeline、Exports、AI、Lost Pet QR。完整參數與 schema 以 Swagger 為準。
 
 ## 開發、測試與 Build
 
@@ -193,8 +195,14 @@ git diff --check
 
 - 日期／時間欄位使用自製 JavaScript Calendar／Time Modal，避免 native picker 的 1970 初始值與模組錯誤。
 - 新產生時間與服務 log 使用台灣時區 UTC+8。
-- 目前展示資料保留帳號與毛孩，照護功能可建立測試資料；重置資料前需確認範圍。
+- 本機展示資料可用下列指令重建：保留 `users` 帳號，清空其餘資料並為每個帳號建立新版測試毛孩與照護紀錄。
+
+  ```bash
+  cd backend
+  PYTHONPATH=. ../dog-care/bin/python scripts/reset_and_seed_demo_data.py
+  ```
 - AI Session 每隻毛孩最多 5 個，非 LLM 查詢不計每日次數；每日 LLM 限制預設關閉。
+- 就醫前摘要可選近 7、15、30 天與要帶入的照護資料；先以結構化內容立即產生，使用者可再主動選擇 AI 補充整理。
 - PDF 報告為中文、不含圖片；內容供照護溝通，不是醫療診斷。
 - 背景圖片使用 WebP 壓縮資產；日期選擇器不重新引入 native picker。
 
@@ -205,4 +213,4 @@ git diff --check
 - AI 外部服務金鑰只存在後端；服務逾時或格式錯誤會使用 deterministic fallback 或友善錯誤。
 - App 目前沒有 OCR、雲端備份、醫療診斷或藥物處方功能。
 
-更多規劃請參考 [ARCHITECTURE.md](ARCHITECTURE.md)、[ROADMAP.md](ROADMAP.md) 與 [adjust.txt](adjust.txt)。
+本 README 保持自包含，供 GitHub 使用者了解、安裝與啟動專案。開發工作區可另保留不提交的產品、功能與流程維護文件。

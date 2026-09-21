@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   label: { color: '#5F5148', fontWeight: '700', marginBottom: 7 },
   field: { minHeight: 54, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DED4C7', borderRadius: 12, backgroundColor: '#FFF', justifyContent: 'center', paddingHorizontal: 15 },
   calendarIcon: { marginRight: 9 },
-  value: { color: '#40362F' },
+  value: { color: '#40362F', flexShrink: 1, textAlign: 'center', paddingVertical: 12 },
   placeholder: { color: '#9B8D7F' },
   modalBackdrop: { flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0,0,0,0.25)' },
   calendarModal: { backgroundColor: '#FFF', borderRadius: 20, padding: 16 },

@@ -142,7 +142,7 @@ const s = StyleSheet.create({
   subtitle: { color: '#887d74', marginTop: 3 },
   petCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: '#eee5dc' },
   petAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#f7e4d8', alignItems: 'center', justifyContent: 'center' },
-  petInfo: { marginLeft: 14 },
+  petInfo: { flex: 1, minWidth: 0, marginLeft: 14 },
   petName: { fontSize: 22, fontWeight: '800', color: '#3f342c' },
   petMeta: { color: '#887d74', marginTop: 3 },
   infoBox: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#eef7f2', borderRadius: 14, padding: 12 },
