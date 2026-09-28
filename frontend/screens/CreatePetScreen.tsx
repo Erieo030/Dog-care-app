@@ -12,7 +12,7 @@ interface CreatePetScreenProps {
 export default function CreatePetScreen(props: CreatePetScreenProps) {
   return (
     <PetFormScreen
-      title="建立毛孩檔案 🐾"
+      title="建立毛孩檔案"
       submitLabel="儲存毛孩資料"
       onSubmit={props.onSubmit}
       onCancel={props.onCancel}

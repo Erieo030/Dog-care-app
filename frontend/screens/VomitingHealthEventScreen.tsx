@@ -1,23 +1,39 @@
 /** 用途：提供 10～20 秒可完成的嘔吐專屬新增與編輯快速表單。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { AppButton } from '../components/AppButton';
+import SupplementalNotesField from '../components/SupplementalNotesField';
 
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_FIELD_HEIGHT,
+  FORM_FIELD_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_WEIGHT,
+  FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  FORM_FIELD_LABEL_MARGIN_TOP,
+  FORM_FIELD_PADDING_HORIZONTAL,
+  FORM_FIELD_RADIUS,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import DatePickerField from '../components/DatePickerField';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
+import { showQuickRecordFeedback } from '../utils/quickRecordFeedback';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { SEVERITY_LABELS } from '../constants/HealthEvents';
 import {
   buildVomitingSummary,
@@ -34,6 +50,15 @@ import { usePet } from '../contexts/PetContext';
 import type { HomeStackParamList } from '../navigation/types';
 import * as service from '../services/healthEventService';
 import { EnergyCondition, Attachment, Severity, VomitCount, VomitingDetails } from '../types';
+import {
+  HealthEventOptionGroup as OptionGroup,
+  HealthEventOptionsWrap as OptionsWrap,
+  HealthEventToggle as Toggle,
+} from '../features/health-events/components/HealthEventOptions';
+import {
+  HealthEventErrorState,
+  HealthEventLoadingState,
+} from '../features/health-events/components/HealthEventScreenState';
 
 const severities = Object.entries(SEVERITY_LABELS) as Array<[Severity, string]>;
 const emptyDetails = (): VomitingDetails => ({
@@ -48,7 +73,9 @@ const emptyDetails = (): VomitingDetails => ({
 type Props = NativeStackScreenProps<HomeStackParamList, 'VomitingHealthEvent'>;
 
 export default function VomitingHealthEventScreen({ route, navigation }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const eventId = route.params?.eventId as string | undefined;
+  const quickEntry = route.params?.quickEntry === true;
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const [details, setDetails] = useState<VomitingDetails>(emptyDetails);
@@ -62,7 +89,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
   const [submitting, setSubmitting] = useState(false);
   const requestId = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     if (!eventId) return;
     const currentRequest = ++requestId.current;
     if (!session?.userId || !selectedPet) {
@@ -72,7 +99,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
     }
     try {
       setError('');
-      const result = await service.getHealthEvent(session.userId, eventId);
+      const result = await service.getHealthEvent(session.userId, eventId, signal);
       if (currentRequest !== requestId.current) return;
       if (result.petId !== selectedPet.id || result.type !== 'vomiting') {
         setError('找不到目前毛孩的嘔吐紀錄');
@@ -105,10 +132,15 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
 
   useFocusEffect(
     useCallback(() => {
+      const controller = new AbortController();
       if (eventId) {
         setLoading(true);
-        load();
+        void load(controller.signal);
       }
+      return () => {
+        controller.abort();
+        requestId.current += 1;
+      };
     }, [eventId, load]),
   );
 
@@ -128,20 +160,25 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
         summary: buildVomitingSummary(details),
         details,
         notes: notes.trim(),
-        attachmentIds: images
-
-          .map((item) => item.id),
+        attachmentIds: images.map((item) => item.id),
       };
       if (eventId) await service.updateVomitingHealthEvent(session.userId, eventId, input);
       else await service.createVomitingHealthEvent(session.userId, selectedPet.id, input);
       const safety = shouldShowVomitingSafety(details, severity);
-      Alert.alert(
-        '已儲存',
-        safety
-          ? `嘔吐紀錄已儲存。\n\n安全提醒：${VOMITING_SAFETY_MESSAGE}`
-          : '嘔吐紀錄已加入近期動態。',
-        [{ text: '完成', onPress: () => (eventId ? navigation.goBack() : navigation.popToTop()) }],
-      );
+      const successMessage = safety
+        ? `嘔吐紀錄已儲存。\n\n安全提醒：${VOMITING_SAFETY_MESSAGE}`
+        : '嘔吐紀錄已加入近期動態。';
+      if (quickEntry && !eventId) {
+        showQuickRecordFeedback({
+          message: `${successMessage}\n\n完整內容可到「紀錄」查看。`,
+          onDone: () => navigation.popToTop(),
+          onAddAnother: () => navigation.replace('VomitingHealthEvent', { quickEntry: true }),
+        });
+      } else {
+        Alert.alert('已儲存', successMessage, [
+          { text: '完成', onPress: () => (eventId ? navigation.goBack() : navigation.popToTop()) },
+        ]);
+      }
     } catch (requestError) {
       Alert.alert('儲存失敗', (requestError as Error).message || '請稍後再試');
     } finally {
@@ -149,34 +186,32 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
     }
   };
 
-  if (loading)
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
-        <Text style={styles.stateText}>正在載入嘔吐紀錄…</Text>
-      </View>
-    );
+  if (loading) return <HealthEventLoadingState text="正在載入嘔吐紀錄…" />;
   if (error)
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retry}
-          onPress={() => {
-            setLoading(true);
-            load();
-          }}
-        >
-          <Text style={styles.retryText}>重新載入</Text>
-        </TouchableOpacity>
-      </View>
+      <HealthEventErrorState
+        text={error}
+        onRetry={() => {
+          setLoading(true);
+          load();
+        }}
+      />
     );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{eventId ? '編輯嘔吐紀錄' : '記錄嘔吐'}</Text>
-        <Text style={styles.subtitle}>只記錄看到的狀況，不提供疾病診斷。</Text>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
+      >
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="alert-circle-outline" size={22} color={Colors.primary} />
+          </View>
+          <View style={styles.introCopy}>
+            <Text style={styles.title}>{eventId ? '編輯嘔吐紀錄' : '記錄嘔吐'}</Text>
+            <Text style={styles.subtitle}>只記錄看到的狀況，不提供疾病診斷。</Text>
+          </View>
+        </View>
 
         <Text style={styles.label}>發生次數（必填）</Text>
         <OptionGroup
@@ -230,7 +265,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
             />
 
             <Text style={styles.label}>內容特徵（可複選）</Text>
-            <View style={styles.chips}>
+            <OptionsWrap>
               <Toggle
                 text="有泡沫"
                 active={details.hasFoam}
@@ -258,7 +293,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
                   }))
                 }
               />
-            </View>
+            </OptionsWrap>
 
             <Text style={styles.label}>飲水狀況</Text>
             <OptionGroup
@@ -269,15 +304,11 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
               }
             />
 
-            <Text style={styles.label}>備註（最多 500 字）</Text>
-            <TextInput
-              style={[styles.input, styles.notes]}
+            <SupplementalNotesField
               value={notes}
-              onChangeText={setNotes}
+              onChange={setNotes}
               maxLength={500}
-              multiline
               placeholder="簡短補充觀察到的狀況"
-              placeholderTextColor={Colors.subtext}
             />
           </View>
         )}
@@ -289,79 +320,51 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
           </View>
         )}
 
-        <TouchableOpacity
+        <AppButton
+          title={submitting ? '儲存中…' : '儲存紀錄'}
+          variant="primary"
           disabled={submitting}
+          busy={submitting}
           style={[styles.submit, submitting && styles.disabled]}
+          textStyle={styles.submitText}
           onPress={submit}
-        >
-          <Text style={styles.submitText}>{submitting ? '儲存中…' : '儲存紀錄'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        />
+      </KeyboardAwareScrollView>
     </SafeAreaView>
-  );
-}
-
-function OptionGroup<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: Array<[T, string]>;
-  value?: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <View style={styles.chips}>
-      {options.map(([key, label]) => (
-        <Toggle key={key} text={label} active={value === key} onPress={() => onChange(key)} />
-      ))}
-    </View>
-  );
-}
-
-function Toggle({ text, active, onPress }: { text: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{text}</Text>
-    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 50 },
-  center: {
-    flex: 1,
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 18, paddingBottom: 34 },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 7 },
+  introIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: Colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.background,
-    padding: 24,
   },
-  title: { color: Colors.text, fontSize: 27, fontWeight: '800' },
-  subtitle: { color: Colors.subtext, lineHeight: 21, marginTop: 6, marginBottom: 5 },
-  label: { color: Colors.text, fontWeight: '700', marginTop: 18, marginBottom: 9 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
-  chip: {
-    minHeight: 48,
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 17,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
+  introCopy: { flex: 1, minWidth: 0 },
+  title: { color: Colors.text, fontSize: 22, fontWeight: '800' },
+  subtitle: { color: Colors.subtext, lineHeight: 18, marginTop: 2, fontSize: 12 },
+  label: {
+    color: Colors.text,
+    fontSize: FORM_FIELD_LABEL_FONT_SIZE,
+    fontWeight: FORM_FIELD_LABEL_FONT_WEIGHT,
+    marginTop: FORM_FIELD_LABEL_MARGIN_TOP,
+    marginBottom: FORM_FIELD_LABEL_MARGIN_BOTTOM,
   },
-  chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  chipText: { color: Colors.text },
-  chipTextActive: { color: '#FFF', fontWeight: '700' },
   input: {
-    minHeight: 54,
+    fontSize: FORM_FIELD_FONT_SIZE,
+    minHeight: FORM_FIELD_HEIGHT,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: FORM_FIELD_RADIUS,
+    paddingHorizontal: FORM_FIELD_PADDING_HORIZONTAL,
     color: Colors.text,
   },
   inputText: { color: Colors.text },
@@ -380,12 +383,11 @@ const styles = StyleSheet.create({
   image: { width: 76, height: 76, borderRadius: 12 },
   removeImage: { color: '#C34D4D', fontSize: 12, textAlign: 'center', marginTop: 3 },
   advanced: { borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 8, paddingTop: 2 },
-  notes: { minHeight: 88, paddingTop: 13, textAlignVertical: 'top' },
   safety: {
     backgroundColor: '#FFF3E4',
     borderWidth: 1,
     borderColor: '#F0C58A',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 15,
     marginTop: 20,
   },
@@ -393,22 +395,12 @@ const styles = StyleSheet.create({
   safetyText: { color: '#70451D', lineHeight: 21, marginTop: 5 },
   submit: {
     backgroundColor: Colors.primary,
-    borderRadius: 16,
+    borderRadius: FORM_BUTTON_RADIUS,
     padding: 16,
     alignItems: 'center',
     marginTop: 24,
+    minHeight: FORM_BUTTON_HEIGHT,
   },
   submitText: { color: '#FFF', fontWeight: '800' },
   disabled: { opacity: 0.5 },
-  stateText: { color: Colors.subtext, marginTop: 10 },
-  error: { color: '#C55B5B', textAlign: 'center' },
-  retry: {
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 13,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  retryText: { color: Colors.text, fontWeight: '700' },
 });

@@ -11,12 +11,13 @@ MEGO 是紀錄與整理工具，不提供疾病診斷、處方或用藥指示。
 - 日常照護、健康異常、體重、就醫、疫苗、驅蟲、用藥紀錄。
 - 健康紀錄支援複製新增，減少重複輸入。
 - 提醒支援新增、編輯、完成、延後、略過、刪除與重複週期。
-- 首頁顯示今日待做、未來 7 天待辦與健康觀察。
+- 首頁顯示今日待做與日常健康觀察；健康觀察只從喝水、飼料、精神與便便的連續變化推算，不混入健康異常事件。
 - 時間軸整合提醒、健康異常、體重與照護事件。
 - 健康照護報告匯出為不含圖片的 PDF。
 - 毛孩身份 QR：以隨機公開 Token 顯示飼主選擇的毛孩與聯絡資料。
 - iOS／Android Expo App；手機通知使用本機通知。
-- MEGO AI：紀錄查詢使用 deterministic 規則；健康整理與一般問題可選用外部 OpenAI-compatible LLM。非 LLM 查詢不計次數。
+- MEGO AI：固定照護紀錄查詢使用 deterministic 規則；健康整理與一般知識問題可使用外部 OpenAI-compatible LLM。首次使用 LLM 前須確認資料使用說明；非 LLM 查詢不計次數，對話依毛孩分開保存，最多 5 個 session。
+- 設定：查看通知、相簿與相機權限，閱讀 AI 資料使用說明，管理毛孩、身份 QR 與 PDF 匯出。
 
 ## 技術棧
 
@@ -35,53 +36,66 @@ MEGO 是紀錄與整理工具，不提供疾病診斷、處方或用藥指示。
 ```bash
 git clone <repository-url>
 cd Dog-care-app
-cp backend/.env.example backend/.env
+cp env.example .env
 cd frontend && npm ci
 cd ..
 python3 -m venv dog-care
 dog-care/bin/python -m pip install -r backend/requirements.txt
 ```
 
-請在 `backend/.env` 設定 MongoDB；不要提交 `.env`、密碼或 API Key。
+請在專案根目錄 `.env` 設定前後端共用的本機環境變數；不要提交 `.env`、密碼或 API Key。環境範例以根目錄 `env.example` 為唯一來源。
 
 ## 設定說明
 
-Backend `backend/.env`：
+根目錄 `.env`（前後端共用）：
 
 ```env
+# [選填] ./start.sh 會讀取此埠號；未設定時使用 8000
 PORT=8000
-MONGO_URI=mongodb://使用者名稱:密碼@localhost:27017/app_dog_db?authSource=admin
+# [必填] MongoDB 連線，帳密需與下方 Docker 設定一致
+MONGO_URI=mongodb://mego:change-me@localhost:27017/app_dog_db?authSource=admin
+# [必填] MongoDB 資料庫名稱
 MONGO_DB=app_dog_db
-MONGO_USERNAME=使用者名稱
-MONGO_PASSWORD=密碼
+# [必填] 至少 32 字元隨機密鑰；./start.sh 留白時會自動產生
+AUTH_SECRET_KEY=
+# [選填] Access Token 分鐘數，預設 15
+AUTH_ACCESS_TOKEN_MINUTES=15
+# [選填] 閒置登入天數，預設且上限 7 天
+AUTH_REFRESH_TOKEN_DAYS=7
+# [Docker 選填] 本機 MongoDB 管理者帳密，需與 MONGO_URI 相同
+MONGO_USERNAME=mego
+MONGO_PASSWORD=change-me
 
-# 可選；未設定時 AI 使用 deterministic fallback
+# [選填] 目前支援 self_hosted；未設定時使用此預設 Provider
 AI_PROVIDER=self_hosted
+# [使用 LLM 時必填] 模型服務位址與機密金鑰；不可放在前端環境變數
 AI_MODEL_API_URL=
 AI_MODEL_API_KEY=
+# [選填] 模型名稱與請求逾時
 AI_MODEL_NAME=gemma-4-26b-a4b
 AI_MODEL_TIMEOUT_SECONDS=45
-# 就醫前摘要的「AI 補充整理」最多等待 15 秒；初始摘要不呼叫模型
+# [選填] 就醫前摘要 AI 補充整理逾時；基礎摘要不呼叫模型
 AI_VET_BRIEF_TIMEOUT_SECONDS=15
 
-# 預設關閉每日限制
+# [選填] 每日 AI 次數限制預設關閉；啟用後使用下方上限
 AI_DAILY_REQUEST_LIMIT_ENABLED=false
 AI_DAILY_REQUEST_LIMIT=20
 
-PUBLIC_APP_URL=
+# [選填] 本機開發可用 *；正式 Web 網域請明確設定
 CORS_ORIGINS=*
+APP_TITLE=MEGO Backend
+APP_VERSION=2.0.0
 ```
 
-Frontend 可使用 `frontend/.env`：
+`./start.sh` 會在根目錄 `.env` 缺少有效 `AUTH_SECRET_KEY` 時產生並保留一組隨機密鑰；手動／正式部署可用 `openssl rand -hex 32` 產生。重啟或多個後端實例必須使用同一密鑰。Access token 有效期短；refresh token 以雜湊保存並輪替，閒置 7 天後到期；每次成功 refresh 會重新計算 7 天期限，因此持續使用不會被固定 7 天上限打斷。閒置超過期限後必須重新輸入帳號密碼。手機端憑證存放於 iOS Keychain／Android Keystore。登出會撤銷該裝置 session。首次成功登入時，既有明文密碼會遷移為 PBKDF2 雜湊，不會刪除帳號或毛孩資料。正式部署請使用 HTTPS 保護網路中的 bearer token。
 
-```env
-EXPO_PUBLIC_API_URL=http://手機可連到的電腦IP:8000
-EXPO_PUBLIC_API_BASE_URL=
-EXPO_PUBLIC_LOST_PET_BASE_URL=https://你的公開網域
-EXPO_PUBLIC_ENABLE_AI=true
-```
+前端 Expo 公開設定也放在同一個根目錄 `.env`；`./start.sh` 會將必要的 `EXPO_PUBLIC_*` 變數傳入 Metro，並自動更新 API URL。
 
-`EXPO_PUBLIC_API_BASE_URL` 留白時，會使用 `EXPO_PUBLIC_API_URL`。`./start.sh` 會依區網 IP 同步更新 API URL。API Key 只能放後端；`EXPO_PUBLIC_*` 變數不可放秘密。
+`EXPO_PUBLIC_*` 會被打包進 App，任何人都可能讀取，不能放 API Key、密碼或私密 token。`PORT` 與 `EXPO_CONNECTION` 也可用啟動命令前的 shell 環境變數覆蓋 `.env` 設定。
+
+執行 `./start.sh` 時會自動偵測電腦目前使用的網路 IP（無論是 Wi-Fi 或手機熱點），檢查 IP 屬於目前電腦後，同步更新 `EXPO_PUBLIC_API_URL` 與 `EXPO_PUBLIC_API_BASE_URL`，避免舊 IP 造成登入逾時。一般情況不必手動選擇網路；特殊網路可在 `MEGO_API_URL` 指定 API URL。切換網路後請重啟 `./start.sh`／Metro，再重新掃描 Expo QR code。`EXPO_CONNECTION` 只控制 Expo Go bundle 連線方式，不會代替 FastAPI 的 API 網址。
+
+`EXPO_PUBLIC_*` 變數不可放秘密；API Key 只能放後端。Expo Tunnel 只處理 Metro bundle，不會代轉 FastAPI API，手機仍需能連到選取的 Phone API URL。
 
 ## 使用方式
 
@@ -99,17 +113,17 @@ EXPO_CONNECTION=tunnel ./start.sh
 
 服務位置：
 
-| 服務 | 位址 |
-| --- | --- |
-| FastAPI | `http://localhost:8000` |
+| 服務             | 位址                         |
+| ---------------- | ---------------------------- |
+| FastAPI          | `http://localhost:8000`      |
 | Swagger API 文件 | `http://localhost:8000/docs` |
-| Mongo Express | `http://localhost:8082` |
-| Expo | 依終端機輸出的 QR／網址 |
+| Mongo Express    | `http://localhost:8082`      |
+| Expo             | 依終端機輸出的 QR／網址      |
 
 停止：在 `start.sh` 終端按 `Ctrl+C`；MongoDB 另執行：
 
 ```bash
-docker compose --env-file backend/.env -f backend/docker-compose.yml down
+docker compose --env-file .env -f backend/docker-compose.yml down
 ```
 
 此指令保留資料 volume；除非確認要清空資料，勿使用 `down -v`。
@@ -120,8 +134,10 @@ docker compose --env-file backend/.env -f backend/docker-compose.yml down
 Dog-care-app/
 ├── frontend/
 │   ├── screens/       # 首頁、紀錄、提醒、AI、設定與表單畫面
+│   ├── features/      # 依照護領域整理的畫面、元件、樣式與模組 README
 │   ├── components/    # 共用元件（日期／時間 Modal、按鈕、導航）
 │   ├── services/      # API client 與各功能 service
+│   ├── utils/         # 可測試的前端業務規則（例如健康趨勢引擎）
 │   ├── contexts/      # Auth、Pet、Settings 狀態
 │   ├── navigation/    # Root、Tab 與功能 Stack
 │   ├── constants/     # 色票、提醒、時間軸等固定設定
@@ -138,6 +154,8 @@ Dog-care-app/
 ```
 
 `dog-care/` 是本機 Python 虛擬環境，不納入 Git。
+
+前端功能位置：疫苗、驅蟲、用藥、毛孩身份 QR、設定子頁在 `frontend/features/<功能>/screens/`；首頁、提醒、時間軸、就醫、健康異常、AI 與毛孩表單仍由 `frontend/screens/` 組裝，相關欄位與視覺元件位於對應 `frontend/features/<功能>/`。導航入口是 `frontend/navigation/MainTabs.tsx` 與 `SharedHealthScreens.tsx`。Screen 經 `frontend/services/` 呼叫 API，不直接使用 `fetch`；後端 `app/api/routes/` 轉交 `app/services/` 執行資料操作。各功能目錄的 `README.md` 標記細部位置與資料流。
 
 ## API 文件與範例
 
@@ -193,6 +211,11 @@ git diff --check
 
 ## 目前產品與資料狀態
 
+- 2026-09-25 前端畫面基準已統一：首頁、紀錄、健康管理、毛孩資料、身份 QR、設定、AI、匯出皆採「摘要 → 資料分組 → 單一主要操作」層級；保留既有資料與導航流程。
+- 健康管理的疫苗、驅蟲、用藥、就醫，皆有列表、摘要式詳細頁與分段表單；支援原有的編輯、複製新增、刪除、日期、提醒及附件功能。
+- 毛孩表單依基本資料、生活資訊、健康備註、身份資訊分段；多毛孩以可滑動身份卡切換。身份 QR 設定頁清楚標示每個公開欄位的開啟／關閉狀態。
+- AI 對話有空白引導、建議提問、來源清楚的訊息泡泡與 Session 清單；就醫前摘要保留結構化資料、圖表、分享與可選 AI 補充。
+- 頁內已有主要標題的畫面，導航列只保留返回控制，避免重複標題。
 - 日期／時間欄位使用自製 JavaScript Calendar／Time Modal，避免 native picker 的 1970 初始值與模組錯誤。
 - 新產生時間與服務 log 使用台灣時區 UTC+8。
 - 本機展示資料可用下列指令重建：保留 `users` 帳號，清空其餘資料並為每個帳號建立新版測試毛孩與照護紀錄。
@@ -201,6 +224,9 @@ git diff --check
   cd backend
   PYTHONPATH=. ../dog-care/bin/python scripts/reset_and_seed_demo_data.py
   ```
+
+- `healthTrendEngine.ts` 依日常紀錄顯示「今天狀況穩定」、「近期有 N 項需留意」或「有 N 項持續需留意」。喝水／食量偏少、精神稍低、便便偏硬／偏軟連續 2 天開始留意、3 天為持續；水狀便首次即留意、連續 2 天為持續；食量偏多連續 3 天留意但不升級為持續。
+- 「健康觀察」詳細頁只說明日常趨勢與連續天數；健康異常事件仍由獨立紀錄頁管理。展示腳本會為每個帳號建立 1 隻毛孩，以及日常、體重、健康異常、就醫、疫苗、驅蟲、用藥、提醒各 10 筆資料；近三天會保留可驗證健康趨勢的樣本。
 - AI Session 每隻毛孩最多 5 個，非 LLM 查詢不計每日次數；每日 LLM 限制預設關閉。
 - 就醫前摘要可選近 7、15、30 天與要帶入的照護資料；先以結構化內容立即產生，使用者可再主動選擇 AI 補充整理。
 - PDF 報告為中文、不含圖片；內容供照護溝通，不是醫療診斷。
@@ -208,9 +234,10 @@ git diff --check
 
 ## 安全與限制
 
-- 正式環境應改用 JWT／Session、HTTPS、嚴格 CORS、秘密管理與備份策略。
+- 登入使用短效 JWT access token 與可撤銷、輪替的 refresh session；憑證存放於手機安全儲存區。正式部署仍需 HTTPS、嚴格 CORS、秘密管理、資料備份與還原演練。
 - 公開 QR 不回傳帳號、密碼、完整健康紀錄或內部資料庫 ID；飼主可設定公開欄位並更新 Token。
 - AI 外部服務金鑰只存在後端；服務逾時或格式錯誤會使用 deterministic fallback 或友善錯誤。
+- AI 使用前會記錄目前版本的資料使用說明確認；固定紀錄查詢不送至 LLM，需生成文字的功能才會依請求與已選資料呼叫模型服務。
 - App 目前沒有 OCR、雲端備份、醫療診斷或藥物處方功能。
 
 本 README 保持自包含，供 GitHub 使用者了解、安裝與啟動專案。開發工作區可另保留不提交的產品、功能與流程維護文件。

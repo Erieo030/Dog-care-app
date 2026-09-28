@@ -39,6 +39,8 @@ class HealthSummaryResponse(BaseModel):
     highlights: list[str] = Field(default_factory=list)
     attentionItems: list[str] = Field(default_factory=list)
     upcomingCare: list[str] = Field(default_factory=list)
+    vetQuestions: list[str] = Field(default_factory=list)
+    dataGaps: list[str] = Field(default_factory=list)
     dataCoverage: str
     disclaimer: str
     provider: str

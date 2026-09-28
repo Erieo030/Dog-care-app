@@ -1,9 +1,7 @@
 /** 毛孩新增與編輯共用表單，集中處理欄位驗證與健康資料輸入。 */
 import React, { useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -11,15 +9,28 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_FIELD_LABEL_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_WEIGHT,
+  FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import { Ionicons } from '@expo/vector-icons';
-import DatePickerField from '../components/DatePickerField';
+import { AppButton } from '../components/AppButton';
 import { emptyPetData, PetData } from '../types';
+import PetAvatarPicker from '../features/pets/components/PetAvatarPicker';
+import PetFormTextField from '../features/pets/components/PetFormTextField';
+import {
+  PET_FORM_FIELDS,
+  PetFormTextField as PetFormTextFieldData,
+} from '../features/pets/petFormContent';
 
 interface PetFormScreenProps {
   title: string;
@@ -27,6 +38,7 @@ interface PetFormScreenProps {
   initialData?: PetData;
   onSubmit: (data: PetData) => void;
   onCancel?: () => void;
+  bottomContentPadding?: number;
 }
 
 export default function PetFormScreen({
@@ -35,6 +47,7 @@ export default function PetFormScreen({
   initialData,
   onSubmit,
   onCancel,
+  bottomContentPadding,
 }: PetFormScreenProps) {
   const [form, setForm] = useState<PetData>({ ...emptyPetData, ...initialData });
   const update = <K extends keyof PetData>(key: K, value: PetData[K]) =>
@@ -62,32 +75,15 @@ export default function PetFormScreen({
     });
   };
 
-  const fields: Array<{
-    key: keyof PetData;
-    label: string;
-    placeholder: string;
-    multiline?: boolean;
-  }> = [
-    { key: 'name', label: '毛孩姓名（必填）', placeholder: '例如：Kuro' },
-    { key: 'breed', label: '品種（必填）', placeholder: '例如：柴犬、米克斯' },
-    { key: 'birthday', label: '出生日期', placeholder: '不知道可留空：YYYY-MM-DD' },
-    { key: 'arrivalDate', label: '到家日期（必填）', placeholder: 'YYYY-MM-DD' },
-    { key: 'allergies', label: '過敏資訊', placeholder: '沒有可留空', multiline: true },
-    {
-      key: 'chronicDiseases',
-      label: '慢性病',
-      placeholder: '沒有可留空',
-      multiline: true,
-    },
-    { key: 'microchipNumber', label: '晶片號碼', placeholder: '可留空' },
-    { key: 'coatColor', label: '毛色', placeholder: '例如：黑色' },
-    {
-      key: 'distinctiveFeatures',
-      label: '明顯特徵',
-      placeholder: '例如：胸口有白毛',
-      multiline: true,
-    },
-  ];
+  const renderFields = (items: PetFormTextFieldData[]) =>
+    items.map((field) => (
+      <PetFormTextField
+        key={field.key}
+        field={field}
+        value={form[field.key]}
+        onChange={(value) => update(field.key, value)}
+      />
+    ));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,61 +91,84 @@ export default function PetFormScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          {form.avatarUri ? (
-            <Image source={{ uri: form.avatarUri }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Ionicons name="paw" size={42} color={Colors.primary} />
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            bottomContentPadding !== undefined && { paddingBottom: bottomContentPadding },
+          ]}
+        >
+          <View style={styles.formIntro}>
+            <View style={styles.formIntroIcon}>
+              <Ionicons name="paw" size={23} color={Colors.primary} />
             </View>
-          )}
+            <View style={styles.formIntroCopy}>
+              <Text style={styles.formEyebrow}>毛孩資料</Text>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.formHint}>先完成基本資料，日後照護紀錄會更貼近牠。</Text>
+            </View>
+          </View>
 
+          <PetAvatarPicker
+            avatarUri={form.avatarUri}
+            onChange={(uri) => update('avatarUri', uri)}
+          />
+
+          <Text style={styles.sectionHeading}>基本資料</Text>
+          {renderFields(PET_FORM_FIELDS.slice(0, 2))}
           <Text style={styles.label}>性別（必填）</Text>
           <View style={styles.optionRow}>
-            {([['male', '公'], ['female', '母']] as const).map(([value, label]) => (
-              <TouchableOpacity key={value} style={[styles.option, form.gender === value && styles.optionSelected]} onPress={() => update('gender', value)}>
-                <Text style={[styles.optionText, form.gender === value && styles.optionTextSelected]}>{label}</Text>
+            {(
+              [
+                ['male', '公'],
+                ['female', '母'],
+              ] as const
+            ).map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.option, form.gender === value && styles.optionSelected]}
+                onPress={() => update('gender', value)}
+              >
+                <Text
+                  style={[styles.optionText, form.gender === value && styles.optionTextSelected]}
+                >
+                  {label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
           <Text style={styles.label}>品種類型（必填）</Text>
           <View style={styles.optionRow}>
-            {([['purebred', '純種'], ['mixed', '混種'], ['unknown', '不確定']] as const).map(([value, label]) => (
-              <TouchableOpacity key={value} style={[styles.option, form.breedType === value && styles.optionSelected]} onPress={() => update('breedType', value)}>
-                <Text style={[styles.optionText, form.breedType === value && styles.optionTextSelected]}>{label}</Text>
+            {(
+              [
+                ['purebred', '純種'],
+                ['mixed', '混種'],
+                ['unknown', '不確定'],
+              ] as const
+            ).map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.option, form.breedType === value && styles.optionSelected]}
+                onPress={() => update('breedType', value)}
+              >
+                <Text
+                  style={[styles.optionText, form.breedType === value && styles.optionTextSelected]}
+                >
+                  {label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.label}>頭像</Text>
-          <View style={styles.imageActions}>
-            <TouchableOpacity style={styles.imageButton} onPress={async () => { const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 }); if (!r.canceled) update('avatarUri', r.assets[0].uri); }}><Text style={styles.imageButtonText}>從相簿選擇</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.imageButton} onPress={async () => { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) { Alert.alert('需要相機權限', '請允許相機權限後再拍照'); return; } const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 }); if (!r.canceled) update('avatarUri', r.assets[0].uri); }}><Text style={styles.imageButtonText}>拍照</Text></TouchableOpacity>
-            {form.avatarUri ? <TouchableOpacity style={styles.removeButton} onPress={() => update('avatarUri', '')}><Text style={styles.removeText}>移除圖片</Text></TouchableOpacity> : null}
-          </View>
-          {fields.map((field) => (
-            <View key={field.key}>
-              <Text style={styles.label}>{field.label}</Text>
-              {field.key === 'birthday' || field.key === 'arrivalDate' ? (
-                <DatePickerField
-                  label=""
-                  value={form[field.key] ? new Date(`${form[field.key]}T12:00:00`) : undefined}
-                  placeholder={field.placeholder}
-                  onChange={(date) => update(field.key, date.toISOString().slice(0, 10))}
-                  maximumDate={new Date()}
-                />
-              ) : (
-                <TextInput
-                  style={[styles.input, field.multiline && styles.multiline]}
-                  value={String(form[field.key] ?? '')}
-                  onChangeText={(value) => update(field.key, value as never)}
-                  placeholder={field.placeholder}
-                  placeholderTextColor={Colors.subtext}
-                  multiline={field.multiline}
-                />
-              )}
-            </View>
-          ))}
+
+          <Text style={styles.sectionHeading}>生活資訊</Text>
+          {renderFields(PET_FORM_FIELDS.slice(2, 4))}
+
+          <Text style={styles.sectionHeading}>健康備註</Text>
+          <Text style={styles.sectionHint}>有過敏或慢性病時，AI 整理與就醫前摘要會一併參考。</Text>
+          {renderFields(PET_FORM_FIELDS.slice(4, 6))}
+
+          <Text style={styles.sectionHeading}>身份資訊</Text>
+          <Text style={styles.sectionHint}>選填。可用於毛孩身份卡與 QR 身份頁。</Text>
+          {renderFields(PET_FORM_FIELDS.slice(6))}
           <View style={styles.switchRow}>
             <View>
               <Text style={styles.label}>結紮狀態</Text>
@@ -162,13 +181,21 @@ export default function PetFormScreen({
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={submit}>
-            <Text style={styles.submitText}>{submitLabel}</Text>
-          </TouchableOpacity>
+          <AppButton
+            title={submitLabel}
+            variant="primary"
+            style={styles.submitButton}
+            textStyle={styles.submitText}
+            onPress={submit}
+          />
           {onCancel && (
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelText}>取消</Text>
-            </TouchableOpacity>
+            <AppButton
+              title="取消"
+              variant="secondary"
+              style={styles.cancelButton}
+              textStyle={styles.cancelText}
+              onPress={onCancel}
+            />
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -179,58 +206,54 @@ export default function PetFormScreen({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingHorizontal: 28, paddingTop: 18, paddingBottom: 60 },
-  title: {
-    color: Colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'left',
-    marginBottom: 14,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignSelf: 'center',
-    marginBottom: 18,
-  },
-  avatarFallback: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.surface,
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 18, paddingBottom: 48 },
+  formIntro: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  formIntroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    backgroundColor: Colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 24,
+    marginRight: 12,
   },
-  avatarEmoji: { fontSize: 48 },
-  label: { color: Colors.text, fontWeight: '700', marginBottom: 7, fontSize: 15 },
+  formIntroCopy: { flex: 1 },
+  formEyebrow: { color: Colors.primary, fontSize: 13, fontWeight: '800', marginBottom: 2 },
+  formHint: { color: Colors.subtext, fontSize: 13, lineHeight: 19, marginTop: 3 },
+  title: {
+    color: Colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  sectionHeading: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 20,
+    marginBottom: 3,
+  },
+  sectionHint: { color: Colors.subtext, fontSize: 12, lineHeight: 18, marginBottom: 2 },
+  label: {
+    color: Colors.text,
+    fontWeight: FORM_FIELD_LABEL_FONT_WEIGHT,
+    marginBottom: FORM_FIELD_LABEL_MARGIN_BOTTOM,
+    fontSize: FORM_FIELD_LABEL_FONT_SIZE,
+  },
   optionRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
-  option: { flex: 1, minHeight: 50, borderWidth: 1, borderColor: '#E8DDD4', borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  option: {
+    flex: 1,
+    minHeight: FORM_BUTTON_HEIGHT,
+    borderWidth: 1,
+    borderColor: '#E8DDD4',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+  },
   optionSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   optionText: { color: Colors.text, fontWeight: '700' },
   optionTextSelected: { color: '#FFF' },
-  imageActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
-  imageButton: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  imageButtonText: { color: Colors.primary, fontWeight: '700' },
-  removeButton: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FFF1F0', borderWidth: 1, borderColor: '#F3B5AE' },
-  removeText: { color: '#C94C4C', fontWeight: '700' },
   hint: { color: Colors.subtext, fontSize: 12 },
-  dateValue: { color: Colors.text },
-  datePlaceholder: { color: Colors.subtext },
-  input: {
-    minHeight: 54,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E8DDD4',
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    borderRadius: 16,
-    paddingHorizontal: 15,
-    marginBottom: 17,
-    color: Colors.text,
-  },
-  multiline: { minHeight: 90, paddingTop: 14, textAlignVertical: 'top' },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -239,8 +262,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: Colors.primary,
-    minHeight: 56,
-    borderRadius: 28,
+    minHeight: FORM_BUTTON_HEIGHT,
+    borderRadius: FORM_BUTTON_RADIUS,
     justifyContent: 'center',
     alignItems: 'center',
   },

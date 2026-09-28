@@ -105,7 +105,7 @@ def build_vet_brief(pet_id: str, user_id: str, days: int, context_data: dict | N
         deworming=context.dewormings,
         monitorAlerts=[alert.model_dump(mode="json") for alert in result.alerts],
         dataCoverage=coverage,
-        generatedSummary="已依你選擇的資料整理就醫重點。",
+        aiNarrative=None,
         disclaimer="本報告依 MEGO 中由飼主記錄的資料整理，內容僅供健康紀錄與就醫溝通參考，不代表疾病診斷，也不能取代獸醫專業評估。",
         generatedAt=now_taipei(),
         generationMode="deterministic",

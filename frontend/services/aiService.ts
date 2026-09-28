@@ -10,7 +10,13 @@ export interface HealthSummaryResponse {
 export const getHealthSummary = (userId:string, petId:string, range=30) => apiData<HealthSummaryResponse>(`/api/pets/${petId}/ai/summary?userId=${encodeURIComponent(userId)}&range=${range}`, {}, AI_REQUEST_TIMEOUT_MS);
 
 export interface ChatSource { type:string; label:string; recordId?:string|null; occurredAt?:string|null; }
-export const getAIUsage = (userId:string) => apiData<AIUsage>(`/api/ai/usage?userId=${encodeURIComponent(userId)}`);
+export interface AIDataConsent { accepted:boolean; version?:string|null; acceptedAt?:string|null; currentVersion:string; }
+export const getAIDataConsent = (userId:string) => apiData<AIDataConsent>(`/api/ai/data-consent?userId=${encodeURIComponent(userId)}`);
+export const acceptAIDataConsent = (userId:string) => apiData<AIDataConsent>(`/api/ai/data-consent?userId=${encodeURIComponent(userId)}`, { method:'POST' });
+export const getAIUsage = (userId:string, signal?:AbortSignal) => {
+  const path = `/api/ai/usage?userId=${encodeURIComponent(userId)}`;
+  return signal ? apiData<AIUsage>(path, { signal }) : apiData<AIUsage>(path);
+};
 
 export interface AIUsage { dailyLimit:number|null; used:number; remaining:number|null; unlimited?:boolean; tokensUsed:number; date:string; }
 export interface ChatResponse { answer:string; intent:string; sources:ChatSource[]; fallbackUsed:boolean; provider:string; model?:string|null; generationMode:string; conversationId?:string|null; suggestions:string[]; usage?:AIUsage; errorCode?:string; errorMessage?:string; }
@@ -22,16 +28,21 @@ export interface VetHealthEvent { id:string; type:string; occurredAt:string; sev
 export interface VetMedication { name:string; instructions?:string; timesPerDay?:number; startDate?:string; endDate?:string; mealTiming?:string; }
 export interface VetMedicalVisit { id:string; visitedAt:string; reason:string; clinicName?:string; treatmentNotes?:string; followUpAt?:string; }
 export interface VetReminder { title:string; scheduledAt:string; }
+export interface VetNarrative { overview:string; timeline:string[]; questions:string[]; dataGaps:string[]; }
 export interface VetVisitBrief {
   pet:{ name?:string; breed?:string; sex?:string; birthDate?:string; isNeutered?:boolean; allergies?:string; chronicDiseases?:string; };
   period:{days:number;startAt:string;endAt:string}; keyObservations:string[];
   weightSummary:{latestWeightKg?:number|null; previousWeightKg?:number|null; differenceKg?:number|null; recordCount:number; series:VetWeightPoint[]};
-  dailyLogSummary:{recordCount:number; water?:{latest?:string}; food?:{latest?:string}; energy?:{latest?:string}; stool?:{latest?:number}};
+  dailyLogSummary:{recordCount:number; water?:{latest?:string}; food?:{latest?:string}; energy?:{latest?:string}; stool?:{latest?:string}};
   recentHealthEvents:VetHealthEvent[]; activeMedications:VetMedication[]; recentMedicalVisits:VetMedicalVisit[];
   vaccination:{latest?:{vaccineName?:string; administeredAt?:string; nextDueAt?:string}|null}; deworming:{latest?:{type?:string; productName?:string; administeredAt?:string; nextDueAt?:string}|null};
-  monitorAlerts:HealthMonitorAlert[]; dataCoverage:Record<string,number>; generatedSummary:string; disclaimer:string; generatedAt:string; generationMode:'deterministic'|'llm'|'fallback'; sources:ChatSource[]; scopeNotes:string[]; vetQuestions:string[]; upcomingReminders:VetReminder[];
+  monitorAlerts:HealthMonitorAlert[]; dataCoverage:Record<string,number>; aiNarrative:VetNarrative|null; disclaimer:string; generatedAt:string; generationMode:'deterministic'|'llm'|'fallback'; sources:ChatSource[]; scopeNotes:string[]; vetQuestions:string[]; upcomingReminders:VetReminder[];
 }
-export const getVetVisitBrief = (userId:string, petId:string, range=7, includeNarrative=false, sections:VetBriefSection[] = []) => {
+export const getVetVisitBrief = (userId:string, petId:string, range=7, includeNarrative=false, sections:VetBriefSection[] = [], signal?:AbortSignal) => {
   const selected = sections.length ? `&sections=${encodeURIComponent(sections.join(','))}` : '';
-  return apiData<VetVisitBrief>(`/api/pets/${petId}/ai/vet-brief?userId=${encodeURIComponent(userId)}&range=${range}&includeNarrative=${includeNarrative}${selected}`, {}, includeNarrative ? 20000 : AI_REQUEST_TIMEOUT_MS);
+  const path = `/api/pets/${petId}/ai/vet-brief?userId=${encodeURIComponent(userId)}&range=${range}&includeNarrative=${includeNarrative}${selected}`;
+  const timeout = includeNarrative ? 20000 : AI_REQUEST_TIMEOUT_MS;
+  return signal && !includeNarrative
+    ? apiData<VetVisitBrief>(path, { signal }, timeout)
+    : apiData<VetVisitBrief>(path, {}, timeout);
 };

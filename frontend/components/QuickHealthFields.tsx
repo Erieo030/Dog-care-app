@@ -64,19 +64,19 @@ export function HealthSafetyNotice({ message }: { message: string }) {
   );
 }
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    minHeight: 52,
+    minHeight: 48,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 11,
   },
-  active: { backgroundColor: Colors.text, borderColor: Colors.text },
-  text: { color: Colors.text },
+  active: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  text: { color: Colors.text, fontWeight: '700' },
   activeText: { color: '#FFF', fontWeight: '700' },
   safety: {
     backgroundColor: '#FFF6EC',

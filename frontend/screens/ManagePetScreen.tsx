@@ -7,6 +7,7 @@ import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
 import PetFormScreen from './PetFormScreen';
 import { PetData } from '../types';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 
 type AddProps = NativeStackScreenProps<HomeStackParamList, 'AddPet'>;
 type EditProps = { navigation: { goBack: () => void } };
@@ -25,6 +26,7 @@ const toFormData = (data: PetData) => ({
 });
 
 export function AddPetScreen({ navigation }: AddProps) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const { createPet } = usePet();
   const submit = async (data: PetData) => {
     try {
@@ -38,6 +40,7 @@ export function AddPetScreen({ navigation }: AddProps) {
     <PetFormScreen
       title="新增毛孩"
       submitLabel="儲存毛孩資料"
+      bottomContentPadding={bottomContentPadding}
       onSubmit={submit}
       onCancel={() => navigation.goBack()}
     />
@@ -45,6 +48,7 @@ export function AddPetScreen({ navigation }: AddProps) {
 }
 
 export function EditPetScreen({ navigation }: EditProps) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const { selectedPet, updateSelectedPet } = usePet();
   if (!selectedPet) return null;
   const initialData: PetData = {
@@ -74,6 +78,7 @@ export function EditPetScreen({ navigation }: EditProps) {
     <PetFormScreen
       title="編輯毛孩資料"
       submitLabel="儲存變更"
+      bottomContentPadding={bottomContentPadding}
       initialData={initialData}
       onSubmit={submit}
       onCancel={() => navigation.goBack()}

@@ -5,12 +5,20 @@ import { Reminder, ReminderActionResult, ReminderInput, ReminderUpdateInput } fr
 const withUser = (path: string, userId: string) =>
   `${path}${path.includes('?') ? '&' : '?'}userId=${encodeURIComponent(userId)}`;
 
-export const getReminders = async (userId: string, petId: string) =>
-  (await apiData<{ reminders: Reminder[] }>(withUser(`/api/pets/${petId}/reminders`, userId)))
-    .reminders;
-export const getTodayReminders = async (userId: string, petId: string) =>
-  (await apiData<{ reminders: Reminder[] }>(withUser(`/api/pets/${petId}/reminders/today`, userId)))
-    .reminders;
+export const getReminders = async (userId: string, petId: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/pets/${petId}/reminders`, userId);
+  const response = signal
+    ? await apiData<{ reminders: Reminder[] }>(path, { signal })
+    : await apiData<{ reminders: Reminder[] }>(path);
+  return response.reminders;
+};
+export const getTodayReminders = async (userId: string, petId: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/pets/${petId}/reminders/today`, userId);
+  const response = signal
+    ? await apiData<{ reminders: Reminder[] }>(path, { signal })
+    : await apiData<{ reminders: Reminder[] }>(path);
+  return response.reminders;
+};
 export const createReminder = async (userId: string, petId: string, data: ReminderInput) =>
   (
     await apiData<{ reminder: Reminder }>(withUser(`/api/pets/${petId}/reminders`, userId), {

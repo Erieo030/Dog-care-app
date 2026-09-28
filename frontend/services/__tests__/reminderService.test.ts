@@ -27,6 +27,13 @@ test('today reminders uses pet and encoded user query', async () => {
   expect(request).toHaveBeenCalledWith('/api/pets/pet-1/reminders/today?userId=user%40example.com');
 });
 
+test('reminder reads forward an optional cancellation signal', async () => {
+  const controller = new AbortController();
+  request.mockResolvedValueOnce({ reminders: [reminder] });
+  await getTodayReminders('u1', 'pet-1', controller.signal);
+  expect(request.mock.calls[0][1]).toEqual({ signal: controller.signal });
+});
+
 test('reminder actions use explicit HTTP methods and payloads', async () => {
   request.mockResolvedValueOnce({ reminder });
   await createReminder('u1', 'p1', {

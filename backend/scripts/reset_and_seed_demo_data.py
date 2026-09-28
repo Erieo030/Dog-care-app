@@ -82,16 +82,30 @@ def seed_pet(user_id: str, ordinal: int) -> str:
 
 def seed_records(user_id: str, pet_id: str) -> None:
     now = now_taipei().replace(second=0, microsecond=0)
+    # 最後三天刻意保留可辨識的日常趨勢，方便驗證首頁「健康觀察」。
+    daily_samples = (
+        ("low", "normal", "normal", "hard"),
+        ("normal", "high", "normal", "normal"),
+        ("high", "low", "slightly_low", "soft"),
+        ("normal", "normal", "normal", "normal"),
+        ("high", "high", "normal", "watery"),
+        ("normal", "low", "normal", "normal"),
+        ("normal", "normal", "normal", "normal"),
+        ("low", "high", "normal", "normal"),
+        ("low", "high", "slightly_low", "soft"),
+        ("low", "high", "slightly_low", "soft"),
+    )
 
     for index in range(10):
         logged_at = now - timedelta(days=9 - index, hours=1)
+        water_level, food_level, energy_level, stool_level = daily_samples[index]
         create_daily_log(pet_id, user_id, DailyLogCreateRequest(
             loggedAt=logged_at,
             localDate=logged_at.date().isoformat(),
-            waterLevel=("low", "normal", "high")[index % 3],
-            foodLevel=("normal", "high", "low")[index % 3],
-            energyLevel="low" if index in {2, 7} else "normal",
-            stoolLevel=(2, 3, 3, 4, 5)[index % 5],
+            waterLevel=water_level,
+            foodLevel=food_level,
+            energyLevel=energy_level,
+            stoolLevel=stool_level,
             notes="展示用日常觀察" if index % 3 == 0 else "",
         ))
         create_record(pet_id, user_id, WeightRecordRequest(
@@ -155,6 +169,22 @@ def seed_records(user_id: str, pet_id: str) -> None:
         ))
 
 
+def seed_ai_usage(user_id: str) -> None:
+    """建立歷史用量測試列，不呼叫模型，也不影響今天的用量。"""
+    now = now_taipei()
+    db.ai_usage.insert_many([
+        {
+            "userId": user_id,
+            "day": (now.date() - timedelta(days=offset)).isoformat(),
+            "count": (offset % 3) + 1,
+            "tokens": 0,
+            "updatedAt": now - timedelta(days=offset),
+            "testData": True,
+        }
+        for offset in range(1, 6)
+    ])
+
+
 def main() -> None:
     deleted = clear_non_account_data()
     users = list(db.users.find({}, {"_id": 1}).sort("_id", 1))
@@ -163,10 +193,27 @@ def main() -> None:
         return
     for ordinal, user in enumerate(users, start=1):
         user_id = str(user["_id"])
-        pet_id = seed_pet(user_id, ordinal)
-        seed_records(user_id, pet_id)
+        # 每帳號建立 5 隻測試毛孩，以涵蓋多寵物切換與各自的身份 QR 資料。
+        pet_ids = [seed_pet(user_id, ordinal * 10 + pet_number) for pet_number in range(1, 6)]
+        # 其餘照護紀錄集中在第一隻測試毛孩，讓各功能都有完整可檢視的歷史。
+        seed_records(user_id, pet_ids[0])
+        seed_ai_usage(user_id)
     counts = {name: db[name].count_documents({}) for name in CARE_COLLECTIONS}
-    print({"users": len(users), "deleted": deleted, "seeded": counts})
+    per_account = []
+    for ordinal, user in enumerate(users, start=1):
+        user_id = str(user["_id"])
+        pet_ids = [str(item["_id"]) for item in db.pets.find({"userId": user_id}, {"_id": 1})]
+        account_counts = {"pets": len(pet_ids)}
+        for name in CARE_COLLECTIONS:
+            if name == "pets":
+                continue
+            account_counts[name] = db[name].count_documents(
+                {"userId": user_id}
+                if name in {"ai_usage", "export_jobs"}
+                else {"petId": {"$in": pet_ids}}
+            )
+        per_account.append({"account": ordinal, "seeded": account_counts})
+    print({"users": len(users), "deleted": deleted, "seeded": counts, "perAccount": per_account})
 
 
 if __name__ == "__main__":

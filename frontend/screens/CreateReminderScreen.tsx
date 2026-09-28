@@ -3,18 +3,36 @@ import React, { useState } from 'react';
 import {
   Alert,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AppButton } from '../components/AppButton';
+import SupplementalNotesField from '../components/SupplementalNotesField';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_FIELD_HEIGHT,
+  FORM_FIELD_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_WEIGHT,
+  FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  FORM_FIELD_LABEL_MARGIN_TOP,
+  FORM_FIELD_PADDING_HORIZONTAL,
+  FORM_FIELD_RADIUS,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import DatePickerField from '../components/DatePickerField';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
+import { showQuickRecordFeedback } from '../utils/quickRecordFeedback';
 import { RECURRENCE_RULES, REMINDER_TYPES } from '../constants/Reminders';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -29,7 +47,9 @@ import { RecurrenceRule, ReminderType } from '../types';
 type Props = NativeStackScreenProps<HomeStackParamList, 'CreateReminder'>;
 
 export default function CreateReminderScreen({ navigation, route }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const existing = route.params?.reminder;
+  const quickEntry = route.params?.quickEntry === true;
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const { settings } = useSettings();
@@ -94,11 +114,26 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
               : result.status === 'expired'
                 ? '提醒已儲存；時間已過，不會排程手機通知。'
                 : `提醒已儲存${existing ? '並重新排程' : '並排程手機通知'}。`;
-        Alert.alert('已儲存', message, [{ text: '完成', onPress: navigation.goBack }]);
+        if (quickEntry) {
+          showQuickRecordFeedback({
+            message: `${message} 完整安排可到「紀錄」查看。`,
+            onDone: () => navigation.popToTop(),
+            onAddAnother: () => navigation.replace('CreateReminder', { quickEntry: true }),
+          });
+        } else {
+          Alert.alert('已儲存', message, [{ text: '完成', onPress: navigation.goBack }]);
+        }
       } catch {
-        Alert.alert('已儲存', '提醒已儲存，但手機通知排程失敗，仍可在 App 內查看。', [
-          { text: '完成', onPress: navigation.goBack },
-        ]);
+        const notificationError = '提醒已儲存，但手機通知排程失敗，仍可在 App 內查看。';
+        if (quickEntry) {
+          showQuickRecordFeedback({
+            message: notificationError,
+            onDone: () => navigation.popToTop(),
+            onAddAnother: () => navigation.replace('CreateReminder', { quickEntry: true }),
+          });
+        } else {
+          Alert.alert('已儲存', notificationError, [{ text: '完成', onPress: navigation.goBack }]);
+        }
       }
     } catch (error) {
       Alert.alert('儲存失敗', (error as Error).message);
@@ -109,7 +144,20 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
+      >
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+          </View>
+          <View style={styles.introCopy}>
+            <Text style={styles.introTitle}>
+              {existing ? '調整照護安排' : '安排下一件照護事項'}
+            </Text>
+            <Text style={styles.introHint}>完成後會保留在 App 內，並依通知設定提醒你。</Text>
+          </View>
+        </View>
         <Label text="提醒類型（必填）" />
         <View style={styles.chips}>
           {REMINDER_TYPES.map((item) => (
@@ -143,24 +191,17 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
           ))}
         </View>
         <Text style={styles.notice}>實際頻率請依獸醫建議與產品說明為準。</Text>
-        <Label text="備註" />
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={notes}
-          onChangeText={setNotes}
-          maxLength={1000}
-          multiline
-        />
-        <TouchableOpacity
+        <SupplementalNotesField value={notes} onChange={setNotes} maxLength={1000} />
+        <AppButton
+          title={submitting ? '儲存中…' : existing ? '儲存修改' : '建立提醒'}
+          variant="primary"
           disabled={submitting}
+          busy={submitting}
           style={[styles.submit, submitting && styles.disabled]}
+          textStyle={styles.submitText}
           onPress={submit}
-        >
-          <Text style={styles.submitText}>
-            {submitting ? '儲存中…' : existing ? '儲存修改' : '建立提醒'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+        />
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -177,40 +218,67 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 50 },
-  label: { color: Colors.text, fontWeight: '700', marginTop: 14, marginBottom: 8 },
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 18, paddingBottom: 34 },
+  intro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 13,
+  },
+  introIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introCopy: { flex: 1, minWidth: 0 },
+  introTitle: { color: Colors.text, fontSize: 16, fontWeight: '800' },
+  introHint: { color: Colors.subtext, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  label: {
+    color: Colors.text,
+    fontSize: FORM_FIELD_LABEL_FONT_SIZE,
+    fontWeight: FORM_FIELD_LABEL_FONT_WEIGHT,
+    marginTop: FORM_FIELD_LABEL_MARGIN_TOP,
+    marginBottom: FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 14,
     minHeight: 44,
     justifyContent: 'center',
     paddingVertical: 11,
   },
-  chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
+  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { color: Colors.text },
   chipTextActive: { color: '#FFF', fontWeight: '700' },
   input: {
-    minHeight: 54,
+    fontSize: FORM_FIELD_FONT_SIZE,
+    minHeight: FORM_FIELD_HEIGHT,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: FORM_FIELD_RADIUS,
+    paddingHorizontal: FORM_FIELD_PADDING_HORIZONTAL,
     color: Colors.text,
   },
   inputText: { color: Colors.text },
-  multiline: { height: 90, paddingTop: 13, textAlignVertical: 'top' },
   notice: { color: Colors.subtext, fontSize: 12, marginTop: 10 },
   submit: {
     backgroundColor: Colors.primary,
-    borderRadius: 14,
+    borderRadius: FORM_BUTTON_RADIUS,
     padding: 14,
-    minHeight: 52,
+    minHeight: FORM_BUTTON_HEIGHT,
     alignItems: 'center',
     marginTop: 25,
   },

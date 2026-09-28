@@ -1,9 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AIUsage } from './aiService';
+import { AIUsage, ChatSource } from './aiService';
 
 const key = (userId: string, petId: string) => `mego:ai-session:${userId}:${petId}`;
 const historyKey = (userId: string, petId: string) => `mego:ai-sessions:${userId}:${petId}`;
-export type StoredMessage = { role: 'user' | 'assistant'; text: string };
+let sessionIdSequence = 0;
+const createSessionId = () => {
+  sessionIdSequence = (sessionIdSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `session-${Date.now()}-${sessionIdSequence}`;
+};
+export type StoredMessage = { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] };
 export type AISession = { sessionId?: string; messages?: StoredMessage[]; usage?: AIUsage };
 
 export async function loadAISession(userId: string, petId: string): Promise<AISession> {
@@ -17,7 +22,7 @@ export type AISessionRecord = { id: string; title: string; messages: StoredMessa
 export async function createNewAISession(userId: string, petId: string) {
   const current = await loadAISession(userId, petId);
   const history: AISessionRecord[] = JSON.parse((await AsyncStorage.getItem(historyKey(userId, petId))) || '[]');
-  if (current.messages?.length) history.push({ id: `session-${Date.now()}`, title: current.messages.find((m) => m.role === 'user')?.text.slice(0, 24) || '未命名對話', messages: current.messages, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  if (current.messages?.length) history.push({ id: createSessionId(), title: current.messages.find((m) => m.role === 'user')?.text.slice(0, 24) || '未命名對話', messages: current.messages, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
   const ordered = history.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
   const overflow = ordered.length > 5 ? ordered[ordered.length - 1] : undefined;
   return { sessions: ordered.slice(0, 5), overflow };
@@ -43,12 +48,12 @@ export async function activateAISession(userId: string, petId: string, session: 
 
 export async function activateEmptyAISession(userId: string, petId: string) {
   const current = await loadAISession(userId, petId);
-  await saveAISession(userId, petId, { sessionId: `session-${Date.now()}`, messages: [], usage: current.usage });
+  await saveAISession(userId, petId, { sessionId: createSessionId(), messages: [], usage: current.usage });
 }
 
 export async function saveActiveAISession(userId: string, petId: string, messages: StoredMessage[], usage?: AIUsage) {
   const current = await loadAISession(userId, petId);
-  const sessionId = current.sessionId || `session-${Date.now()}`;
+  const sessionId = current.sessionId || createSessionId();
   const now = new Date().toISOString();
   const sessions = await loadAISessions(userId, petId);
   const previous = sessions.find((item) => item.id === sessionId);

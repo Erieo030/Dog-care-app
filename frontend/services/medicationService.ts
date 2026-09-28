@@ -1,12 +1,18 @@
 import { apiData } from './api';
 import { MedicationCourse } from '../types';
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
-export const getMedications = (u: string, p: string, status?: string) =>
-  apiData<{ records: MedicationCourse[] }>(
-    `/api/pets/${p}/medications?${q(u)}${status ? `&status=${status}` : ''}`,
-  );
-export const getMedication = (u: string, id: string) =>
-  apiData<{ record: MedicationCourse }>(`/api/medications/${id}?${q(u)}`);
+export const getMedications = (u: string, p: string, status?: string, signal?: AbortSignal) => {
+  const path = `/api/pets/${p}/medications?${q(u)}${status ? `&status=${status}` : ''}`;
+  return signal
+    ? apiData<{ records: MedicationCourse[] }>(path, { signal })
+    : apiData<{ records: MedicationCourse[] }>(path);
+};
+export const getMedication = (u: string, id: string, signal?: AbortSignal) => {
+  const path = `/api/medications/${id}?${q(u)}`;
+  return signal
+    ? apiData<{ record: MedicationCourse }>(path, { signal })
+    : apiData<{ record: MedicationCourse }>(path);
+};
 export const createMedication = (u: string, p: string, d: Partial<MedicationCourse>) =>
   apiData<{ record: MedicationCourse }>(`/api/pets/${p}/medications?${q(u)}`, {
     method: 'POST',

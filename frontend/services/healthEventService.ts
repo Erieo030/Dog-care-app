@@ -4,12 +4,21 @@ import { HealthEvent, HealthEventInput } from '../types';
 
 const withUser = (path: string, userId: string) => `${path}?userId=${encodeURIComponent(userId)}`;
 
-export const getHealthEvents = async (userId: string, petId: string) =>
-  (await apiData<{ events: HealthEvent[] }>(withUser(`/api/pets/${petId}/health-events`, userId)))
-    .events;
+export const getHealthEvents = async (userId: string, petId: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/pets/${petId}/health-events`, userId);
+  const result = signal
+    ? await apiData<{ events: HealthEvent[] }>(path, { signal })
+    : await apiData<{ events: HealthEvent[] }>(path);
+  return result.events;
+};
 
-export const getHealthEvent = async (userId: string, eventId: string) =>
-  (await apiData<{ event: HealthEvent }>(withUser(`/api/health-events/${eventId}`, userId))).event;
+export const getHealthEvent = async (userId: string, eventId: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/health-events/${eventId}`, userId);
+  const result = signal
+    ? await apiData<{ event: HealthEvent }>(path, { signal })
+    : await apiData<{ event: HealthEvent }>(path);
+  return result.event;
+};
 
 export const createHealthEvent = async (userId: string, petId: string, data: HealthEventInput) =>
   (

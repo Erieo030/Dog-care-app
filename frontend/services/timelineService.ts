@@ -4,7 +4,14 @@ import { TimelinePage, TimelineType } from '../types';
 export const getTimelinePage = async (
   userId: string,
   petId: string,
-  options: { limit?: number; skip?: number; type?: TimelineType } = {},
+  options: {
+    limit?: number;
+    skip?: number;
+    type?: TimelineType;
+    startAt?: string;
+    endAt?: string;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<TimelinePage> => {
   const query = new URLSearchParams({
     userId,
@@ -12,7 +19,12 @@ export const getTimelinePage = async (
     skip: String(options.skip ?? 0),
   });
   if (options.type) query.set('type', options.type);
-  return apiData<TimelinePage>(`/api/pets/${petId}/timeline?${query.toString()}`);
+  if (options.startAt) query.set('startAt', options.startAt);
+  if (options.endAt) query.set('endAt', options.endAt);
+  const path = `/api/pets/${petId}/timeline?${query.toString()}`;
+  return options.signal
+    ? apiData<TimelinePage>(path, { signal: options.signal })
+    : apiData<TimelinePage>(path);
 };
 export const getRecentTimeline = async (userId: string, petId: string, limit = 5) =>
   (await getTimelinePage(userId, petId, { limit, skip: 0 })).items;

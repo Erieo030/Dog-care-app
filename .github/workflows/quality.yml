@@ -27,11 +27,12 @@ jobs:
       - run: python -m compileall -q backend/app
         env:
           MONGO_URI: mongodb://ci:ci-password@localhost:27017/?authSource=admin
-          MONGO_DB: pawlog_ci
+          MONGO_DB: mego_ci
       - run: PYTHONPATH=backend pytest -q backend/tests
         env:
           MONGO_URI: mongodb://ci:ci-password@localhost:27017/?authSource=admin
-          MONGO_DB: pawlog_ci
+          MONGO_DB: mego_ci
+          AUTH_SECRET_KEY: ci-only-random-secret-do-not-use-in-production-0123456789
   frontend:
     runs-on: ubuntu-latest
     steps:

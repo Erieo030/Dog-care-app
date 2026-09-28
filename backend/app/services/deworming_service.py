@@ -1,21 +1,17 @@
 from app.timezone import now_taipei
-from bson.errors import InvalidId
-from bson.objectid import ObjectId
 from fastapi import HTTPException
 from app.db import db
 from app.schemas.deworming import DewormingRequest
 from app.schemas.reminder import ReminderCreateRequest, ReminderUpdateRequest
 from app.services.reminder_service import create_reminder, update_reminder
 from app.services.timeline_service import delete_timeline_item, upsert_timeline_item
+from app.services.care_record_support import require_object_id, require_owned_pet, serialize_record
 TYPE_LABELS={"internal":"體內驅蟲","external":"體外驅蟲","heartworm":"心絲蟲預防","other":"其他"}
 def oid(value):
-    try:return ObjectId(value)
-    except InvalidId:raise HTTPException(400,"驅蟲紀錄 ID 格式錯誤")
+    return require_object_id(value,"驅蟲紀錄")
 def pet(pet_id,user_id):
-    try: object_id=ObjectId(pet_id)
-    except InvalidId: raise HTTPException(400,"毛孩 ID 格式錯誤")
-    if not db.pets.find_one({"_id":object_id,"userId":user_id}): raise HTTPException(404,"找不到毛孩資料")
-def serialize(item): return {"id":str(item["_id"]),**{k:v for k,v in item.items() if k!="_id"}}
+    return require_owned_pet(pet_id,user_id)
+def serialize(item): return serialize_record(item)
 def sync_timeline(item):
     upsert_timeline_item(item["petId"],"deworming",item["administeredAt"],f"完成{TYPE_LABELS[item['type']]}",str(item["_id"]),item.get("productName", ""))
 def sync_reminder(item,user_id):

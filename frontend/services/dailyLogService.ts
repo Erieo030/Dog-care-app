@@ -1,16 +1,29 @@
 import { apiData } from './api';
 import { DailyLog } from '../types';
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
-export const getDailyLogs = (u: string, p: string) =>
-  apiData<{ records: DailyLog[] }>(`/api/pets/${p}/daily-logs?${q(u)}`);
-export const getDailyLog = (u: string, id: string) =>
-  apiData<{ record: DailyLog }>(`/api/daily-logs/${id}?${q(u)}`);
+export const getDailyLogs = (u: string, p: string, signal?: AbortSignal) => {
+  const path = `/api/pets/${p}/daily-logs?${q(u)}`;
+  return signal
+    ? apiData<{ records: DailyLog[] }>(path, { signal })
+    : apiData<{ records: DailyLog[] }>(path);
+};
+export const getDailyLog = (u: string, id: string, signal?: AbortSignal) => {
+  const path = `/api/daily-logs/${id}?${q(u)}`;
+  return signal
+    ? apiData<{ record: DailyLog }>(path, { signal })
+    : apiData<{ record: DailyLog }>(path);
+};
 export const getTodayDailyLog = (
   u: string,
   p: string,
   date = new Date().toISOString().slice(0, 10),
-) =>
-  apiData<{ record: DailyLog | null }>(`/api/pets/${p}/daily-logs/today?${q(u)}&localDate=${date}`);
+  signal?: AbortSignal,
+) => {
+  const path = `/api/pets/${p}/daily-logs/today?${q(u)}&localDate=${date}`;
+  return signal
+    ? apiData<{ record: DailyLog | null }>(path, { signal })
+    : apiData<{ record: DailyLog | null }>(path);
+};
 export const createDailyLog = (
   u: string,
   p: string,

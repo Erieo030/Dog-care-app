@@ -1,21 +1,17 @@
 from app.timezone import now_taipei, TAIPEI
 from datetime import datetime,timezone
-from bson.errors import InvalidId
-from bson.objectid import ObjectId
 from fastapi import HTTPException
 from app.db import db
 from app.schemas.medication import MedicationRequest
 from app.schemas.reminder import ReminderCreateRequest
 from app.services.reminder_service import create_reminder,delete_reminder
 from app.services.timeline_service import delete_timeline_item,upsert_timeline_item
+from app.services.care_record_support import require_object_id, require_owned_pet, serialize_record
 def oid(v):
- try:return ObjectId(v)
- except InvalidId:raise HTTPException(400,"用藥紀錄 ID 格式錯誤")
+ return require_object_id(v,"用藥紀錄")
 def pet(pid,uid):
- try:o=ObjectId(pid)
- except InvalidId:raise HTTPException(400,"毛孩 ID 格式錯誤")
- if not db.pets.find_one({"_id":o,"userId":uid}):raise HTTPException(404,"找不到毛孩資料")
-def ser(x):return {"id":str(x["_id"]),**{k:v for k,v in x.items() if k!="_id"}}
+ return require_owned_pet(pid,uid)
+def ser(x):return serialize_record(x)
 def source_visit(visit_id,pet_id,uid):
  if not visit_id:return
  visit=db.medical_visits.find_one({"_id":oid(visit_id),"petId":pet_id})

@@ -1,5 +1,5 @@
 /** 用途：提供相機、相簿、多張預覽、單張刪除與失敗重試的共用附件 UI。 */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,7 @@ import {
 import { Colors } from '../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Attachment, AttachmentSourceType } from '../types';
+import { getValidAccessToken } from '../services/api';
 import {
   attachmentUri,
   deleteAttachment,
@@ -42,6 +43,12 @@ export default function AttachmentPicker({
   const [error, setError] = useState('');
   const [last, setLast] = useState<AttachmentPickSource | null>(null);
   const [failed, setFailed] = useState<Record<string, boolean>>({});
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getValidAccessToken().then((token) => { if (active) setAccessToken(token); });
+    return () => { active = false; };
+  }, [userId]);
   const pick = async (source: AttachmentPickSource) => {
     if (busy || disabled) return;
     setBusy(true);
@@ -129,7 +136,10 @@ export default function AttachmentPicker({
               </View>
             ) : (
               <Image
-                source={{ uri: attachmentUri(item, userId) }}
+                source={{
+                  uri: attachmentUri(item, userId),
+                  headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+                }}
                 style={s.image}
                 onError={() => setFailed((x) => ({ ...x, [item.id]: true }))}
               />
@@ -181,14 +191,16 @@ const s = StyleSheet.create({
   uploaded: { color: Colors.subtext, fontSize: 13, marginBottom: 6 },
   remove: {
     position: 'absolute',
-    right: 4,
-    top: 4,
-    minWidth: 48,
-    height: 28,
+    right: 0,
+    top: 0,
+    minWidth: 56,
+    minHeight: 44,
     paddingHorizontal: 8,
-    borderRadius: 14,
+    borderBottomLeftRadius: 14,
+    borderTopRightRadius: 12,
     backgroundColor: '#0009',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   removeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });

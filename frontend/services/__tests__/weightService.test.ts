@@ -26,6 +26,13 @@ test('getWeights sorts records newest first', async () => {
   expect(result.records.map((item) => item.id)).toEqual(['new', 'old']);
 });
 
+test('getWeights forwards an optional cancellation signal', async () => {
+  const controller = new AbortController();
+  request.mockResolvedValueOnce({ records: [], summary: {} });
+  await getWeights('user-1', 'pet-1', controller.signal);
+  expect(request.mock.calls[0][1]).toEqual({ signal: controller.signal });
+});
+
 test('weight mutations use the shared API contract', async () => {
   request.mockResolvedValue({ record: record('new', '2026-02-01T00:00:00Z') });
   await createWeight('user-1', 'pet-1', { weightKg: 8.4, measuredAt: '2026-02-01T00:00:00Z' });

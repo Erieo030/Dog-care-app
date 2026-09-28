@@ -5,24 +5,13 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { ATTACHMENT_ALLOWED_MIME, ATTACHMENT_MAX_BYTES } from '../constants/Attachments';
 import { Attachment, AttachmentSourceType } from '../types';
-import { API_BASE_URL, ApiError } from './api';
+import { API_BASE_URL, apiData, apiRequest, ApiError } from './api';
+import { requestMediaPermission } from './mediaPermissionService';
 
 export type AttachmentPickSource = 'camera' | 'library';
 
-const errorMessage = async (response: Response) => {
-  try {
-    const body = await response.json();
-    return typeof body.detail === 'string' ? body.detail : body.message;
-  } catch {
-    return undefined;
-  }
-};
-
 const ensurePermission = async (source: AttachmentPickSource) => {
-  const result =
-    source === 'camera'
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const result = await requestMediaPermission(source);
   if (!result.granted)
     throw new ApiError(
       source === 'camera' ? '請允許相機權限後再拍照' : '請允許相簿權限後再選擇照片',
@@ -77,24 +66,14 @@ export async function pickAndUploadAttachments(input: {
     form.append(
       'file',
       new FileSystem.File(prepared.uri),
-      asset.fileName || `pawlog-${Date.now()}.${prepared.mimeType === 'image/png' ? 'png' : 'jpg'}`,
+      asset.fileName || `mego-${Date.now()}.${prepared.mimeType === 'image/png' ? 'png' : 'jpg'}`,
     );
     form.append('width', String(prepared.width));
     form.append('height', String(prepared.height));
-    const response = await fetch(
-      `${API_BASE_URL}/api/pets/${input.petId}/attachments?userId=${encodeURIComponent(input.userId)}`,
-      {
-        method: 'POST',
-        headers: { Accept: 'application/json' },
-        body: form,
-      },
+    const body = await apiRequest<{ data: Attachment }>(
+      `/api/pets/${input.petId}/attachments?userId=${encodeURIComponent(input.userId)}`,
+      { method: 'POST', headers: { Accept: 'application/json' }, body: form },
     );
-    if (!response.ok)
-      throw new ApiError(
-        (await errorMessage(response)) || `圖片上傳失敗 (${response.status})`,
-        response.status,
-      );
-    const body = (await response.json()) as { data: Attachment };
     uploaded.push(body.data);
   }
   return uploaded;
@@ -106,10 +85,9 @@ export const attachmentUri = (item: Attachment, userId: string, retry = 0) => {
 };
 
 export async function deleteAttachment(userId: string, item: Attachment) {
-  const response = await fetch(
-    `${API_BASE_URL}/api/attachments/${item.id}?userId=${encodeURIComponent(userId)}`,
-    { method: 'DELETE' },
-  );
-  if (!response.ok && response.status !== 404)
-    throw new ApiError((await errorMessage(response)) || '刪除照片失敗', response.status);
+  try {
+    await apiData(`/api/attachments/${item.id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+  } catch (error) {
+    if ((error as ApiError).status !== 404) throw error;
+  }
 }

@@ -26,8 +26,12 @@ export interface LostProfile {
   lostMessage?: string;
 }
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
-export const getLostProfile = (u: string, p: string) =>
-  apiData<{ profile: LostProfile | null }>(`/api/pets/${p}/lost-profile?${q(u)}`);
+export const getLostProfile = (u: string, p: string, signal?: AbortSignal) => {
+  const path = `/api/pets/${p}/lost-profile?${q(u)}`;
+  return signal
+    ? apiData<{ profile: LostProfile | null }>(path, { signal })
+    : apiData<{ profile: LostProfile | null }>(path);
+};
 export const saveLostProfile = (u: string, p: string, d: Partial<LostProfile>) => {
   // 後端 schema 僅接受可編輯欄位；token 與資料庫 ID 只能由後端管理。
   const payload = {
@@ -62,5 +66,3 @@ export const rotateLostToken = (u: string, p: string) =>
   apiData<{ publicToken: string }>(`/api/pets/${p}/lost-profile/rotate-token?${q(u)}`, {
     method: 'POST',
   });
-export const disableLostProfile = (u: string, p: string) =>
-  apiData(`/api/pets/${p}/lost-profile?${q(u)}`, { method: 'DELETE' });

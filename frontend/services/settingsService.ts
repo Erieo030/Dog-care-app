@@ -1,16 +1,19 @@
 /** 用途：持久化非敏感 App 偏好；不保存帳密或秘密。 */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_HOME_THEME, HomeThemeId, isHomeThemeId } from '../constants/HomeThemeIds';
 export interface AppSettings {
   localNotificationsEnabled: boolean;
   defaultReminderTime: string;
   tonightTime: string;
+  homeTheme: HomeThemeId;
 }
 export const DEFAULT_SETTINGS: AppSettings = {
   localNotificationsEnabled: true,
   defaultReminderTime: '09:00',
   tonightTime: '20:00',
+  homeTheme: DEFAULT_HOME_THEME,
 };
-const KEY = 'pawlog.app-settings.v1';
+const KEY = 'mego.app-settings.v1';
 const validTime = (value: unknown) =>
   typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 export async function loadSettings(): Promise<AppSettings> {
@@ -26,6 +29,7 @@ export async function loadSettings(): Promise<AppSettings> {
         ? value.defaultReminderTime
         : DEFAULT_SETTINGS.defaultReminderTime,
       tonightTime: validTime(value.tonightTime) ? value.tonightTime : DEFAULT_SETTINGS.tonightTime,
+      homeTheme: isHomeThemeId(value.homeTheme) ? value.homeTheme : DEFAULT_SETTINGS.homeTheme,
     };
   } catch {
     return DEFAULT_SETTINGS;

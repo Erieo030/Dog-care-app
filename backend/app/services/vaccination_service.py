@@ -1,7 +1,5 @@
 from app.timezone import now_taipei, TAIPEI
 from datetime import datetime,timezone
-from bson.errors import InvalidId
-from bson.objectid import ObjectId
 from fastapi import HTTPException
 from pymongo import ReturnDocument
 from app.db import db
@@ -9,14 +7,12 @@ from app.schemas.vaccination import VaccinationRequest
 from app.services.timeline_service import delete_timeline_item,upsert_timeline_item
 from app.services.reminder_service import create_reminder,update_reminder
 from app.schemas.reminder import ReminderCreateRequest,ReminderUpdateRequest
+from app.services.care_record_support import require_object_id, require_owned_pet, serialize_record
 def oid(v):
- try:return ObjectId(v)
- except InvalidId:raise HTTPException(400,"疫苗紀錄 ID 格式錯誤")
+ return require_object_id(v,"疫苗紀錄")
 def pet(pid,uid):
- try:o=ObjectId(pid)
- except InvalidId:raise HTTPException(400,"毛孩 ID 格式錯誤")
- if not db.pets.find_one({"_id":o,"userId":uid}):raise HTTPException(404,"找不到毛孩資料")
-def ser(x):return {"id":str(x["_id"]),**{k:v for k,v in x.items() if k!="_id"}}
+ return require_owned_pet(pid,uid)
+def ser(x):return serialize_record(x)
 def sync_timeline(x):upsert_timeline_item(x["petId"],"vaccination",x["administeredAt"],f"完成 {x['vaccineName']} 疫苗接種",str(x["_id"]),x.get("hospitalName", ""))
 def sync_reminder(x,uid):
  rid=x.get("reminderId");

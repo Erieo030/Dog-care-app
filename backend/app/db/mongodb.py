@@ -9,6 +9,10 @@ settings = get_settings()
 client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=5000)
 db = client[settings.mongo_db]
 
+# Refresh credentials are stored only as hashes and expire automatically.
+db.auth_sessions.create_index("tokenHash", unique=True)
+db.auth_sessions.create_index("expiresAt", expireAfterSeconds=0)
+
 # Daily Log 以毛孩與裝置本地日期避免同日重複，並支援歷史排序。
 db.daily_logs.create_index([ ("userId", 1), ("petId", 1), ("localDate", 1) ], unique=True)
 db.daily_logs.create_index([ ("userId", 1), ("petId", 1), ("loggedAt", -1) ])

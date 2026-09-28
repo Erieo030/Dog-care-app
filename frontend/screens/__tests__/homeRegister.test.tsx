@@ -6,7 +6,6 @@ import HomeScreen from '../HomeScreen';
 import RegisterScreen from '../RegisterScreen';
 import { getHealthDashboard } from '../../services/dashboardService';
 import { getTodayReminders } from '../../services/reminderService';
-import { getHealthMonitor } from '../../services/aiService';
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -33,7 +32,11 @@ jest.mock('react-native', () => {
     Alert: { alert: jest.fn() },
   };
 });
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }));
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: 'SafeAreaView',
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+jest.mock('@react-navigation/bottom-tabs', () => ({ useBottomTabBarHeight: () => 72 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 jest.mock('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
 jest.mock('../../components/SoftMotion', () => ({
@@ -41,10 +44,22 @@ jest.mock('../../components/SoftMotion', () => ({
   SoftEntrance: 'SoftEntrance',
   SoftField: 'SoftField',
 }));
+jest.mock('../../constants/HomeThemes', () => ({
+  HOME_THEMES: {
+    'morning-home': {
+      id: 'morning-home',
+      marker: 1,
+      iconColor: '#A9603D',
+      iconSurface: 'rgba(243, 237, 220, 0.94)',
+      iconBorder: 'rgba(183, 101, 59, 0.28)',
+      labelSurface: 'rgba(255, 249, 239, 0.78)',
+    },
+  },
+}));
 jest.mock('../../components/home/HomeBackgroundScene', () => ({
   HomeBackgroundScene: 'Background',
 }));
-jest.mock('../../assets/home-scene/logo.png', () => 1);
+jest.mock('../../assets/home-scene/logo.webp', () => 1);
 const mockNavigate = jest.fn();
 const mockNavigation = { navigate: mockNavigate, getParent: () => ({ navigate: mockNavigate }) };
 jest.mock('@react-navigation/native', () => ({
@@ -53,6 +68,9 @@ jest.mock('@react-navigation/native', () => ({
 }));
 const mockSession = { userId: 'account-a' };
 jest.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ session: mockSession }) }));
+jest.mock('../../contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { homeTheme: 'morning-home' } }),
+}));
 const mockPets = [
   { id: 'a', name: '毛孩A' },
   { id: 'b', name: '毛孩B' },
@@ -70,7 +88,6 @@ jest.mock('../../contexts/PetContext', () => ({
 }));
 jest.mock('../../services/dashboardService', () => ({ getHealthDashboard: jest.fn() }));
 jest.mock('../../services/reminderService', () => ({ getTodayReminders: jest.fn() }));
-jest.mock('../../services/aiService', () => ({ getHealthMonitor: jest.fn() }));
 jest.mock('../../services/notificationService', () => ({
   reconcileAccountNotifications: jest.fn().mockResolvedValue(undefined),
 }));
@@ -89,8 +106,7 @@ const text = () => JSON.stringify(screen.toJSON());
 beforeEach(() => {
   jest.clearAllMocks();
   mockSelectedPet = mockPets[0];
-  (getHealthDashboard as jest.Mock).mockResolvedValue({});
-  (getHealthMonitor as jest.Mock).mockResolvedValue({ alerts: [] });
+  (getHealthDashboard as jest.Mock).mockResolvedValue({ dailyRecords: [] });
   (getTodayReminders as jest.Mock).mockResolvedValue([]);
 });
 afterEach(async () => {
@@ -119,14 +135,37 @@ test('switching pets ignores a late reminder response from the previous pet', as
   expect(text()).toContain('毛孩B');
 });
 
-test('today and observation entries navigate directly to their own destinations', async () => {
+test('today and observation summaries open from the Records tab', async () => {
   await act(async () => {
     screen = create(<HomeScreen />);
   });
   await act(async () => byLabel('查看今日待辦').props.onPress());
-  expect(mockNavigate).toHaveBeenCalledWith('ReminderList', { upcomingDays: 0 });
+  expect(mockNavigate).toHaveBeenCalledWith('Timeline', {
+    screen: 'ReminderList',
+    params: { upcomingDays: 0 },
+  });
   await act(async () => byLabel('查看健康觀察紀錄').props.onPress());
-  expect(mockNavigate).toHaveBeenCalledWith('HealthEventList');
+  expect(mockNavigate).toHaveBeenCalledWith('Timeline', { screen: 'HealthObservation' });
+});
+
+test('home shortcuts open quick-entry forms instead of record lists', async () => {
+  await act(async () => {
+    screen = create(<HomeScreen />);
+  });
+  const expectedRoutes = [
+    ['日常', 'DailyLog'],
+    ['記錄異常', 'AbnormalType'],
+    ['體重', 'WeightForm'],
+    ['提醒', 'CreateReminder'],
+    ['疫苗', 'VaccinationForm'],
+    ['驅蟲', 'DewormingForm'],
+    ['用藥', 'MedicationForm'],
+    ['就醫', 'MedicalVisitForm'],
+  ] as const;
+  for (const [label, route] of expectedRoutes) {
+    await act(async () => byLabel(label).props.onPress());
+    expect(mockNavigate).toHaveBeenLastCalledWith(route, { quickEntry: true });
+  }
 });
 
 test('failed secondary data is not presented as zero reminders', async () => {

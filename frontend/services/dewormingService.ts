@@ -1,10 +1,18 @@
 import { apiData } from './api';
 import { Deworming } from '../types';
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
-export const getDewormings = (u: string, p: string) =>
-  apiData<{ records: Deworming[] }>(`/api/pets/${p}/dewormings?${q(u)}`);
-export const getDeworming = (u: string, id: string) =>
-  apiData<{ record: Deworming }>(`/api/dewormings/${id}?${q(u)}`);
+export const getDewormings = (u: string, p: string, signal?: AbortSignal) => {
+  const path = `/api/pets/${p}/dewormings?${q(u)}`;
+  return signal
+    ? apiData<{ records: Deworming[] }>(path, { signal })
+    : apiData<{ records: Deworming[] }>(path);
+};
+export const getDeworming = (u: string, id: string, signal?: AbortSignal) => {
+  const path = `/api/dewormings/${id}?${q(u)}`;
+  return signal
+    ? apiData<{ record: Deworming }>(path, { signal })
+    : apiData<{ record: Deworming }>(path);
+};
 export const createDeworming = (u: string, p: string, d: Partial<Deworming>) =>
   apiData<{ record: Deworming }>(`/api/pets/${p}/dewormings?${q(u)}`, {
     method: 'POST',

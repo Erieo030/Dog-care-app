@@ -32,13 +32,16 @@ def _streak(summary, key, low, high):
     return None
 def monitor(context):
     alerts=[]; logs=context.get("dailyLogs",{}); n=HealthMonitorConfig.STREAK_COUNT
-    for key,low,high in (("food",{"low"},set()),("water",{"low"},{"high"}),("energy",{"low"},set())):
+    for key,low,high in (("food",{"low"},set()),("water",{"low"},{"high"}),("energy",{"slightly_low"},set())):
         a=_streak(logs,key,low,high)
         if a: alerts.append(a)
     stool=logs.get("stool",{}).get("recent",[])
-    if len(stool)>=n and all(isinstance(v,int) and v!=3 for v in stool[-n:]):
-        kind="偏軟或水狀" if all(v>=4 for v in stool[-n:]) else "偏硬" if all(v<=2 for v in stool[-n:]) else "異常型態"
-        alerts.append(_alert("stool_abnormal_streak","attention","近期排便型態變化",f"最近{n}筆排便紀錄皆{kind}。",{"records":stool[-n:]}))
+    if len(stool)>=n and all(v=="hard" for v in stool[-n:]):
+        alerts.append(_alert("stool_hard_streak","attention","近期排便偏硬",f"最近{n}筆排便紀錄皆偏硬。",{"records":stool[-n:]}))
+    elif len(stool)>=n and all(v=="soft" for v in stool[-n:]):
+        alerts.append(_alert("stool_soft_streak","attention","近期排便偏軟",f"最近{n}筆排便紀錄皆偏軟。",{"records":stool[-n:]}))
+    elif len(stool)>=2 and all(v=="watery" for v in stool[-2:]):
+        alerts.append(_alert("stool_watery_streak","attention","近期水狀便紀錄",f"最近 2 筆排便紀錄皆為水狀。",{"records":stool[-2:]}))
     events=context.get("healthEvents",{}).get("recentEvents",[]); types=[x.get("type") for x in events]
     for typ in sorted(set(types)):
         if types.count(typ)>=HealthMonitorConfig.REPEATED_EVENT_COUNT: alerts.append(_alert("repeated_health_event","attention","近期健康異常重複出現",f"最近期間記錄了 {types.count(typ)} 次相同類型的健康異常。",{"type":typ,"count":types.count(typ)}))

@@ -16,42 +16,53 @@ export type AuthStackParamList = { Login: undefined; Register: undefined };
 export type PetSetupStackParamList = { CreatePet: undefined };
 export type HomeStackParamList = {
   HomeOverview: undefined;
-  DailyLog: { record?: DailyLog; recordId?: string; recordDate?: string } | undefined;
+  DailyLog:
+    | { record?: DailyLog; recordId?: string; recordDate?: string; quickEntry?: boolean }
+    | undefined;
   VaccinationList: undefined;
-  VaccinationForm: { record?: Vaccination; duplicate?: boolean } | undefined;
+  VaccinationForm: { record?: Vaccination; duplicate?: boolean; quickEntry?: boolean } | undefined;
   VaccinationDetail: { recordId: string };
   DewormingList: undefined;
-  DewormingForm: { record?: Deworming; duplicate?: boolean } | undefined;
+  DewormingForm: { record?: Deworming; duplicate?: boolean; quickEntry?: boolean } | undefined;
   DewormingDetail: { recordId: string };
   MedicationList: undefined;
-  MedicationForm: { record?: MedicationCourse; duplicate?: boolean } | undefined;
+  MedicationForm:
+    | { record?: MedicationCourse; duplicate?: boolean; quickEntry?: boolean }
+    | undefined;
   MedicationDetail: { recordId: string };
   HealthOverview: undefined;
   TimelineOverview: undefined;
   AddPet: undefined;
   EditPet: undefined;
   ReminderList: { focusReminderId?: string; upcomingDays?: number } | undefined;
-  CreateReminder: { reminder?: Reminder } | undefined;
-  AbnormalType: undefined;
-  CreateHealthEvent: { type: HealthEventType; label: string };
-  VomitingHealthEvent: { eventId?: string };
-  StoolHealthEvent: { eventId?: string };
-  ObservationHealthEvent: { type: ObservationHealthEventType; eventId?: string };
+  CreateReminder: { reminder?: Reminder; quickEntry?: boolean } | undefined;
+  AbnormalType: { quickEntry?: boolean } | undefined;
+  CreateHealthEvent: { type: HealthEventType; label: string; quickEntry?: boolean };
+  VomitingHealthEvent: { eventId?: string; quickEntry?: boolean };
+  StoolHealthEvent: { eventId?: string; quickEntry?: boolean };
+  ObservationHealthEvent: {
+    type: ObservationHealthEventType;
+    eventId?: string;
+    quickEntry?: boolean;
+  };
+  HealthObservation: undefined;
   HealthEventList: undefined;
   HealthEventDetail: { eventId: string };
   HealthEventEdit: { eventId: string };
   WeightList: { focusRecordId?: string } | undefined;
-  WeightForm: { record?: WeightRecord };
+  WeightForm: { record?: WeightRecord; quickEntry?: boolean };
   MedicalVisitList: undefined;
-  MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean };
+  MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean; quickEntry?: boolean };
   MedicalVisitDetail: { visitId: string };
   AIChat: undefined;
   VetVisitBrief: undefined;
 };
 export type ProfileStackParamList = {
   ProfileOverview: undefined;
+  HomeTheme: undefined;
   AccountInfo: undefined;
   AIUsage: undefined;
+  AIDataUseInfo: undefined;
   PetManagement: undefined;
   EditPet: undefined;
   NotificationSettings: undefined;

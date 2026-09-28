@@ -1,6 +1,13 @@
 import { pickAndUploadAttachments } from '../attachmentService';
+import * as ImagePicker from 'expo-image-picker';
 
-jest.mock('../api', () => ({ API_BASE_URL: 'http://localhost:8000', ApiError: Error }));
+jest.mock('../api', () => ({
+  API_BASE_URL: 'http://localhost:8000',
+  ApiError: Error,
+  apiData: jest.fn(),
+  apiRequest: (path: string, options: RequestInit) =>
+    global.fetch(`http://localhost:8000${path}`, options).then((response) => response.json()),
+}));
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   launchImageLibraryAsync: jest.fn().mockResolvedValue({
@@ -56,4 +63,22 @@ test('photo upload uses a real Blob with filename for the SDK 57 fetch implement
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('a denied library permission prevents opening the system photo picker', async () => {
+  const requestPermission = ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock;
+  const openLibrary = ImagePicker.launchImageLibraryAsync as jest.Mock;
+  requestPermission.mockResolvedValueOnce({ granted: false, canAskAgain: true });
+  openLibrary.mockClear();
+
+  await expect(
+    pickAndUploadAttachments({
+      source: 'library',
+      userId: 'u1',
+      petId: 'p1',
+      sourceType: 'health_event',
+      remaining: 1,
+    }),
+  ).rejects.toThrow('請允許相簿權限');
+  expect(openLibrary).not.toHaveBeenCalled();
 });

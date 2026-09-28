@@ -1,38 +1,49 @@
 /** 用途：依異常類型呈現快速選項，支援時間、嚴重程度、圖片與備註。 */
 import React, { useState } from 'react';
-import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { AppButton } from '../components/AppButton';
+import SupplementalNotesField from '../components/SupplementalNotesField';
 
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_FIELD_HEIGHT,
+  FORM_FIELD_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_WEIGHT,
+  FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  FORM_FIELD_LABEL_MARGIN_TOP,
+  FORM_FIELD_PADDING_HORIZONTAL,
+  FORM_FIELD_RADIUS,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import DatePickerField from '../components/DatePickerField';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
+import { showQuickRecordFeedback } from '../utils/quickRecordFeedback';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
 import { createHealthEvent } from '../services/healthEventService';
 import { Attachment, Severity } from '../types';
+import {
+  CreateHealthEventChoiceField,
+  CreateHealthEventQuestions,
+} from '../features/health-events/components/CreateHealthEventChoices';
+import { CREATE_EVENT_SEVERITY_OPTIONS } from '../features/health-events/createHealthEventContent';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'CreateHealthEvent'>;
-const severityOptions: Array<[Severity, string]> = [
-  ['mild', '輕微'],
-  ['moderate', '需要注意'],
-  ['severe', '嚴重'],
-];
-
 export default function CreateHealthEventScreen({ route, navigation }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const { type, label } = route.params;
+  const quickEntry = route.params.quickEntry === true;
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [severity, setSeverity] = useState<Severity>('mild');
   const [details, setDetails] = useState<Record<string, string>>({});
@@ -54,19 +65,33 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
         notes: notes.trim(),
         attachmentIds: images.map((item) => item.id),
       });
-      Alert.alert('已儲存', '異常紀錄已加入近期動態', [
-        {
-          text: '完成',
-          onPress: () => {
-            if (severity === 'severe')
-              Alert.alert(
-                '安全提醒',
-                '如果毛孩持續惡化、反覆嘔吐、呼吸困難、昏倒、大量出血或無法飲水，請立即聯絡動物醫院。',
-              );
-            navigation.popToTop();
+      const showSafetyNotice = () => {
+        if (severity === 'severe')
+          Alert.alert(
+            '安全提醒',
+            '如果毛孩持續惡化、反覆嘔吐、呼吸困難、昏倒、大量出血或無法飲水，請立即聯絡動物醫院。',
+          );
+      };
+      if (quickEntry) {
+        showQuickRecordFeedback({
+          message:
+            severity === 'severe'
+              ? '健康觀察已儲存。若毛孩持續惡化、反覆嘔吐、呼吸困難、昏倒、大量出血或無法飲水，請立即聯絡動物醫院。完整內容可到「紀錄」查看。'
+              : '健康觀察已儲存，完整內容可到「紀錄」查看。',
+          onDone: () => navigation.popToTop(),
+          onAddAnother: () => navigation.replace('AbnormalType', { quickEntry: true }),
+        });
+      } else {
+        Alert.alert('已儲存', '異常紀錄已加入近期動態', [
+          {
+            text: '完成',
+            onPress: () => {
+              showSafetyNotice();
+              navigation.popToTop();
+            },
           },
-        },
-      ]);
+        ]);
+      }
     } catch (e) {
       Alert.alert('儲存失敗', (e as Error).message);
     } finally {
@@ -76,113 +101,34 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{label}</Text>
-        {type === 'vomiting' && (
-          <>
-            <QuickField
-              label="發生幾次？"
-              field="count"
-              values={['1 次', '2～3 次', '4 次以上']}
-              state={details}
-              setState={setDetails}
-            />
-            <QuickField
-              label="精神狀況？"
-              field="energy"
-              values={['正常', '稍差', '很差']}
-              state={details}
-              setState={setDetails}
-            />
-            <TouchableOpacity
-              style={styles.advancedButton}
-              onPress={() => setShowAdvanced((value) => !value)}
-            >
-              <Text style={styles.advancedText}>
-                {showAdvanced ? '收合補充資訊' : '補充更多資訊'}
-              </Text>
-            </TouchableOpacity>
-            {showAdvanced && (
-              <>
-                <QuickField
-                  label="顏色"
-                  field="color"
-                  values={['透明', '黃色', '褐色', '紅色', '其他']}
-                  state={details}
-                  setState={setDetails}
-                />
-                <QuickField
-                  label="內容物"
-                  field="contents"
-                  values={['有泡沫', '有食物', '疑似有血', '疑似有異物']}
-                  state={details}
-                  setState={setDetails}
-                />
-                <QuickField
-                  label="是否能正常喝水"
-                  field="canDrink"
-                  values={['可以', '不太能', '完全不能']}
-                  state={details}
-                  setState={setDetails}
-                />
-              </>
-            )}
-          </>
-        )}
-        {type === 'abnormal_stool' && (
-          <>
-            <QuickField
-              label="形狀"
-              field="shape"
-              values={['偏軟', '水狀', '很硬', '其他']}
-              state={details}
-              setState={setDetails}
-            />
-            <QuickField
-              label="顏色"
-              field="color"
-              values={['一般', '黃色', '綠色', '黑色', '紅色']}
-              state={details}
-              setState={setDetails}
-            />
-            <QuickField
-              label="其他"
-              field="other"
-              values={['黏液', '疑似血液', '異物', '疑似蟲體']}
-              state={details}
-              setState={setDetails}
-            />
-          </>
-        )}
-        {type === 'low_appetite' && (
-          <QuickField
-            label="食慾狀況"
-            field="level"
-            values={['少吃一些', '吃不到一半', '完全不吃']}
-            state={details}
-            setState={setDetails}
-          />
-        )}
-        {type === 'low_energy' && (
-          <QuickField
-            label="精神狀況"
-            field="level"
-            values={['稍微沒精神', '明顯沒精神', '幾乎不活動']}
-            state={details}
-            setState={setDetails}
-          />
-        )}
-        <Text style={styles.label}>嚴重程度（必填）</Text>
-        <View style={styles.chips}>
-          {severityOptions.map(([value, text]) => (
-            <Chip
-              key={value}
-              text={text}
-              active={severity === value}
-              onPress={() => setSeverity(value)}
-            />
-          ))}
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
+      >
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="pulse-outline" size={22} color={Colors.primary} />
+          </View>
+          <View style={styles.introCopy}>
+            <Text style={styles.title}>{label}</Text>
+            <Text style={styles.subtitle}>記下看見的狀況，方便日後回看。</Text>
+          </View>
         </View>
+        <CreateHealthEventQuestions
+          type={type}
+          details={details}
+          showAdvanced={showAdvanced}
+          onToggleAdvanced={() => setShowAdvanced((value) => !value)}
+          onChange={(field, value) => setDetails((current) => ({ ...current, [field]: value }))}
+        />
+        <CreateHealthEventChoiceField
+          label="嚴重程度（必填）"
+          values={CREATE_EVENT_SEVERITY_OPTIONS.map(([, label]) => label)}
+          value={CREATE_EVENT_SEVERITY_OPTIONS.find(([value]) => value === severity)?.[1]}
+          onChange={(label) => {
+            const value = CREATE_EVENT_SEVERITY_OPTIONS.find(([, text]) => text === label)?.[0];
+            if (value) setSeverity(value);
+          }}
+        />
         <DatePickerField
           label="發生日期（必填）"
           value={occurredAt}
@@ -200,111 +146,71 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
           onChange={setImages}
           disabled={submitting}
         />
-        <Text style={styles.label}>備註</Text>
-        <TextInput
-          style={[styles.input, styles.notes]}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          placeholder="只需補充重要資訊"
-          placeholderTextColor={Colors.subtext}
-        />
-        <TouchableOpacity
+        <SupplementalNotesField value={notes} onChange={setNotes} placeholder="只需補充重要資訊" />
+        <AppButton
+          title={submitting ? '儲存中…' : '儲存紀錄'}
+          variant="primary"
           disabled={submitting}
+          busy={submitting}
           style={[styles.submit, submitting && styles.disabled]}
+          textStyle={styles.submitText}
           onPress={submit}
-        >
-          <Text style={styles.submitText}>{submitting ? '儲存中…' : '儲存紀錄'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        />
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
-function QuickField({
-  label,
-  field,
-  values,
-  state,
-  setState,
-}: {
-  label: string;
-  field: string;
-  values: string[];
-  state: Record<string, string>;
-  setState: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-}) {
-  return (
-    <>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.chips}>
-        {values.map((value) => (
-          <Chip
-            key={value}
-            text={value}
-            active={state[field] === value}
-            onPress={() => setState((current) => ({ ...current, [field]: value }))}
-          />
-        ))}
-      </View>
-    </>
-  );
-}
-function Chip({ text, active, onPress }: { text: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{text}</Text>
-    </TouchableOpacity>
-  );
-}
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 50 },
-  title: { color: Colors.text, fontSize: 26, fontWeight: '800', marginBottom: 8 },
-  label: { color: Colors.text, fontWeight: '700', marginTop: 17, marginBottom: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    minHeight: 44,
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 18, paddingBottom: 34 },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 7 },
+  introIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: Colors.primarySoft,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
   },
-  chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  chipText: { color: Colors.text },
-  chipTextActive: { color: '#FFF', fontWeight: '700' },
+  introCopy: { flex: 1, minWidth: 0 },
+  title: { color: Colors.text, fontSize: 22, fontWeight: '800' },
+  subtitle: { color: Colors.subtext, lineHeight: 18, marginTop: 2, fontSize: 12 },
+  label: {
+    color: Colors.text,
+    fontSize: FORM_FIELD_LABEL_FONT_SIZE,
+    fontWeight: FORM_FIELD_LABEL_FONT_WEIGHT,
+    marginTop: FORM_FIELD_LABEL_MARGIN_TOP,
+    marginBottom: FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  },
   input: {
-    minHeight: 54,
+    fontSize: FORM_FIELD_FONT_SIZE,
+    minHeight: FORM_FIELD_HEIGHT,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: FORM_FIELD_RADIUS,
+    paddingHorizontal: FORM_FIELD_PADDING_HORIZONTAL,
     color: Colors.text,
   },
   inputText: { color: Colors.text },
   notes: { minHeight: 90, paddingTop: 13, textAlignVertical: 'top' },
   images: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   image: { width: 70, height: 70, borderRadius: 12 },
-  advancedButton: { paddingVertical: 12 },
-  advancedText: { color: Colors.primary, fontWeight: '700' },
   outline: {
     borderWidth: 1,
     borderColor: Colors.primary,
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 13,
     alignItems: 'center',
   },
   outlineText: { color: Colors.text, fontWeight: '700' },
   submit: {
     backgroundColor: Colors.primary,
-    borderRadius: 14,
+    borderRadius: FORM_BUTTON_RADIUS,
     padding: 14,
-    minHeight: 52,
+    minHeight: FORM_BUTTON_HEIGHT,
     alignItems: 'center',
     marginTop: 25,
   },

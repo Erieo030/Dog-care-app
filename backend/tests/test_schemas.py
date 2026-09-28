@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from app.schemas.weight import WeightRecordRequest
 from app.schemas.health_event import HealthEventCreateRequest
 from app.schemas.medical_visit import MedicalVisitRequest
+from app.schemas.daily_log import DailyLogCreateRequest
 
 
 def test_weight_rejects_invalid_precision():
@@ -23,3 +24,14 @@ def test_follow_up_cannot_precede_visit():
     visited = datetime.now(timezone.utc)
     with pytest.raises(ValidationError):
         MedicalVisitRequest(visitedAt=visited, reason='test', followUpAt=visited - timedelta(days=1))
+
+
+def test_daily_log_uses_named_stool_and_energy_states():
+    record = DailyLogCreateRequest(
+        loggedAt=datetime.now(timezone.utc), localDate='2026-09-22',
+        energyLevel='slightly_low', stoolLevel='soft',
+    )
+    assert record.energyLevel == 'slightly_low'
+    assert record.stoolLevel == 'soft'
+    with pytest.raises(ValidationError):
+        DailyLogCreateRequest(loggedAt=datetime.now(timezone.utc), localDate='2026-09-22', stoolLevel=4)

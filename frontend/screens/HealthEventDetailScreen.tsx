@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/Colors';
+import { AppButton } from '../components/AppButton';
 import AttachmentGallery from '../components/AttachmentGallery';
 import { HEALTH_EVENT_LABELS, SEVERITY_LABELS } from '../constants/HealthEvents';
 import { normalizeVomitingDetails, vomitingDetailRows } from '../constants/Vomiting';
@@ -24,6 +26,7 @@ import {
   observationDetailRows,
 } from '../constants/ObservationHealthEvents';
 import { useAuth } from '../contexts/AuthContext';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
 import * as service from '../services/healthEventService';
@@ -32,6 +35,7 @@ import { HealthEvent } from '../types';
 type Props = NativeStackScreenProps<HomeStackParamList, 'HealthEventDetail'>;
 
 export default function HealthEventDetailScreen({ route, navigation }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const [item, setItem] = useState<HealthEvent | null>(null);
@@ -40,7 +44,7 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const requestId = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     const currentRequest = ++requestId.current;
     setItem(null);
     if (!session?.userId || !selectedPet) {
@@ -50,7 +54,7 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
     }
     try {
       setError('');
-      const result = await service.getHealthEvent(session.userId, route.params.eventId);
+      const result = await service.getHealthEvent(session.userId, route.params.eventId, signal);
       if (currentRequest !== requestId.current) return;
       if (result.petId !== selectedPet.id) {
         setError('此紀錄不屬於目前選取的毛孩');
@@ -69,8 +73,13 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      const controller = new AbortController();
       setLoading(true);
-      load();
+      void load(controller.signal);
+      return () => {
+        controller.abort();
+        requestId.current += 1;
+      };
     }, [load]),
   );
 
@@ -133,9 +142,33 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
             );
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
+        <View style={styles.hero}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="heart-outline" size={23} color={Colors.primary} />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroType}>{HEALTH_EVENT_LABELS[item.type]}</Text>
+            <Text numberOfLines={2} style={styles.heroSummary}>
+              {item.summary}
+            </Text>
+            <Text style={styles.heroDate}>
+              {new Date(item.occurredAt).toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
+          <Text style={[styles.severity, item.severity === 'severe' && styles.severitySevere]}>
+            {SEVERITY_LABELS[item.severity]}
+          </Text>
+        </View>
         <View style={styles.actions}>
-          <TouchableOpacity
+          <AppButton
+            title="編輯紀錄"
+            variant="primary"
+            fullWidth={false}
             disabled={submitting}
             style={styles.edit}
             onPress={() => {
@@ -150,29 +183,48 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
                 });
               else navigation.navigate('HealthEventEdit', { eventId: item.id });
             }}
-          >
-            <Text style={styles.editText}>編輯紀錄</Text>
-          </TouchableOpacity>
-          <TouchableOpacity disabled={submitting} style={styles.delete} onPress={remove}>
-            <Text style={styles.deleteText}>{submitting ? '刪除中…' : '刪除'}</Text>
-          </TouchableOpacity>
+          />
+          <AppButton
+            title={submitting ? '刪除中…' : '刪除'}
+            variant="danger"
+            fullWidth={false}
+            disabled={submitting}
+            style={styles.delete}
+            onPress={remove}
+          />
         </View>
-        <Row label="異常類型" value={HEALTH_EVENT_LABELS[item.type]} />
-        <Row label="摘要" value={item.summary} />
-        <Row label="發生時間" value={new Date(item.occurredAt).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })} />
-        <Row label="嚴重程度" value={SEVERITY_LABELS[item.severity]} />
-        {!!item.notes && <Row label="備註" value={item.notes} />}
+        <Text style={styles.heading}>這次紀錄</Text>
+        <View style={styles.detailGroup}>
+          <Row label="異常類型" value={HEALTH_EVENT_LABELS[item.type]} />
+          <Row label="摘要" value={item.summary} />
+          <Row
+            label="發生時間"
+            value={new Date(item.occurredAt).toLocaleString('zh-TW', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          />
+          <Row label="嚴重程度" value={SEVERITY_LABELS[item.severity]} />
+          {!!item.notes && <Row label="補充備註" value={item.notes} />}
+        </View>
         {!!detailRows.length && (
           <>
             <Text style={styles.heading}>補充資訊</Text>
-            {detailRows.map(([label, value]) => (
-              <Row key={label} label={label} value={String(value)} />
-            ))}
+            <View style={styles.detailGroup}>
+              {detailRows.map(([label, value]) => (
+                <Row key={label} label={label} value={String(value)} />
+              ))}
+            </View>
           </>
         )}
         <>
           <Text style={styles.heading}>照片</Text>
-          <AttachmentGallery items={item.attachments ?? []} userId={session!.userId} />
+          <View style={styles.detailGroup}>
+            <AttachmentGallery items={item.attachments ?? []} userId={session!.userId} />
+          </View>
         </>
       </ScrollView>
     </SafeAreaView>
@@ -190,7 +242,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 50 },
+  content: { padding: 18, paddingBottom: 34 },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -198,32 +250,77 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 24,
   },
-  actions: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 14,
+  },
+  heroIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primarySoft,
+  },
+  heroCopy: { flex: 1, minWidth: 0 },
+  heroType: { color: Colors.primary, fontSize: 12, fontWeight: '800' },
+  heroSummary: {
+    color: Colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    lineHeight: 23,
+    marginTop: 2,
+  },
+  heroDate: { color: Colors.subtext, fontSize: 12, marginTop: 5 },
+  severity: {
+    color: Colors.primary,
+    backgroundColor: Colors.primarySoft,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  severitySevere: { color: Colors.danger, backgroundColor: '#F9E5E2' },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 2 },
   edit: {
     flex: 1,
     backgroundColor: Colors.primary,
     padding: 13,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
   },
   editText: { color: '#FFF', fontWeight: '800' },
   delete: {
-    borderWidth: 1,
-    borderColor: '#D96C6C',
-    paddingHorizontal: 20,
+    minHeight: 44,
+    minWidth: 72,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
   },
   deleteText: { color: '#C34D4D', fontWeight: '800' },
-  row: {
+  detailGroup: {
     backgroundColor: Colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  row: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     padding: 15,
   },
   label: { color: Colors.subtext, fontSize: 12 },
   value: { color: Colors.text, marginTop: 5, lineHeight: 21 },
-  heading: { color: Colors.text, fontSize: 20, fontWeight: '800', marginTop: 22, marginBottom: 10 },
+  heading: { color: Colors.text, fontSize: 17, fontWeight: '800', marginTop: 21, marginBottom: 9 },
   images: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   image: { width: 100, height: 100, borderRadius: 12 },
   error: { color: '#C55B5B', textAlign: 'center' },

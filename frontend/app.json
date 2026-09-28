@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PawLog",
-    "slug": "my-app",
+    "name": "MEGO",
+    "slug": "mego",
     "version": "1.0.0",
     "ios": {
       "bundleIdentifier": "org.name.myapp"
@@ -15,14 +15,24 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "允許 PawLog 選擇健康紀錄照片",
-          "cameraPermission": "允許 PawLog 拍攝健康紀錄照片",
+          "photosPermission": "允許 MEGO 存取相簿，以選取毛孩照片或照護紀錄照片；只有你選取的照片會加入 App。",
+          "cameraPermission": "允許 MEGO 使用相機，拍攝毛孩照片或照護紀錄照片。",
           "microphonePermission": false
         }
       ],
       "expo-sharing",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/home-scene/logo-splash.png",
+          "imageWidth": 190,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F4EE"
+        }
+      ]
     ]
   }
 }

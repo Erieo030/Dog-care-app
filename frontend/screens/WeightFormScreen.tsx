@@ -2,19 +2,30 @@
 import React, { useState } from 'react';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
-import {
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { Alert, View, SafeAreaView, StyleSheet, Text, TextInput } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { AppButton } from '../components/AppButton';
+import SupplementalNotesField from '../components/SupplementalNotesField';
 
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_FIELD_HEIGHT,
+  FORM_FIELD_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_SIZE,
+  FORM_FIELD_LABEL_FONT_WEIGHT,
+  FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  FORM_FIELD_LABEL_MARGIN_TOP,
+  FORM_FIELD_PADDING_HORIZONTAL,
+  FORM_FIELD_RADIUS,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import DatePickerField from '../components/DatePickerField';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
+import { showQuickRecordFeedback } from '../utils/quickRecordFeedback';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
@@ -23,7 +34,9 @@ import * as service from '../services/weightService';
 type Props = NativeStackScreenProps<HomeStackParamList, 'WeightForm'>;
 
 export default function WeightFormScreen({ route, navigation }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const record = route.params?.record;
+  const quickEntry = route.params?.quickEntry === true;
   const { session } = useAuth();
   const { selectedPet, refreshPets } = usePet();
   const initialDate = record ? new Date(record.measuredAt) : new Date();
@@ -61,9 +74,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
         weightKg: value,
         measuredAt: date.toISOString(),
         notes: notes.trim(),
-        attachmentIds: attachments
-
-          .map((item) => item.id),
+        attachmentIds: attachments.map((item) => item.id),
       };
       if (record) {
         await service.updateWeight(session.userId, record.id, data);
@@ -71,7 +82,15 @@ export default function WeightFormScreen({ route, navigation }: Props) {
         await service.createWeight(session.userId, selectedPet.id, data);
       }
       await refreshPets();
-      navigation.goBack();
+      if (quickEntry) {
+        showQuickRecordFeedback({
+          message: '體重紀錄已儲存，完整趨勢可到「紀錄」查看。',
+          onDone: () => navigation.popToTop(),
+          onAddAnother: () => navigation.replace('WeightForm', { quickEntry: true }),
+        });
+      } else {
+        navigation.goBack();
+      }
     } catch (error) {
       Alert.alert('儲存失敗', (error as Error).message);
     } finally {
@@ -81,7 +100,18 @@ export default function WeightFormScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
+      >
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="scale-outline" size={20} color={Colors.success} />
+          </View>
+          <View style={styles.introCopy}>
+            <Text style={styles.introTitle}>{record ? '更新這次測量' : '記下今天的體重'}</Text>
+            <Text style={styles.introHint}>固定在相近條件下量測，更容易比較變化。</Text>
+          </View>
+        </View>
         <Text style={styles.label}>體重（kg）（必填）</Text>
         <TextInput
           style={styles.input}
@@ -100,14 +130,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
           onChange={setDate}
         />
 
-        <Text style={styles.label}>備註</Text>
-        <TextInput
-          style={[styles.input, styles.notes]}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          editable={!submitting}
-        />
+        <SupplementalNotesField value={notes} onChange={setNotes} />
 
         {session?.userId && (selectedPet || record) && (
           <AttachmentPicker
@@ -121,39 +144,69 @@ export default function WeightFormScreen({ route, navigation }: Props) {
           />
         )}
 
-        <TouchableOpacity
+        <AppButton
+          title={submitting ? '儲存中…' : '儲存體重'}
+          variant="primary"
           disabled={submitting}
+          busy={submitting}
           style={[styles.submit, submitting && styles.disabled]}
+          textStyle={styles.submitText}
           onPress={submit}
-        >
-          <Text style={styles.submitText}>{submitting ? '儲存中…' : '儲存體重'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        />
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 22 },
-  label: { color: Colors.text, fontWeight: '700', marginTop: 15, marginBottom: 8 },
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 18, paddingBottom: 34 },
+  intro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 13,
+  },
+  introIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.successSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introCopy: { flex: 1, minWidth: 0 },
+  introTitle: { color: Colors.text, fontSize: 16, fontWeight: '800' },
+  introHint: { color: Colors.subtext, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  label: {
+    color: Colors.text,
+    fontSize: FORM_FIELD_LABEL_FONT_SIZE,
+    fontWeight: FORM_FIELD_LABEL_FONT_WEIGHT,
+    marginTop: FORM_FIELD_LABEL_MARGIN_TOP,
+    marginBottom: FORM_FIELD_LABEL_MARGIN_BOTTOM,
+  },
   input: {
-    minHeight: 55,
+    fontSize: FORM_FIELD_FONT_SIZE,
+    minHeight: FORM_FIELD_HEIGHT,
     justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: FORM_FIELD_RADIUS,
+    paddingHorizontal: FORM_FIELD_PADDING_HORIZONTAL,
     color: Colors.text,
   },
-  notes: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   submit: {
     backgroundColor: Colors.primary,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: FORM_BUTTON_RADIUS,
     alignItems: 'center',
     marginTop: 25,
+    minHeight: FORM_BUTTON_HEIGHT,
   },
   disabled: { opacity: 0.55 },
   submitText: { color: '#FFF', fontWeight: '800' },

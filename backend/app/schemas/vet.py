@@ -1,6 +1,16 @@
 from typing import Any, Literal
 from pydantic import BaseModel, Field
-from app.schemas.ai import AIPeriod, HealthSummaryResponse
+from app.schemas.ai import AIPeriod
+
+
+class VetNarrative(BaseModel):
+    """Concise, source-grounded narrative for discussing recorded care with a veterinarian."""
+    overview: str
+    timeline: list[str] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
+    dataGaps: list[str] = Field(default_factory=list)
+
+
 class VetVisitBrief(BaseModel):
     pet: dict[str, Any]
     period: AIPeriod
@@ -14,7 +24,7 @@ class VetVisitBrief(BaseModel):
     deworming: dict[str, Any]
     monitorAlerts: list[dict[str, Any]]
     dataCoverage: dict[str, int]
-    generatedSummary: str
+    aiNarrative: VetNarrative | None = None
     disclaimer: str
     generatedAt: Any
     generationMode: Literal["deterministic", "llm", "fallback"]

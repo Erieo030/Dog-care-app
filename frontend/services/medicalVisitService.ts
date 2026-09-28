@@ -2,11 +2,20 @@
 import { apiData } from './api';
 import { MedicalVisit, MedicalVisitInput } from '../types';
 const withUser = (path: string, userId: string) => `${path}?userId=${encodeURIComponent(userId)}`;
-export const getMedicalVisits = async (userId: string, petId: string) =>
-  (await apiData<{ visits: MedicalVisit[] }>(withUser(`/api/pets/${petId}/medical-visits`, userId)))
-    .visits;
-export const getMedicalVisit = async (userId: string, id: string) =>
-  (await apiData<{ visit: MedicalVisit }>(withUser(`/api/medical-visits/${id}`, userId))).visit;
+export const getMedicalVisits = async (userId: string, petId: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/pets/${petId}/medical-visits`, userId);
+  const result = signal
+    ? await apiData<{ visits: MedicalVisit[] }>(path, { signal })
+    : await apiData<{ visits: MedicalVisit[] }>(path);
+  return result.visits;
+};
+export const getMedicalVisit = async (userId: string, id: string, signal?: AbortSignal) => {
+  const path = withUser(`/api/medical-visits/${id}`, userId);
+  const result = signal
+    ? await apiData<{ visit: MedicalVisit }>(path, { signal })
+    : await apiData<{ visit: MedicalVisit }>(path);
+  return result.visit;
+};
 export const createMedicalVisit = async (userId: string, petId: string, data: MedicalVisitInput) =>
   (
     await apiData<{ visit: MedicalVisit }>(withUser(`/api/pets/${petId}/medical-visits`, userId), {

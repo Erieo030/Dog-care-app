@@ -1,13 +1,19 @@
-/** 用途：封裝登入與註冊 API；安全 Token 流程依目前範圍暫緩。 */
+/** 用途：封裝登入、註冊、session refresh 與登出 API。 */
 import { apiData } from './api';
 import { Pet } from '../types';
 
 export interface AuthResponse {
   success: boolean;
   userId: string;
+  email: string;
   hasPet: boolean;
   petData: Pet | null;
   pets?: Pet[];
+  accessToken: string;
+  refreshToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number;
+  refreshExpiresIn: number;
 }
 
 const submitCredentials = (path: string, email: string, password: string) =>
@@ -21,3 +27,15 @@ export const login = (email: string, password: string) =>
 
 export const register = (email: string, password: string) =>
   submitCredentials('/api/register', email, password);
+
+export const refresh = (refreshToken: string) =>
+  apiData<AuthResponse>('/api/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  });
+
+export const logout = (refreshToken: string) =>
+  apiData<{ success: boolean }>('/api/logout', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  });

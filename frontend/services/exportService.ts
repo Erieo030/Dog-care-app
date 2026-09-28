@@ -1,7 +1,7 @@
 /** 用途：集中建立、輪詢、取消、下載及分享匯出檔案。 */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { API_BASE_URL, apiData } from './api';
+import { API_BASE_URL, apiData, getValidAccessToken, refreshStoredTokens } from './api';
 import { ExportJob, ExportRequest } from '../types';
 const query = (userId: string) => `userId=${encodeURIComponent(userId)}`;
 export async function createExport(userId: string, request: ExportRequest) {
@@ -11,8 +11,9 @@ export async function createExport(userId: string, request: ExportRequest) {
     30000,
   );
 }
-export async function getExport(userId: string, id: string) {
-  return await apiData<ExportJob>(`/api/exports/${id}?${query(userId)}`);
+export async function getExport(userId: string, id: string, signal?: AbortSignal) {
+  const path = `/api/exports/${id}?${query(userId)}`;
+  return signal ? apiData<ExportJob>(path, { signal }) : apiData<ExportJob>(path);
 }
 export async function cancelExport(userId: string, id: string) {
   return await apiData<ExportJob>(`/api/exports/${id}?${query(userId)}`, {
@@ -21,13 +22,20 @@ export async function cancelExport(userId: string, id: string) {
 }
 export async function downloadAndShareExport(userId: string, job: ExportJob) {
   if (!job.fileName) throw new Error('匯出檔案尚未完成');
-  const directory = `${FileSystem.cacheDirectory}pawlog-exports/`;
+  const directory = `${FileSystem.cacheDirectory}mego-exports/`;
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
   const target = `${directory}${job.fileName}`;
-  const result = await FileSystem.downloadAsync(
-    `${API_BASE_URL}/api/exports/${job.id}/download?${query(userId)}`,
-    target,
-  );
+  const url = `${API_BASE_URL}/api/exports/${job.id}/download?${query(userId)}`;
+  let token = await getValidAccessToken();
+  let result = await FileSystem.downloadAsync(url, target, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (result.status === 401 && (await refreshStoredTokens())) {
+    token = await getValidAccessToken();
+    result = await FileSystem.downloadAsync(url, target, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  }
   if (result.status < 200 || result.status >= 300) throw new Error('下載匯出檔案失敗');
   if (!(await Sharing.isAvailableAsync())) throw new Error('此裝置不支援系統分享或儲存');
   await Sharing.shareAsync(result.uri, {

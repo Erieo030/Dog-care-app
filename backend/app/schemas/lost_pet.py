@@ -23,9 +23,9 @@ class LostPetProfileRequest(BaseModel):
  lostSince:datetime|None=None
  lostLocationText:str=Field(default="",max_length=300)
  lostMessage:str=Field(default="",max_length=1000)
- @field_validator("contactName","contactPhone")
+ @field_validator("contactName","contactEmail","contactPhone","alternatePhone","contactMessage")
  @classmethod
- def trim_required(cls,v):return v.strip()
+ def trim_contact_fields(cls,v):return v.strip()
 class PublicLostPetResponse(BaseModel):
  name:str
  avatar:str|None=None
@@ -38,8 +38,8 @@ class PublicLostPetResponse(BaseModel):
  lostSince:datetime|None=None
  lostLocationText:str|None=None
  lostMessage:str|None=None
- contactName:str
+ contactName:str|None=None
  contactEmail:str|None=None
- contactPhone:str
+ contactPhone:str|None=None
  alternatePhone:str|None=None
  contactMessage:str|None=None

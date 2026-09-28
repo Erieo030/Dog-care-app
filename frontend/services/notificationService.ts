@@ -1,4 +1,4 @@
-/** 用途：集中管理 PawLog 本機通知權限、排程、取消、重排與帳號層級 reconciliation。 */
+/** 用途：集中管理 MEGO 本機通知權限、排程、取消、重排與帳號層級 reconciliation。 */
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
@@ -6,8 +6,8 @@ import { Pet, Reminder } from '../types';
 import { getReminders } from './reminderService';
 import { localNotificationsEnabled } from './settingsService';
 
-const CHANNEL_ID = 'pawlog-reminders';
-const OWNER_KEY = 'pawlog-local-reminder';
+const CHANNEL_ID = 'mego-reminders';
+const OWNER_KEY = 'mego-local-reminder';
 
 export type NotificationPermissionState = 'granted' | 'denied' | 'undetermined';
 export type ScheduleResult =
@@ -56,16 +56,16 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 const dataOf = (request: Notifications.NotificationRequest) => request.content.data ?? {};
-const isPawLog = (request: Notifications.NotificationRequest) =>
+const isMegoReminder = (request: Notifications.NotificationRequest) =>
   dataOf(request).owner === OWNER_KEY;
 const isForUser = (request: Notifications.NotificationRequest, userId: string) =>
-  isPawLog(request) && dataOf(request).userId === userId;
+  isMegoReminder(request) && dataOf(request).userId === userId;
 const isForReminder = (request: Notifications.NotificationRequest, reminderId: string) =>
-  isPawLog(request) && dataOf(request).reminderId === reminderId;
+  isMegoReminder(request) && dataOf(request).reminderId === reminderId;
 
-export async function getPawLogScheduledNotifications(userId?: string) {
+export async function getMegoScheduledNotifications(userId?: string) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  return scheduled.filter((item) => (userId ? isForUser(item, userId) : isPawLog(item)));
+  return scheduled.filter((item) => (userId ? isForUser(item, userId) : isMegoReminder(item)));
 }
 
 export async function scheduleReminderNotification(
@@ -129,7 +129,7 @@ export async function replaceReminderNotification(
 }
 
 export async function cancelAccountNotifications(userId: string) {
-  const scheduled = await getPawLogScheduledNotifications(userId);
+  const scheduled = await getMegoScheduledNotifications(userId);
   await Promise.all(
     scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
   );
@@ -137,7 +137,7 @@ export async function cancelAccountNotifications(userId: string) {
 
 export async function reconcileAccountNotifications(userId: string, pets: Pet[]) {
   if (!(await localNotificationsEnabled())) {
-    const scheduled = await getPawLogScheduledNotifications(userId);
+    const scheduled = await getMegoScheduledNotifications(userId);
     await Promise.all(
       scheduled.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
     );
@@ -157,7 +157,7 @@ export async function reconcileAccountNotifications(userId: string, pets: Pet[])
       .map((reminder) => ({ reminder, petName: pet.name })),
   );
   const desiredIds = new Set(desired.map(({ reminder }) => reminder.id));
-  const scheduled = await getPawLogScheduledNotifications(userId);
+  const scheduled = await getMegoScheduledNotifications(userId);
   let cancelled = 0;
   let created = 0;
 
@@ -176,7 +176,7 @@ export async function reconcileAccountNotifications(userId: string, pets: Pet[])
   if (permission !== 'granted') return { scheduled: 0, cancelled, permission };
 
   for (const { reminder, petName } of desired) {
-    const current = (await getPawLogScheduledNotifications(userId)).filter((item) =>
+    const current = (await getMegoScheduledNotifications(userId)).filter((item) =>
       isForReminder(item, reminder.id),
     );
     const exact = current.filter((item) => {

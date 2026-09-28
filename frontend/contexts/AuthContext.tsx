@@ -1,8 +1,10 @@
-/** 用途：集中管理登入、註冊與登出狀態；安全持久化依目前範圍暫緩。 */
-import React, { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
+/** 用途：集中管理登入、註冊、SecureStore session 恢復與登出狀態。 */
+import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 
 import * as authService from '../services/authService';
 import { normalizePets } from '../services/petService';
+import { ApiError, setAuthExpiredHandler } from '../services/api';
+import { clearAuthTokens, readAuthTokens, saveAuthTokens } from '../services/authTokenStorage';
 import { Pet } from '../types';
 
 interface Session {
@@ -25,8 +27,47 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const restoreSession = async () => {
+      try {
+        const tokens = await readAuthTokens();
+        if (!tokens?.refreshToken) return;
+        const result = await authService.refresh(tokens.refreshToken);
+        await saveAuthTokens({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn,
+        });
+        if (mounted) {
+          setSession({
+            userId: result.userId,
+            email: result.email,
+            pets: normalizePets((result.pets ?? (result.petData ? [result.petData] : [])) as unknown[]),
+          });
+        }
+      } catch (restoreError) {
+        if ((restoreError as ApiError).status === 401) await clearAuthTokens();
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    void restoreSession();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setAuthExpiredHandler(() => {
+      setSession(null);
+      setError('登入狀態已失效，請重新登入');
+    });
+    return () => setAuthExpiredHandler(null);
+  }, []);
 
   const authenticate = async (
     request: typeof authService.login,
@@ -37,10 +78,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const result = await request(email, password);
+      await saveAuthTokens({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      });
       const rawPets = result.pets ?? (result.petData ? [result.petData] : []);
       setSession({
         userId: result.userId,
-        email: email.trim(),
+        email: result.email || email.trim(),
         pets: normalizePets(rawPets as unknown[]),
       });
     } catch (requestError) {
@@ -60,6 +106,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login: (email, password) => authenticate(authService.login, email, password),
       register: (email, password) => authenticate(authService.register, email, password),
       logout: () => {
+        void (async () => {
+          let refreshToken: string | undefined;
+          try {
+            const tokens = await readAuthTokens();
+            refreshToken = tokens?.refreshToken;
+          } catch {
+            // Continue clearing local credentials if secure storage is unavailable.
+          }
+          try { await clearAuthTokens(); } catch { /* Keep local navigation signed out. */ }
+          if (refreshToken) {
+            try { await authService.logout(refreshToken); } catch { /* Server-side expiry remains the fallback. */ }
+          }
+        })();
         setSession(null);
         setError(null);
       },

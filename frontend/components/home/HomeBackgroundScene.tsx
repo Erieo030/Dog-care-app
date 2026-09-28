@@ -1,29 +1,51 @@
-import React from 'react';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
-const CANVAS_WIDTH = 853;
-const CANVAS_HEIGHT = 1796;
+import React, { useState } from 'react';
+import { Image, LayoutChangeEvent, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { HOME_THEMES } from '../../constants/HomeThemes';
+import { DEFAULT_HOME_THEME, HomeThemeId } from '../../constants/HomeThemeIds';
 
+/** Static theme artwork. All layers are decorative and never receive touch input. */
+export function HomeBackgroundScene({ themeId = DEFAULT_HOME_THEME }: { themeId?: HomeThemeId }) {
+  const window = useWindowDimensions();
+  const [sceneSize, setSceneSize] = useState({ width: window.width, height: window.height });
+  const theme = HOME_THEMES[themeId];
+  // 先依素材比例計算高度；容器較高時只延展背景高度，避免底部露出純色底。
+  const imageHeight = Math.max(
+    (sceneSize.width * theme.canvasHeight) / theme.canvasWidth,
+    sceneSize.height,
+  );
+  const measureScene = ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
+    setSceneSize((current) => {
+      if (current.width === layout.width && current.height === layout.height) return current;
+      return { width: layout.width, height: layout.height };
+    });
+  };
 
-/** Static full-scene artwork. All layers are decorative and never receive touch input. */
-export function HomeBackgroundScene() {
-  const { width } = useWindowDimensions();
-  // 以螢幕寬度為基準，避免 cover 比例造成左右裁切。
-  const scale = width / CANVAS_WIDTH;
-  const canvasWidth = CANVAS_WIDTH * scale;
-  const canvasHeight = CANVAS_HEIGHT * scale;
-  const canvasLeft = (width - canvasWidth) / 2;
   return (
-    <View pointerEvents="none" accessible={false} importantForAccessibility="no" style={styles.scene}>
-      <View style={[styles.canvas, { width: canvasWidth, height: canvasHeight, left: canvasLeft }]}>
-        <Image source={require('../../assets/home-scene/background.webp')} style={[styles.background, { width: canvasWidth, height: canvasHeight }]} resizeMode="stretch" />
-      </View>
+    <View
+      pointerEvents="none"
+      accessible={false}
+      importantForAccessibility="no"
+      style={styles.scene}
+      onLayout={measureScene}
+    >
+      <Image
+        source={theme.background}
+        style={[styles.background, { width: sceneSize.width, height: imageHeight }]}
+        resizeMode="stretch"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scene: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, overflow: 'hidden', backgroundColor: '#F1E5CF' },
-  canvas: { position: 'absolute', top: 0 },
+  scene: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    backgroundColor: '#F1E5CF',
+  },
   background: { position: 'absolute', top: 0, left: 0 },
 });
-

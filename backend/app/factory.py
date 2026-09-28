@@ -4,11 +4,14 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import json
+import re
 
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.services.export_service import recover_jobs, shutdown as shutdown_exports
 from app.db import close as close_mongodb
+from app.services.auth_tokens import authenticate_request_token
 
 def _error_message(detail):
     if isinstance(detail, str):
@@ -48,6 +51,47 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @application.middleware("http")
+    async def require_authenticated_owner(request: Request, call_next):
+        path = request.url.path
+        if request.method == "OPTIONS" or not path.startswith("/api/"):
+            return await call_next(request)
+        if path in {"/api/login", "/api/register", "/api/refresh", "/api/logout"} or path.startswith("/api/public/lost-pets/"):
+            return await call_next(request)
+
+        try:
+            user_id = authenticate_request_token(request.headers.get("authorization"))
+            submitted_ids = [value for value in request.query_params.getlist("userId") if value]
+            submitted_ids += [value for value in request.query_params.getlist("user_id") if value]
+            # The pet-list endpoint historically places owner id in its path.
+            match = re.fullmatch(r"/api/pets/([^/]+)", path)
+            if request.method == "GET" and match:
+                submitted_ids.append(match.group(1))
+
+            if request.method in {"POST", "PUT", "PATCH"} and "application/json" in request.headers.get("content-type", ""):
+                body = await request.body()
+                if body:
+                    try:
+                        payload = json.loads(body)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        payload = None
+                    if isinstance(payload, dict):
+                        for key in ("userId", "user_id"):
+                            if payload.get(key):
+                                submitted_ids.append(str(payload[key]))
+                async def receive_body():
+                    return {"type": "http.request", "body": body, "more_body": False}
+                request._receive = receive_body
+
+            if not submitted_ids or any(candidate != user_id for candidate in submitted_ids):
+                return JSONResponse(
+                    status_code=403 if submitted_ids else 401,
+                    content={"success": False, "message": "無法驗證此帳號的資料存取權限" if submitted_ids else "請重新登入"},
+                )
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"success": False, "message": _error_message(exc.detail)})
+        return await call_next(request)
 
     @application.get("/", tags=["health"])
     def root():

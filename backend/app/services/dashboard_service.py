@@ -127,7 +127,7 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
 
     today_daily_log = db.daily_logs.find_one({"petId": pet_id, "localDate": local_now.date().isoformat()})
 
-    daily_logs = list(db.daily_logs.find({"petId": pet_id, "loggedAt": {"$gte": trend_start}}, {"loggedAt": 1, "waterLevel": 1, "foodLevel": 1, "stoolLevel": 1, "energyLevel": 1}).sort([("loggedAt", 1), ("_id", 1)]))
+    daily_logs = list(db.daily_logs.find({"petId": pet_id, "loggedAt": {"$gte": trend_start}}, {"loggedAt": 1, "localDate": 1, "waterLevel": 1, "foodLevel": 1, "stoolLevel": 1, "energyLevel": 1}).sort([("loggedAt", 1), ("_id", 1)]))
     daily_trends = {"water": [], "food": [], "stool": [], "energy": []}
     for item in daily_logs:
         point = {"id": str(item["_id"]), "loggedAt": item["loggedAt"]}
@@ -135,6 +135,14 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
             if item.get(key) is not None: daily_trends[{"waterLevel":"water", "foodLevel":"food", "stoolLevel":"stool", "energyLevel":"energy"}[key]].append({**point, key: item[key]})
     energy_counts = {}
     for item in daily_trends["energy"]: energy_counts[item["energyLevel"]] = energy_counts.get(item["energyLevel"], 0) + 1
+    daily_records = [{
+        "id": str(item["_id"]),
+        "date": item.get("localDate") or item["loggedAt"].date().isoformat(),
+        **({"water": item["waterLevel"]} if item.get("waterLevel") is not None else {}),
+        **({"food": item["foodLevel"]} if item.get("foodLevel") is not None else {}),
+        **({"energy": item["energyLevel"]} if item.get("energyLevel") is not None else {}),
+        **({"stool": item["stoolLevel"]} if item.get("stoolLevel") is not None else {}),
+    } for item in daily_logs]
 
     health_30 = list(db.health_events.find(
         {"petId": pet_id, "occurredAt": {"$gte": thirty_days_ago}}, {"type": 1}
@@ -158,6 +166,7 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
         },
         "weight": _weight_data(pet_id, now),
         "dailyLogTrends": daily_trends,
+        "dailyRecords": daily_records,
         "todayDailyLog": None if not today_daily_log else {"id": str(today_daily_log["_id"]), **{k: today_daily_log.get(k) for k in ("waterLevel", "foodLevel", "energyLevel", "stoolLevel")}},
         "energySummary": {"counts": energy_counts, "total": len(daily_trends["energy"])},
         "recentHealthEvents": recent_health,

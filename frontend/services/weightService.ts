@@ -9,8 +9,15 @@ export interface WeightListResult {
 
 const userQuery = (userId: string) => `userId=${encodeURIComponent(userId)}`;
 
-export const getWeights = async (userId: string, petId: string): Promise<WeightListResult> => {
-  const result = await apiData<WeightListResult>(`/api/pets/${petId}/weights?${userQuery(userId)}`);
+export const getWeights = async (
+  userId: string,
+  petId: string,
+  signal?: AbortSignal,
+): Promise<WeightListResult> => {
+  const path = `/api/pets/${petId}/weights?${userQuery(userId)}`;
+  const result = signal
+    ? await apiData<WeightListResult>(path, { signal })
+    : await apiData<WeightListResult>(path);
   return {
     records: [...result.records].sort(
       (left, right) => new Date(right.measuredAt).getTime() - new Date(left.measuredAt).getTime(),

@@ -89,12 +89,20 @@ def _serialize(item: dict) -> dict:
 
 def list_timeline(
     pet_id: str, user_id: str, limit: int = 20, skip: int = 0,
-    item_type: str | None = None,
+    item_type: str | None = None, start_at: datetime | None = None,
+    end_at: datetime | None = None,
 ) -> dict:
     _ensure_owned_pet(pet_id, user_id)
     match: dict = {"petId": pet_id}
     if item_type:
         match["type"] = item_type
+    occurred_at: dict = {}
+    if start_at is not None:
+        occurred_at["$gte"] = start_at
+    if end_at is not None:
+        occurred_at["$lt"] = end_at
+    if occurred_at:
+        match["occurredAt"] = occurred_at
     pipeline = [
         {"$match": match},
         {"$sort": {"occurredAt": -1, "createdAt": -1, "_id": -1}},
@@ -104,9 +112,21 @@ def list_timeline(
     ]
     valid_items = [item for item in db.timeline.aggregate(pipeline) if _source_belongs_to_pet(item, pet_id)]
     # 提醒頁是「已排程」清單；未完成提醒尚未寫入完成時間軸，需在此補成可點擊的時間軸項目。
-    if item_type == "reminder_completed":
+    include_scheduled_reminders = item_type == "reminder_completed" or (
+        item_type is None and start_at is not None and end_at is not None
+    )
+    if include_scheduled_reminders:
         existing_sources = {item.get("sourceId") for item in valid_items}
-        for reminder in db.reminders.find({"petId": pet_id}):
+        reminder_query: dict = {"petId": pet_id}
+        scheduled_at: dict = {}
+        if start_at is not None:
+            scheduled_at["$gte"] = start_at
+        if end_at is not None:
+            scheduled_at["$lt"] = end_at
+        if scheduled_at:
+            reminder_query["scheduledAt"] = scheduled_at
+            reminder_query["status"] = {"$in": ["pending", "snoozed"]}
+        for reminder in db.reminders.find(reminder_query):
             source_id = str(reminder["_id"])
             if source_id in existing_sources or not reminder.get("scheduledAt"):
                 continue

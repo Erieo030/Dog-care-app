@@ -1,5 +1,5 @@
 /** 用途：詳細頁可水平滑動查看附件，並在載入失敗時提供 placeholder 與重試。 */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -12,6 +12,7 @@ import {
 import { Attachment } from '../types';
 import { attachmentUri } from '../services/attachmentService';
 import { Colors } from '../constants/Colors';
+import { getValidAccessToken } from '../services/api';
 export default function AttachmentGallery({
   items,
   userId,
@@ -21,6 +22,12 @@ export default function AttachmentGallery({
 }) {
   const { width } = useWindowDimensions();
   const [failed, setFailed] = useState<Record<string, number>>({});
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getValidAccessToken().then((token) => { if (active) setAccessToken(token); });
+    return () => { active = false; };
+  }, [userId]);
   if (!items.length) return <Text style={s.empty}>目前沒有照片</Text>;
   const w = Math.min(width - 44, 420);
   return (
@@ -39,7 +46,10 @@ export default function AttachmentGallery({
             ) : (
               <Image
                 resizeMode="contain"
-                source={{ uri: attachmentUri(x, userId, failed[x.id] || 0) }}
+                source={{
+                  uri: attachmentUri(x, userId, failed[x.id] || 0),
+                  headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+                }}
                 style={[s.image, { width: w }]}
                 onError={() => setFailed((v) => ({ ...v, [x.id]: (v[x.id] || 0) + 1 }))}
               />

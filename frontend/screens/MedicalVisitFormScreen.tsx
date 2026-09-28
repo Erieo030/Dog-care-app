@@ -5,42 +5,41 @@ import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import {
   Alert,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { AppButton } from '../components/AppButton';
+import SupplementalNotesField from '../components/SupplementalNotesField';
 import DatePickerField from '../components/DatePickerField';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
+import { showQuickRecordFeedback } from '../utils/quickRecordFeedback';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { Colors } from '../constants/Colors';
+import {
+  FORM_BUTTON_HEIGHT,
+  FORM_BUTTON_RADIUS,
+  FORM_PAGE_HORIZONTAL_PADDING,
+} from '../constants/FormTokens';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { HomeStackParamList } from '../navigation/types';
 import * as service from '../services/medicalVisitService';
 import { reconcileAccountNotifications } from '../services/notificationService';
 import { Attachment, Medication } from '../types';
+import MedicalVisitMedicationEditor from '../features/medical-visits/components/MedicalVisitMedicationEditor';
+import MedicalVisitTextField from '../features/medical-visits/components/MedicalVisitTextField';
+import { emptyMedication } from '../features/medical-visits/medicalVisitContent';
 type Props = NativeStackScreenProps<HomeStackParamList, 'MedicalVisitForm'>;
-const emptyMedication = (): Medication => ({
-  name: '',
-  instructions: '',
-  timesPerDay: 1,
-  startDate: '',
-  endDate: '',
-  mealTiming: 'any',
-  notes: '',
-});
-const localDate = (value: Date) =>
-  `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-const parseDate = (value: string) => {
-  const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? new Date() : date;
-};
 export default function MedicalVisitFormScreen({ route, navigation }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
   const existing = route.params?.visit;
   const duplicate = route.params?.duplicate === true;
+  const quickEntry = route.params?.quickEntry === true;
   const { session } = useAuth();
   const { selectedPet, pets } = usePet();
   const clientRequestId = useRef(
@@ -125,9 +124,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
         followUpAt: followUp?.toISOString() || null,
         cost: cost ? Number(cost) : null,
         notes: notes.trim(),
-        attachmentIds: attachments
-
-          .map((a) => a.id),
+        attachmentIds: attachments.map((a) => a.id),
         medications: medications.map((m) => ({
           ...m,
           name: m.name.trim(),
@@ -136,52 +133,87 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
         })),
         createFollowUpReminder: Boolean(followUp && createReminder),
       };
-      if (existing && !duplicate) await service.updateMedicalVisit(session.userId, existing.id, data);
+      if (existing && !duplicate)
+        await service.updateMedicalVisit(session.userId, existing.id, data);
       else await service.createMedicalVisit(session.userId, selectedPet.id, data);
       await reconcileAccountNotifications(session.userId, pets).catch(() => undefined);
-      Alert.alert('已儲存', '就醫紀錄、時間軸與回診提醒已同步。', [
-        { text: '完成', onPress: () => navigation.goBack() },
-      ]);
+      if (quickEntry) {
+        showQuickRecordFeedback({
+          message: '就醫紀錄已儲存，完整內容可到「紀錄」查看。',
+          onDone: () => navigation.popToTop(),
+          onAddAnother: () => navigation.replace('MedicalVisitForm', { quickEntry: true }),
+        });
+      } else {
+        Alert.alert('已儲存', '就醫紀錄、時間軸與回診提醒已同步。', [
+          { text: '完成', onPress: () => navigation.goBack() },
+        ]);
+      }
     } catch (e) {
       Alert.alert('儲存失敗', (e as Error).message || '請稍後再試');
     } finally {
       setSubmitting(false);
     }
   };
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-    multi = false,
-    maxLength = 2000,
-  ) => (
-    <>
-      <Text style={s.label}>{label}</Text>
-      <TextInput
-        style={[s.input, multi && s.multi]}
-        value={value}
-        onChangeText={set}
-        multiline={multi}
-        maxLength={maxLength}
-      />
-    </>
-  );
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Text style={s.title}>{duplicate ? '複製新增就醫紀錄' : existing ? '編輯就醫紀錄' : '新增就醫紀錄'}</Text>
-        <Text style={s.notice}>此處保存飼主取得的就醫資訊，不是正式動物醫院病歷。</Text>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[s.content, { paddingBottom: bottomContentPadding }]}
+      >
+        <View style={s.formIntro}>
+          <View style={s.formIntroIcon}>
+            <Ionicons name="medical-outline" size={23} color={Colors.primary} />
+          </View>
+          <View style={s.formIntroCopy}>
+            <Text style={s.formEyebrow}>就醫照護</Text>
+            <Text style={s.title}>
+              {duplicate ? '複製新增就醫紀錄' : existing ? '編輯就醫紀錄' : '新增就醫紀錄'}
+            </Text>
+            <Text style={s.notice}>保存這次看診重點，方便日後回看或和獸醫溝通。</Text>
+          </View>
+        </View>
+        <Text style={s.sectionHeading}>這次看診</Text>
         <DatePickerField
           label="就醫日期（必填）"
           value={visitedAt}
           mode="date"
-          onChange={(date) => { const next = new Date(visitedAt); next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate()); next.setHours(12, 0, 0, 0); setVisitedAt(next); }}
+          onChange={(date) => {
+            const next = new Date(visitedAt);
+            next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+            next.setHours(12, 0, 0, 0);
+            setVisitedAt(next);
+          }}
         />
-        {field('看診原因（必填）', reason, setReason, false, 500)}
-        {field('動物醫院名稱（選填）', clinic, setClinic, false, 200)}
-        {field('獸醫姓名（選填）', vet, setVet, false, 100)}
-        {field('診斷／獸醫說明（選填）', vetNotes, setVetNotes, true)}
-        {field('治療／用藥說明（選填）', treatment, setTreatment, true)}
+        <MedicalVisitTextField
+          label="看診原因（必填）"
+          value={reason}
+          onChangeText={setReason}
+          maxLength={500}
+        />
+        <MedicalVisitTextField
+          label="動物醫院名稱（選填）"
+          value={clinic}
+          onChangeText={setClinic}
+          maxLength={200}
+        />
+        <MedicalVisitTextField
+          label="獸醫姓名（選填）"
+          value={vet}
+          onChangeText={setVet}
+          maxLength={100}
+        />
+        <SupplementalNotesField
+          label="診斷／獸醫說明（選填）"
+          value={vetNotes}
+          onChange={setVetNotes}
+          placeholder="記下獸醫提供的診斷或說明"
+        />
+        <SupplementalNotesField
+          label="治療／用藥說明（選填）"
+          value={treatment}
+          onChange={setTreatment}
+          placeholder="記下治療方式或用藥說明"
+        />
+        <Text style={s.sectionHeading}>回診安排</Text>
         <DatePickerField
           label="下次回診日期（選填）"
           value={followUp || undefined}
@@ -208,72 +240,26 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
             <Switch value={createReminder} onValueChange={setCreateReminder} />
           </View>
         )}
-        <Text style={s.label}>費用（選填）</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="decimal-pad"
+        <Text style={s.sectionHeading}>其他補充</Text>
+        <MedicalVisitTextField
+          label="費用（選填）"
           value={cost}
           onChangeText={setCost}
+          keyboardType="decimal-pad"
           placeholder="0"
         />
-        {field('備註（選填）', notes, setNotes, true)}
+        <SupplementalNotesField value={notes} onChange={setNotes} />
         <Text style={s.heading}>用藥紀錄（選填）</Text>
         <Text style={s.helper}>只有拿藥時才需要新增；不知道藥名可先查看藥袋或附上照片。</Text>
         {!medications.length && <Text style={s.empty}>目前沒有藥物</Text>}
-        {medications.map((m, i) => (
-          <View key={i} style={s.card}>
-            <View style={s.cardHeader}>
-              <Text style={s.cardTitle}>藥物 {i + 1}</Text>
-              <TouchableOpacity onPress={() => removeMed(i)}>
-                <Text style={s.removeText}>刪除</Text>
-              </TouchableOpacity>
-            </View>
-            {field('藥袋／藥品名稱（新增用藥時必填）', m.name, (v) => updateMed(i, 'name', v), false, 100)}
-            {field(
-              '服用方式（選填）',
-              m.instructions,
-              (v) => updateMed(i, 'instructions', v),
-              false,
-              500,
-            )}
-            <Text style={s.label}>每日次數（選填）</Text>
-            <TextInput
-              style={s.input}
-              keyboardType="number-pad"
-              value={String(m.timesPerDay)}
-              onChangeText={(v) => updateMed(i, 'timesPerDay', Number(v))}
-            />
-            <DatePickerField
-              label="開始日期"
-              value={m.startDate ? parseDate(m.startDate) : undefined}
-              onChange={(date) => updateMed(i, 'startDate', localDate(date))}
-            />
-            <DatePickerField
-              label="結束日期"
-              value={m.endDate ? parseDate(m.endDate) : undefined}
-              minimumDate={m.startDate ? parseDate(m.startDate) : undefined}
-              onChange={(date) => updateMed(i, 'endDate', localDate(date))}
-            />
-            <Text style={s.label}>飯前／飯後（選填）</Text>
-            <View style={s.mealRow}>
-              {(
-                [
-                  ['before', '飯前'],
-                  ['after', '飯後'],
-                  ['any', '不限'],
-                ] as const
-              ).map(([value, label]) => (
-                <TouchableOpacity
-                  key={value}
-                  style={[s.meal, m.mealTiming === value && s.mealActive]}
-                  onPress={() => updateMed(i, 'mealTiming', value)}
-                >
-                  <Text style={s.inputText}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {field('藥物備註（選填）', m.notes, (v) => updateMed(i, 'notes', v), true, 500)}
-          </View>
+        {medications.map((medication, index) => (
+          <MedicalVisitMedicationEditor
+            key={index}
+            medication={medication}
+            index={index}
+            onUpdate={(key, value) => updateMed(index, key, value)}
+            onRemove={() => removeMed(index)}
+          />
         ))}
         <TouchableOpacity
           disabled={submitting}
@@ -291,87 +277,78 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           onChange={setAttachments}
           disabled={submitting}
         />
-        <TouchableOpacity
+        <AppButton
+          title={submitting ? '儲存中…' : '儲存就醫紀錄'}
+          variant="primary"
           disabled={submitting}
+          busy={submitting}
           style={[s.submit, submitting && s.disabled]}
+          textStyle={s.submitText}
           onPress={submit}
-        >
-          <Text style={s.submitText}>{submitting ? '儲存中…' : '儲存就醫紀錄'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        />
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 60 },
-  title: { color: Colors.text, fontSize: 26, fontWeight: '800' },
-  notice: { color: Colors.subtext, lineHeight: 20, marginTop: 6 },
-  label: { color: Colors.text, fontWeight: '700', marginTop: 14, marginBottom: 7 },
-  input: {
-    minHeight: 52,
+  content: { paddingHorizontal: FORM_PAGE_HORIZONTAL_PADDING, paddingTop: 20, paddingBottom: 48 },
+  title: { color: Colors.text, fontSize: 24, fontWeight: '800' },
+  formIntro: { flexDirection: 'row', alignItems: 'center', marginBottom: 22 },
+  formIntroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    backgroundColor: Colors.primarySoft,
+    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    color: Colors.text,
+    marginRight: 12,
   },
-  inputText: { color: Colors.text },
-  multi: { height: 85, paddingTop: 12, textAlignVertical: 'top' },
+  formIntroCopy: { flex: 1 },
+  formEyebrow: { color: Colors.primary, fontSize: 13, fontWeight: '800', marginBottom: 2 },
+  notice: { color: Colors.subtext, lineHeight: 19, marginTop: 3, fontSize: 13 },
+  sectionHeading: {
+    color: Colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 20,
+    marginBottom: 2,
+  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
     marginTop: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceSoft,
+    borderRadius: 16,
+    padding: 13,
   },
   switchText: { color: Colors.text, fontWeight: '700' },
   helper: { color: Colors.subtext, fontSize: 12, marginTop: 4, maxWidth: 280 },
-  mealRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  meal: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  mealActive: { backgroundColor: Colors.primary },
-  heading: { color: Colors.text, fontSize: 19, fontWeight: '800', marginTop: 24, marginBottom: 4 },
+  heading: { color: Colors.text, fontSize: 17, fontWeight: '800', marginTop: 26, marginBottom: 4 },
   empty: { color: Colors.subtext, paddingVertical: 12 },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    minHeight: 52,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardTitle: { color: Colors.text, fontWeight: '800' },
   removeText: { color: '#C34D4D', fontWeight: '700', marginTop: 8 },
   outline: {
     borderWidth: 1,
     borderColor: Colors.primary,
-    borderRadius: 12,
+    borderRadius: 16,
     minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 10,
     alignItems: 'center',
     marginTop: 10,
   },
-  outlineText: { color: Colors.text, fontWeight: '700' },
+  outlineText: { color: Colors.primary, fontWeight: '700' },
   images: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   image: { width: 75, height: 75, borderRadius: 10 },
   removeImage: { color: '#C34D4D', fontSize: 12, textAlign: 'center', marginTop: 3 },
   submit: {
     backgroundColor: Colors.primary,
-    borderRadius: 14,
-    minHeight: 52,
+    borderRadius: FORM_BUTTON_RADIUS,
+    minHeight: FORM_BUTTON_HEIGHT,
     paddingHorizontal: 16,
     paddingVertical: 14,
     alignItems: 'center',

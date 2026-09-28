@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
+import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { HomeStackParamList } from '../navigation/types';
 import { HealthEventType, ObservationHealthEventType } from '../types';
 
@@ -22,29 +23,41 @@ const TYPES: Array<[HealthEventType, string, keyof typeof Ionicons.glyphMap]> = 
   ['other', '其他', 'create-outline'],
 ];
 
-export default function AbnormalRecordTypeScreen({ navigation }: Props) {
+export default function AbnormalRecordTypeScreen({ navigation, route }: Props) {
+  const bottomContentPadding = useTabContentBottomPadding();
+  const quickEntry = route.params?.quickEntry === true;
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>發生什麼狀況？</Text>
-        <Text style={styles.subtitle}>只記錄需要注意的異常，不必每天填寫。</Text>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="heart-outline" size={22} color={Colors.primary} />
+          </View>
+          <View style={styles.introCopy}>
+            <Text style={styles.title}>發生什麼狀況？</Text>
+            <Text style={styles.subtitle}>只記錄需要注意的異常，不必每天填寫。</Text>
+          </View>
+        </View>
         {TYPES.map(([type, label, icon]) => (
           <TouchableOpacity
             key={type}
             style={styles.item}
             onPress={() =>
               type === 'vomiting'
-                ? navigation.navigate('VomitingHealthEvent', {})
+                ? navigation.navigate('VomitingHealthEvent', { quickEntry })
                 : type === 'abnormal_stool'
-                  ? navigation.navigate('StoolHealthEvent', {})
+                  ? navigation.navigate('StoolHealthEvent', { quickEntry })
                   : ['low_appetite', 'low_energy', 'abnormal_drinking'].includes(type)
                     ? navigation.navigate('ObservationHealthEvent', {
                         type: type as ObservationHealthEventType,
+                        quickEntry,
                       })
-                    : navigation.navigate('CreateHealthEvent', { type, label })
+                    : navigation.navigate('CreateHealthEvent', { type, label, quickEntry })
             }
           >
-            <View style={styles.icon}><Ionicons name={icon} size={24} color={Colors.primary} /></View>
+            <View style={styles.icon}>
+              <Ionicons name={icon} size={24} color={Colors.primary} />
+            </View>
             <Text style={styles.label}>{label}</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
@@ -55,21 +68,39 @@ export default function AbnormalRecordTypeScreen({ navigation }: Props) {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 50 },
-  title: { color: Colors.text, fontSize: 27, fontWeight: '800' },
-  subtitle: { color: Colors.subtext, lineHeight: 21, marginTop: 7, marginBottom: 20 },
+  content: { padding: 18, paddingBottom: 34 },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 20 },
+  introIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: Colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introCopy: { flex: 1, minWidth: 0 },
+  title: { color: Colors.text, fontSize: 24, fontWeight: '800' },
+  subtitle: { color: Colors.subtext, lineHeight: 19, marginTop: 3, fontSize: 13 },
   item: {
-    minHeight: 64,
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 17,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
     marginBottom: 10,
   },
-  icon: { fontSize: 25, width: 42 },
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
   label: { flex: 1, color: Colors.text, fontWeight: '700', fontSize: 16 },
   arrow: { color: Colors.subtext, fontSize: 28 },
 });
