@@ -1,7 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：MEGO 統一設定中心。 */
 import Constants from 'expo-constants';
 import React, { useRef, useState } from 'react';
-import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,7 +11,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import { HOME_THEMES } from '../constants/HomeThemes';
 import { Colors } from '../constants/Colors';
 import { ProfileStackParamList } from '../navigation/types';
-import { cancelAccountNotifications } from '../services/notificationService';
 import { getAIUsage } from '../services/aiService';
 import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import {
@@ -40,7 +40,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
         .then((usage) => {
           if (active) {
             loadedUsageUserRef.current = session.userId;
-            setAiUsageText(usage.unlimited ? '不限次數' : `剩餘 ${usage.remaining} 次`);
+            setAiUsageText(`今日已用 ${usage.used} 次`);
           }
         })
         .catch(() => {
@@ -56,7 +56,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
     }, [session?.userId]),
   );
   const confirmLogout = () =>
-    Alert.alert('登出帳號', '登出後會取消此帳號在本機排程的 MEGO 通知；後端健康資料不會刪除。', [
+    Alert.alert('登出帳號', '登出只會清除登入狀態；已排程的 MEGO 通知與照護資料會保留。', [
       { text: '取消', style: 'cancel' },
       {
         text: '登出',
@@ -65,8 +65,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
           if (loggingOut) return;
           setLoggingOut(true);
           try {
-            if (session?.userId)
-              await cancelAccountNotifications(session.userId).catch(() => undefined);
             logout();
           } finally {
             setLoggingOut(false);
@@ -75,7 +73,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       },
     ]);
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottomContentPadding }]}>
         <View style={s.profileBrand}>
           <Image source={require('../assets/home-scene/logo.webp')} style={s.profileLogo} />
@@ -93,7 +91,8 @@ export default function SettingsHomeScreen({ navigation }: Props) {
             value={selectedPet?.name}
             onPress={() => navigation.navigate('PetManagement')}
             icon="paw-outline"
-            imageUri={selectedPet?.avatarUrl}
+            imageAttachmentId={selectedPet?.avatarAttachmentId}
+            imageUserId={session?.userId}
           />
         </Section>
         <Section title="一般設定">
@@ -118,7 +117,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
             icon="lock-closed-outline"
           />
           <Row
-            title="今日 AI 整理次數"
+            title="AI 使用紀錄"
             value={aiUsageText}
             onPress={() => navigation.navigate('AIUsage')}
             icon="sparkles-outline"

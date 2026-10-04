@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
   LayoutChangeEvent,
   ScrollView,
   StyleSheet,
@@ -10,8 +9,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { RecordActionButton } from '../../../components/RecordActionButton';
 import { Colors } from '../../../constants/Colors';
 import type { Pet } from '../../../types';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 
 type Props = {
   pets: Pet[];
@@ -127,8 +128,18 @@ export function PetIdentityCarousel({
                 style={styles.idCardBody}
                 onPress={() => onSelect(pet.id)}
               >
-                {pet.avatarUrl ? (
-                  <Image source={{ uri: pet.avatarUrl }} style={styles.avatar} />
+                {pet.avatarAttachmentId ? (
+                  <AuthenticatedPetAvatar
+                    attachmentId={pet.avatarAttachmentId}
+                    userId={pet.userId}
+                    style={styles.avatar}
+                    fallback={(
+                      <View style={[styles.avatar, styles.avatarFallback]}>
+                        <Text style={styles.avatarText}>{pet.name.slice(0, 1)}</Text>
+                        <Ionicons name="paw" size={14} color={Colors.primary} style={styles.avatarPaw} />
+                      </View>
+                    )}
+                  />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback]}>
                     <Text style={styles.avatarText}>{pet.name.slice(0, 1)}</Text>
@@ -158,15 +169,13 @@ export function PetIdentityCarousel({
                   <Text style={styles.idCode}>M-{identifier}</Text>
                 </View>
                 {onEdit ? (
-                  <TouchableOpacity
-                    accessibilityRole="button"
+                  <RecordActionButton
+                    kind="edit"
+                    label="編輯"
                     accessibilityLabel={`編輯毛孩：${pet.name}`}
                     style={styles.editButton}
                     onPress={() => onEdit(pet)}
-                  >
-                    <Ionicons name="create-outline" size={15} color={Colors.primary} />
-                    <Text style={styles.link}>編輯</Text>
-                  </TouchableOpacity>
+                  />
                 ) : null}
               </View>
             </View>
@@ -299,7 +308,7 @@ const styles = StyleSheet.create({
   },
   currentBadgeText: { color: Colors.success, fontSize: 10, fontWeight: '800' },
   idCardFooter: {
-    minHeight: 36,
+    minHeight: 44,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -317,9 +326,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: Colors.peachSoft,
   },
-  link: { color: Colors.primary, fontSize: 12, fontWeight: '800' },
 });
 
 function Trait({ label }: { label: string }) {

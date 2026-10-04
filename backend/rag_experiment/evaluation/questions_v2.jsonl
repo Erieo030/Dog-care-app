@@ -1,0 +1,50 @@
+{"id":"v2-stool-dev-1","split":"dev","question":"這幾天便便有點軟，我除了形狀還要記下什麼？","expected_doc":"care-stool-observation","expected_section":"日常觀察紀錄"}
+{"id":"v2-stool-dev-2","split":"dev","question":"拉肚子又吐，還一直不想吃東西，現在要聯絡獸醫嗎？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v2-stool-dev-3","split":"dev","question":"看診時醫師可能會想看便便嗎？要準備新鮮的嗎？","expected_doc":"care-stool-observation","expected_section":"日常觀察紀錄"}
+{"id":"v2-stool-test-1","split":"test","question":"大便帶紅色血絲的話，我可以先等幾天看看嗎？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v2-stool-test-2","split":"test","question":"拉稀超過兩天還沒改善，接下來應該怎麼做？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v2-stool-test-3","split":"test","question":"想讓醫生知道牠的排便變化，平常要一起記錄哪些狀況？","expected_doc":"care-stool-observation","expected_section":"日常觀察紀錄"}
+{"id":"v2-toxin-dev-1","split":"dev","question":"牠把無糖口香糖吃下去了，我要等牠有症狀再打給醫院嗎？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v2-toxin-dev-2","split":"dev","question":"家裡常見哪些食材最好收好，不要讓狗狗偷吃？","expected_doc":"care-toxic-ingestion","expected_section":"常見需避免的食物"}
+{"id":"v2-toxin-dev-3","split":"dev","question":"狗吞了葡萄乾但看起來好好的，先做什麼比較妥當？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v2-toxin-test-1","split":"test","question":"巧克力包裝還在，狗可能吃到一些，我需要把什麼告訴獸醫？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v2-toxin-test-2","split":"test","question":"洋蔥、蒜頭這些調味料對狗也要避免嗎？","expected_doc":"care-toxic-ingestion","expected_section":"常見需避免的食物"}
+{"id":"v2-toxin-test-3","split":"test","question":"狗狗可能吃到不該吃的東西，可以在家先讓牠吐出來嗎？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v2-med-dev-1","split":"dev","question":"人的止痛藥掰一小塊給狗吃，這樣可以嗎？","expected_doc":"care-medication-safety","expected_section":"不自行給藥或改變療程"}
+{"id":"v2-med-dev-2","split":"dev","question":"處方藥漏了一次，不知道要不要補吃，應該問誰？","expected_doc":"care-medication-safety","expected_section":"把用藥問題交給獸醫確認"}
+{"id":"v2-med-dev-3","split":"dev","question":"狗狗看起來好多了，獸醫開的藥可以提早停嗎？","expected_doc":"care-medication-safety","expected_section":"不自行給藥或改變療程"}
+{"id":"v2-med-test-1","split":"test","question":"另一隻狗剩下的藥，我家這隻症狀一樣能拿來用嗎？","expected_doc":"care-medication-safety","expected_section":"不自行給藥或改變療程"}
+{"id":"v2-med-test-2","split":"test","question":"藥袋字看不清楚，也忘記醫生怎麼交代，該怎麼確認？","expected_doc":"care-medication-safety","expected_section":"把用藥問題交給獸醫確認"}
+{"id":"v2-med-test-3","split":"test","question":"魚油或保健品不是藥，沒問過獸醫也能先餵嗎？","expected_doc":"care-medication-safety","expected_section":"不自行給藥或改變療程"}
+{"id":"v2-health-dev-1","split":"dev","question":"健康觀察寫穩定，是不是就能確定狗狗沒生病？","expected_doc":"app-health-observation","expected_section":"穩定、近期留意與持續留意"}
+{"id":"v2-health-dev-2","split":"dev","question":"首頁那個健康提示，會把嘔吐的健康異常也算進去嗎？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v2-health-dev-3","split":"dev","question":"今天只有喝水比平常多一點，為什麼趨勢沒有跳出提示？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v2-health-test-1","split":"test","question":"首頁健康觀察用到的日常欄位有哪些？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v2-health-test-2","split":"test","question":"連續幾天吃得少，顯示要留意代表醫生已經診斷了嗎？","expected_doc":"app-health-observation","expected_section":"穩定、近期留意與持續留意"}
+{"id":"v2-health-test-3","split":"test","question":"健康觀察這項提示和健康異常紀錄是同一套判斷嗎？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v2-brief-dev-1","split":"dev","question":"假如我取消體重紀錄，產生分享內容時還會出現體重嗎？","expected_doc":"app-pre-vet-summary","expected_section":"摘要可整理什麼"}
+{"id":"v2-brief-dev-2","split":"dev","question":"就醫前整理的時間範圍可以選一週、半個月或一個月嗎？","expected_doc":"app-pre-vet-summary","expected_section":"摘要可整理什麼"}
+{"id":"v2-brief-dev-3","split":"dev","question":"進到看診摘要頁面，就會自動送資料給 AI 嗎？","expected_doc":"app-pre-vet-summary","expected_section":"系統整理與 AI 補充"}
+{"id":"v2-brief-test-1","split":"test","question":"我把疫苗那類取消勾選後，摘要還會列疫苗內容嗎？","expected_doc":"app-pre-vet-summary","expected_section":"摘要可整理什麼"}
+{"id":"v2-brief-test-2","split":"test","question":"沒有記下的症狀，MEGO 會不會在看診摘要裡幫我推測出來？","expected_doc":"app-pre-vet-summary","expected_section":"系統整理與 AI 補充"}
+{"id":"v2-brief-test-3","split":"test","question":"文字整理是進頁面就開始，還是要我自己按操作才會產生？","expected_doc":"app-pre-vet-summary","expected_section":"系統整理與 AI 補充"}
+{"id":"v2-none-dev-1","split":"dev","question":"狗狗一直抓耳朵，最可能是哪種病？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-2","split":"dev","question":"八公斤的狗吃這種止痛藥要幾毫克才安全？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-3","split":"dev","question":"三個月大的幼犬疫苗要打幾劑、每劑隔多久？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-4","split":"dev","question":"狗狗突然一直喝水，原因會不會是腎臟病？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-5","split":"dev","question":"狗狗吐了兩次，有沒有需要急診？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-6","split":"dev","question":"附近現在還有哪間動物醫院開著？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-7","split":"dev","question":"我的狗狗生日是哪一天？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-dev-8","split":"dev","question":"柴犬每天散步至少要走幾公里才夠？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-med-dev-4","split":"dev","question":"狗狗皮膚紅紅的，可以先擦人的藥膏嗎？","expected_doc":"care-medication-safety","expected_section":"不自行給藥或改變療程"}
+{"id":"v2-none-dev-10","split":"dev","question":"牠今天不吃東西但精神很好，我應該幾天後再看醫生？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-1","split":"test","question":"我家米克斯最近跛腳，是不是骨折了？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-2","split":"test","question":"一顆心絲蟲藥可以切一半給另一隻狗嗎？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-3","split":"test","question":"幼犬幾歲可以開始吃成犬飼料？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-4","split":"test","question":"這張狗大便的照片看起來是哪一種寄生蟲？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-5","split":"test","question":"我忘記帳號密碼，要去哪裡重設？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-6","split":"test","question":"今天台中會下雨嗎？我還能帶狗出門嗎？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-7","split":"test","question":"狗狗最近吐黃水，通常是什麼原因？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-8","split":"test","question":"狗狗 12 公斤，我該買哪一種跳蚤藥、用多少量？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-9","split":"test","question":"我想把狗狗從台灣帶去日本，要辦哪些檢疫？","expected_doc":"NONE","expected_section":""}
+{"id":"v2-none-test-10","split":"test","question":"可以推薦幾款適合腎臟病狗狗的處方飼料嗎？","expected_doc":"NONE","expected_section":""}

@@ -1,4 +1,4 @@
-import { pickAndUploadAttachments } from '../attachmentService';
+import { pickAndUploadAttachments, uploadPetAvatarImage } from '../attachmentService';
 import * as ImagePicker from 'expo-image-picker';
 
 jest.mock('../api', () => ({
@@ -60,6 +60,27 @@ test('photo upload uses a real Blob with filename for the SDK 57 fetch implement
     expect(await uploaded.text()).toBe('photo');
     expect(body.get('width')).toBe('400');
     expect(result).toEqual([{ id: 'photo-1' }]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('pet avatar is converted to compressed JPEG and uploaded through the pet attachment endpoint', async () => {
+  const originalFetch = global.fetch;
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValue({ ok: true, json: async () => ({ data: { id: 'avatar-1' } }) });
+  global.fetch = fetchMock;
+  try {
+    const result = await uploadPetAvatarImage('u1', 'p1', 'file:///picked.png');
+    const [url, options] = fetchMock.mock.calls[0];
+    const body = options?.body as FormData;
+    const uploaded = body.get('file') as File;
+    expect(String(url)).toContain('/api/pets/p1/attachments?userId=u1');
+    expect(uploaded.name).toMatch(/^mego-avatar-\d+\.jpg$/);
+    expect(uploaded.type).toBe('image/jpeg');
+    expect(body.get('width')).toBe('400');
+    expect(result).toEqual({ id: 'avatar-1' });
   } finally {
     global.fetch = originalFetch;
   }

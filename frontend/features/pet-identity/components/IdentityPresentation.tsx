@@ -212,7 +212,8 @@ export const identityStyles = StyleSheet.create({
   optionCopy: { flex: 1 },
   optionLabel: { fontSize: 15, fontWeight: '700', color: Colors.text },
   optionState: { fontSize: 12, color: Colors.subtext, marginTop: 3 },
-  note: { color: Colors.subtext, lineHeight: 20, fontSize: 13 },
+  note: { color: Colors.subtext, lineHeight: 20, fontSize: 13, marginTop: 2, marginBottom: 10 },
+  noteLead: { color: Colors.text, fontWeight: '800' },
   fieldGroup: { gap: 4 },
   fieldLabel: {
     fontSize: FORM_FIELD_LABEL_FONT_SIZE,

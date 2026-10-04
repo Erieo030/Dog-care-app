@@ -5,6 +5,8 @@ import * as authService from '../services/authService';
 import { normalizePets } from '../services/petService';
 import { ApiError, setAuthExpiredHandler } from '../services/api';
 import { clearAuthTokens, readAuthTokens, saveAuthTokens } from '../services/authTokenStorage';
+import { cancelAccountNotifications } from '../services/notificationService';
+import { clearAccountAISessions } from '../services/aiSessionService';
 import { Pet } from '../types';
 
 interface Session {
@@ -20,6 +22,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  deleteAccount: (password: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -46,7 +49,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setSession({
             userId: result.userId,
             email: result.email,
-            pets: normalizePets((result.pets ?? (result.petData ? [result.petData] : [])) as unknown[]),
+            pets: normalizePets(result.pets),
           });
         }
       } catch (restoreError) {
@@ -83,11 +86,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
       });
-      const rawPets = result.pets ?? (result.petData ? [result.petData] : []);
       setSession({
         userId: result.userId,
         email: result.email || email.trim(),
-        pets: normalizePets(rawPets as unknown[]),
+        pets: normalizePets(result.pets),
       });
     } catch (requestError) {
       const message = (requestError as Error).message || '操作失敗';
@@ -121,6 +123,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
         })();
         setSession(null);
         setError(null);
+      },
+      deleteAccount: async (password) => {
+        if (!session?.userId) throw new Error('請重新登入後再試一次');
+        setIsLoading(true);
+        setError(null);
+        try {
+          await authService.deleteAccount(password);
+          await Promise.allSettled([
+            cancelAccountNotifications(session.userId),
+            clearAccountAISessions(session.userId),
+          ]);
+          await clearAuthTokens().catch(() => undefined);
+          setSession(null);
+        } catch (deleteError) {
+          setError((deleteError as Error).message || '帳號刪除失敗，請稍後重試');
+          throw deleteError;
+        } finally {
+          setIsLoading(false);
+        }
       },
       clearError: () => setError(null),
     }),

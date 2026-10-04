@@ -1,11 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：AI 助手入口，集中整理 AI 查詢與健康紀錄入口。 */
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,11 +13,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { Colors } from '../constants/Colors';
-import { HomeStackParamList } from '../navigation/types';
+import { HomeStackParamList, RootStackParamList } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import {
@@ -31,6 +30,7 @@ import {
 import { AIConversationSessionRow } from '../features/ai/components/AIConversationSessionRow';
 import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import { acceptAIDataConsent, getAIDataConsent } from '../services/aiDataConsentService';
+import AuthenticatedPetAvatar from '../components/AuthenticatedPetAvatar';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HealthOverview'>;
 
@@ -41,6 +41,7 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
   const [sessions, setSessions] = useState<AISessionRecord[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState(false);
+  const [openedSessionId, setOpenedSessionId] = useState<string | null>(null);
   const [consentVisible, setConsentVisible] = useState(false);
   const [consentSaving, setConsentSaving] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
@@ -49,6 +50,12 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
   const pendingAIAction = React.useRef<(() => Promise<void>) | null>(null);
   const loadedOwnerRef = React.useRef('');
   const ownerKey = session?.userId && selectedPet?.id ? `${session.userId}:${selectedPet.id}` : '';
+  const openChat = useCallback(() => {
+    const rootNavigation = navigation.getParent()?.getParent() as
+      | NativeStackNavigationProp<RootStackParamList>
+      | undefined;
+    rootNavigation?.navigate('AIChat');
+  }, [navigation]);
   const refreshSessions = useCallback(() => {
     let active = true;
     if (!session?.userId || !selectedPet?.id) {
@@ -96,50 +103,59 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
             setConsentOwnerId(session.userId);
           });
       }
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }, [session?.userId]),
   );
-  const withAIConsent = useCallback(async (action: () => Promise<void>) => {
-    if (!session?.userId || !selectedPet?.id) return;
-    let granted = consentGranted;
-    if (!consentLoaded || consentOwnerId !== session.userId) {
-      try {
-        granted = (await getAIDataConsent(session.userId)).accepted;
-        setConsentGranted(granted);
-        setConsentLoaded(true);
-        setConsentOwnerId(session.userId);
-      } catch {
-        granted = false;
+  const withAIConsent = useCallback(
+    async (action: () => Promise<void>) => {
+      if (!session?.userId || !selectedPet?.id) return;
+      let granted = consentGranted;
+      if (!consentLoaded || consentOwnerId !== session.userId) {
+        try {
+          granted = (await getAIDataConsent(session.userId)).accepted;
+          setConsentGranted(granted);
+          setConsentLoaded(true);
+          setConsentOwnerId(session.userId);
+        } catch {
+          granted = false;
+        }
       }
-    }
-    if (granted) {
-      await action();
-      return;
-    }
-    pendingAIAction.current = action;
-    setConsentVisible(true);
-  }, [consentGranted, consentLoaded, consentOwnerId, selectedPet?.id, session?.userId]);
-  const openAssistant = useCallback(() => withAIConsent(async () => {
-    if (!session?.userId || !selectedPet?.id) return;
-    const begin = async () => {
-      await activateEmptyAISession(session.userId, selectedPet.id);
-      navigation.navigate('AIChat');
-    };
-    if (sessions.length < 5) return begin();
-    const oldest = [...sessions].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))[0];
-    Alert.alert('對話已達 5 個', `建立新對話會刪除最舊的「${oldest.title}」。`, [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '刪除並建立',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteAISession(session.userId, selectedPet.id, oldest.id);
-          setSessions((items) => items.filter((item) => item.id !== oldest.id));
-          await begin();
-        },
-      },
-    ]);
-  }), [navigation, selectedPet?.id, session?.userId, sessions, withAIConsent]);
+      if (granted) {
+        await action();
+        return;
+      }
+      pendingAIAction.current = action;
+      setConsentVisible(true);
+    },
+    [consentGranted, consentLoaded, consentOwnerId, selectedPet?.id, session?.userId],
+  );
+  const openAssistant = useCallback(
+    () =>
+      withAIConsent(async () => {
+        if (!session?.userId || !selectedPet?.id) return;
+        const begin = async () => {
+          await activateEmptyAISession(session.userId, selectedPet.id);
+          openChat();
+        };
+        if (sessions.length < 5) return begin();
+        const oldest = [...sessions].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))[0];
+        Alert.alert('對話已達 5 個', `建立新對話會刪除最舊的「${oldest.title}」。`, [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '刪除並建立',
+            style: 'destructive',
+            onPress: async () => {
+              await deleteAISession(session.userId, selectedPet.id, oldest.id);
+              setSessions((items) => items.filter((item) => item.id !== oldest.id));
+              await begin();
+            },
+          },
+        ]);
+      }),
+    [openChat, selectedPet?.id, session?.userId, sessions, withAIConsent],
+  );
   const confirmAIDataConsent = async () => {
     if (!session?.userId || consentSaving) return;
     setConsentSaving(true);
@@ -164,11 +180,20 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
         <View style={styles.petHeader}>
-          {selectedPet?.avatarUrl ? (
-            <Image source={{ uri: selectedPet.avatarUrl }} style={styles.petAvatar} />
+          {selectedPet?.avatarAttachmentId ? (
+            <AuthenticatedPetAvatar
+              attachmentId={selectedPet.avatarAttachmentId}
+              userId={session?.userId || selectedPet.userId}
+              style={styles.petAvatar}
+              fallback={
+                <View style={styles.petAvatarFallback}>
+                  <Ionicons name="paw-outline" size={23} color={Colors.primary} />
+                </View>
+              }
+            />
           ) : (
             <View style={styles.petAvatarFallback}>
               <Ionicons name="paw-outline" size={23} color={Colors.primary} />
@@ -224,11 +249,15 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
             <AIConversationSessionRow
               key={item.id}
               item={item}
-              onOpen={() => withAIConsent(async () => {
-                if (!session?.userId || !selectedPet?.id) return;
-                await activateAISession(session.userId, selectedPet.id, item);
-                navigation.navigate('AIChat');
-              })}
+              openedSessionId={openedSessionId}
+              onOpenedChange={setOpenedSessionId}
+              onOpen={() =>
+                withAIConsent(async () => {
+                  if (!session?.userId || !selectedPet?.id) return;
+                  await activateAISession(session.userId, selectedPet.id, item);
+                  openChat();
+                })
+              }
               onDelete={() =>
                 Alert.alert('刪除對話？', `將刪除「${item.title}」，此動作無法復原。`, [
                   { text: '取消', style: 'cancel' },
@@ -266,11 +295,24 @@ export default function AIAssistantHubScreen({ navigation }: Props) {
               <Ionicons name="lock-closed-outline" size={23} color={Colors.primary} />
             </View>
             <Text style={styles.consentTitle}>開始使用 MEGO AI 前</Text>
-            <Text style={styles.consentBody}>
-              你輸入的問題會傳送至 MEGO 設定的 AI 服務產生回覆。當問題需要個人化照護資訊時，MEGO 也會傳送回答所需的毛孩資料或紀錄，例如基本資料、過敏／慢性病、日常觀察或相關照護紀錄。資料只會依問題選取必要範圍；一般生活問題不會附帶毛孩紀錄。
+            <Text style={styles.consentIntro}>
+              你的問題會傳送至 MEGO 設定的 AI 服務，以產生回覆。
             </Text>
+            <View style={styles.consentInfoBlock}>
+              <Text style={styles.consentInfoHeading}>對話內容</Text>
+              <Text style={styles.consentBody}>
+                為延續同一段對話，最近最多 10 則訊息可能一併傳送；不同對話不會互相帶入。對話紀錄保存在這台裝置，不會跨裝置同步。
+              </Text>
+            </View>
+            <View style={styles.consentInfoBlock}>
+              <Text style={styles.consentInfoHeading}>毛孩資料</Text>
+              <Text style={styles.consentBody}>
+                問題需要個人化照護資訊時，才會傳送回答所需的資料，例如基本資料、過敏／慢性病、日常觀察或相關照護紀錄。只會依問題提供必要範圍；一般生活問題不會附帶毛孩紀錄。
+              </Text>
+            </View>
             <Text style={styles.consentFootnote}>
-              AI 回覆可能不完全正確，不能取代獸醫診斷。完整內容可在「設定 → AI 助手 → AI 資料使用說明」查看。
+              AI 回覆可能不完全正確，不能取代獸醫診斷。完整內容可在「設定 → AI 助手 → AI
+              資料使用說明」查看。
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
@@ -455,7 +497,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primarySoft,
     marginBottom: 12,
   },
-  consentTitle: { color: Colors.text, fontSize: 20, fontWeight: '800', marginBottom: 10 },
+  consentTitle: { color: Colors.text, fontSize: 20, fontWeight: '800', marginBottom: 8 },
+  consentIntro: { color: Colors.text, fontSize: 14, lineHeight: 22, marginBottom: 12 },
+  consentInfoBlock: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    marginBottom: 8,
+  },
+  consentInfoHeading: { color: Colors.primary, fontSize: 13, fontWeight: '800', marginBottom: 4 },
   consentBody: { color: Colors.text, fontSize: 14, lineHeight: 22 },
   consentFootnote: { color: Colors.subtext, fontSize: 12, lineHeight: 19, marginTop: 12 },
   consentPrimary: {

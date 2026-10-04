@@ -1,10 +1,9 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 """毛孩資料的 CRUD 商業邏輯，隔離 MongoDB 細節與 HTTP 路由。"""
 
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 import secrets
-from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.db import db
@@ -27,7 +26,7 @@ def _ensure_user(user_id: str) -> None:
 
 
 def serialize_pet(pet: dict) -> dict:
-    """將 MongoDB 文件轉成前端穩定可用的 JSON，並補齊舊資料欄位。"""
+    """將 MongoDB 文件轉成前端可用的毛孩資料。"""
     return {
         "_id": str(pet["_id"]),
         "userId": pet["userId"],
@@ -35,7 +34,7 @@ def serialize_pet(pet: dict) -> dict:
         "gender": pet.get("gender", ""),
         "breed": pet.get("breed", ""),
         "breedType": pet.get("breedType", "unknown"),
-        "avatarUri": pet.get("avatarUri", ""),
+        "avatarAttachmentId": pet.get("avatarAttachmentId"),
         "birthday": pet.get("birthday", ""),
         "arrivalDate": pet.get("arrivalDate", ""),
         "neutered": pet.get("neutered", False),
@@ -65,6 +64,9 @@ def create_pet(data: PetCreateRequest) -> dict:
     """新增一隻毛孩；同一帳號可以建立多筆資料。"""
     _ensure_user(data.userId)
     document = data.model_dump()
+    if document.get("avatarAttachmentId"):
+        raise HTTPException(status_code=422, detail="新增毛孩時請先建立資料，再上傳頭像")
+    document.pop("avatarAttachmentId", None)
     result = db.pets.insert_one(document)
     document["_id"] = result.inserted_id
     user = db.users.find_one({"_id": _object_id(data.userId, "使用者 ID ")}, {"email": 1}) or {}
@@ -84,13 +86,21 @@ def create_pet(data: PetCreateRequest) -> dict:
 
 def update_pet(pet_id: str, user_id: str, data: PetUpdateRequest) -> dict:
     """更新屬於目前使用者的毛孩資料。"""
-    result = db.pets.find_one_and_update(
-        {"_id": _object_id(pet_id, "毛孩 ID "), "userId": user_id},
-        {"$set": data.model_dump()},
-        return_document=True,
-    )
-    if not result:
+    pet_object_id = _object_id(pet_id, "毛孩 ID ")
+    existing = db.pets.find_one({"_id": pet_object_id, "userId": user_id})
+    if not existing:
         raise HTTPException(status_code=404, detail="找不到毛孩資料")
+    values = data.model_dump(exclude={"avatarAttachmentId"})
+    values.pop("avatarUri", None)
+    from app.services.attachment_service import replace_pet_avatar
+
+    result = replace_pet_avatar(
+        pet_id,
+        user_id,
+        data.avatarAttachmentId,
+        current_pet=existing,
+        values=values,
+    )
     return {
         "success": True,
         "message": "毛孩資料已更新",

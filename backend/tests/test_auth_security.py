@@ -46,6 +46,47 @@ def test_password_hash_is_salted_and_verifiable():
     assert not auth_service._verify_password("wrong-password", first)
 
 
+def test_plaintext_only_password_is_rejected(monkeypatch):
+    user = {"_id": "legacy-user", "email": "legacy@example.com", "password": "old-format"}
+
+    class Users:
+        def find_one(self, _query):
+            return user
+
+    monkeypatch.setattr(auth_service.db, "users", Users())
+
+    with pytest.raises(HTTPException) as error:
+        auth_service.login_user(SimpleNamespace(email=user["email"], password="old-format"))
+
+    assert error.value.status_code == 401
+
+
+def test_hashed_password_login_returns_pets_only(monkeypatch):
+    user = {
+        "_id": "hashed-user",
+        "email": "current@example.com",
+        "passwordHash": auth_service._hash_password("current-password"),
+    }
+
+    class Users:
+        def find_one(self, _query):
+            return user
+
+    class Pets:
+        def find(self, _query):
+            return []
+
+    monkeypatch.setattr(auth_service.db, "users", Users())
+    monkeypatch.setattr(auth_service.db, "pets", Pets())
+    monkeypatch.setattr(auth_service, "issue_refresh_session", lambda _user_id: ("refresh", 604800, "session"))
+    monkeypatch.setattr(auth_service, "issue_access_token", lambda _user_id, _session_id: ("access", 900))
+
+    result = auth_service.login_user(SimpleNamespace(email=user["email"], password="current-password"))
+
+    assert result["pets"] == []
+    assert "petData" not in result
+
+
 def test_refresh_rotation_and_logout_revoke_access(monkeypatch):
     sessions = FakeSessions()
     monkeypatch.setattr(auth_tokens, "get_settings", lambda: SimpleNamespace(

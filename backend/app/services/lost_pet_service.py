@@ -3,12 +3,11 @@ from app.timezone import now_taipei, TAIPEI
 import secrets
 import re
 from urllib.parse import quote
-from datetime import datetime,timezone
+from datetime import datetime
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException
 from app.db import db
-from app.schemas.lost_pet import LostPetProfileRequest
 def oid(v):
  try:return ObjectId(v)
  except InvalidId:raise HTTPException(400,"毛孩 ID 格式錯誤")
@@ -29,7 +28,6 @@ def save(pid,uid,data):
  now=now_taipei();old=db.lost_pet_profiles.find_one({"petId":pid});token=old.get("publicToken") if old else None
  if not token:token=secrets.token_urlsafe(32)
  values={**data.model_dump(),"petId":pid,"publicToken":token,"updatedAt":now};
- values["enabled"] = True
  values["lostMode"] = False
  values.setdefault("createdAt",now)
  if old:db.lost_pet_profiles.update_one({"_id":old["_id"]},{"$set":values});item=db.lost_pet_profiles.find_one({"_id":old["_id"]})
@@ -51,7 +49,9 @@ def public(token):
     pet = db.pets.find_one({"_id": oid(item["petId"])})
     if not pet: raise HTTPException(404, "這個毛孩資訊頁目前無法使用")
     out = {"name": pet.get("name", "毛孩"), "lostMode": bool(item.get("lostMode", False)), "updatedAt": item.get("updatedAt")}
-    for flag, key, source in (("showAvatar", "avatar", "avatarUri"), ("showBreed", "breed", "breed"), ("showSex", "sex", "gender"), ("showNeutered", "isNeutered", "neutered"), ("showCoatColor", "coatColor", "coatColor"), ("showDistinctiveFeatures", "distinctiveFeatures", "distinctiveFeatures")):
+    if item.get("showAvatar", False) and pet.get("avatarAttachmentId"):
+        out["avatarUrl"] = f"/api/public/lost-pets/{quote(token, safe='')}/avatar"
+    for flag, key, source in (("showBreed", "breed", "breed"), ("showSex", "sex", "gender"), ("showNeutered", "isNeutered", "neutered"), ("showCoatColor", "coatColor", "coatColor"), ("showDistinctiveFeatures", "distinctiveFeatures", "distinctiveFeatures")):
         if item.get(flag, False) and pet.get(source) not in (None, ""): out[key] = pet.get(source)
     for flag, key in (("showContactName", "contactName"), ("showContactEmail", "contactEmail"), ("showContactPhone", "contactPhone"), ("showAlternatePhone", "alternatePhone"), ("showContactMessage", "contactMessage")):
         if item.get(flag, False) and item.get(key) not in (None, ""): out[key] = item.get(key)
@@ -60,13 +60,25 @@ def public(token):
             if item.get(key) not in (None, ""): out[key] = item.get(key)
     return out
 
+
+def public_avatar(token: str):
+    item = db.lost_pet_profiles.find_one({"publicToken": token, "enabled": True, "showAvatar": True})
+    if not item:
+        raise HTTPException(status_code=404, detail="這個毛孩照片目前無法使用")
+    pet = db.pets.find_one({"_id": oid(item["petId"])})
+    if not pet or not pet.get("avatarAttachmentId"):
+        raise HTTPException(status_code=404, detail="這個毛孩照片目前無法使用")
+    from app.services.attachment_service import public_pet_avatar_content
+
+    return public_pet_avatar_content(str(pet["_id"]), pet["avatarAttachmentId"])
+
 def public_html(token):
     x = public(token)
     name = escape(str(x.get("name", "毛孩")))
-    avatar = x.get("avatar")
+    avatar = x.get("avatarUrl")
     image = (
         f'<img class="avatar" src="{escape(str(avatar), quote=True)}" alt="{name}的照片" />'
-        if isinstance(avatar, str) and avatar.startswith(("https://", "http://"))
+        if isinstance(avatar, str) and avatar.startswith(("https://", "http://", "/api/public/"))
         else '<div class="avatar-placeholder" aria-hidden="true">MEGO</div>'
     )
 

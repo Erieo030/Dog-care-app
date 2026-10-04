@@ -17,7 +17,8 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, KeepTogether
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus.tableofcontents import TableOfContents
 from app.db import db
 from app.schemas.export import ExportCreateRequest
 
@@ -31,10 +32,27 @@ def shutdown() -> None:
 
 LOCK = threading.Lock()
 JOBS: dict[str, dict] = {}
-DATE_FIELDS = {"vaccinations":"administeredAt", "weights":"measuredAt", "healthEvents":"occurredAt", "medicalVisits":"visitedAt", "reminders":"scheduledAt", "dewormings":"administeredAt", "medications":"startDate"}
-COLLECTIONS = {"vaccinations":db.vaccinations, "weights":db.weight_records, "healthEvents":db.health_events, "medicalVisits":db.medical_visits, "reminders":db.reminders, "dewormings":db.dewormings, "medications":db.medications}
+DATE_FIELDS = {"dailyLogs":"localDate", "vaccinations":"administeredAt", "weights":"measuredAt", "healthEvents":"occurredAt", "medicalVisits":"visitedAt", "reminders":"scheduledAt", "dewormings":"administeredAt", "medications":"startDate"}
+COLLECTIONS = {"dailyLogs":db.daily_logs, "vaccinations":db.vaccinations, "weights":db.weight_records, "healthEvents":db.health_events, "medicalVisits":db.medical_visits, "reminders":db.reminders, "dewormings":db.dewormings, "medications":db.medications}
 
 class Cancelled(Exception): pass
+
+
+class MegoReportTemplate(SimpleDocTemplate):
+    """Collect report section headings into a linked, page-numbered contents list."""
+
+    def beforeDocument(self):
+        self._toc_counter = 0
+
+    def afterFlowable(self, flowable):
+        if not isinstance(flowable, Paragraph) or flowable.style.name != "ReportSection":
+            return
+        self._toc_counter += 1
+        key = f"report-section-{self._toc_counter}"
+        title = getattr(flowable, "toc_title", flowable.getPlainText())
+        self.canv.bookmarkPage(key)
+        self.canv.addOutlineEntry(title, key, 0, False)
+        self.notify("TOCEntry", (0, title, self.page, key))
 
 def _now(): return now_taipei()
 def _json(value):
@@ -77,7 +95,11 @@ def _collect(user_id, request, pet_docs=None):
     start,end=_range(request); data={"pets":[_json(p) for p in pets]}
     for key,collection in COLLECTIONS.items():
         query={"petId":{"$in":pet_ids}}; field=DATE_FIELDS[key]
-        if start: query[field]={"$gte":start,"$lte":end}
+        if start:
+            if key in {"dailyLogs", "medications"}:
+                query[field]={"$gte":start.astimezone(TAIPEI).date().isoformat(),"$lte":end.astimezone(TAIPEI).date().isoformat()}
+            else:
+                query[field]={"$gte":start,"$lte":end}
         data[key]=[_json(x) for x in collection.find(query).sort([(field,1),("_id",1)])]
     return data
 
@@ -90,19 +112,21 @@ def _s(value): return escape(str(value if value not in (None,"") else "未填寫
 def _date(value):
     if not value: return "未填寫"
     if isinstance(value, dict) and "$date" in value: value = value["$date"]
+    if isinstance(value, str) and len(value) == 10 and value[4] == "-" and value[7] == "-":
+        return value.replace("-", "/")
     try: return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(TAIPEI).strftime("%Y/%m/%d")
     except (ValueError, TypeError): return str(value)[:10]
 def _chart(weights,font):
-    drawing=Drawing(470,130); values=[float(x["weightKg"]) for x in weights[-20:]]
+    drawing=Drawing(470,105); values=[float(x["weightKg"]) for x in weights[-20:]]
     if len(values)<2: return Paragraph("體重資料不足，暫不繪製趨勢圖。",ParagraphStyle("empty",fontName=font,fontSize=10))
     low,high=min(values),max(values); span=max(high-low,1); points=[]
-    for i,v in enumerate(values): points.append((25+i*420/(len(values)-1),20+(v-low)*90/span))
+    for i,v in enumerate(values): points.append((50+i*390/(len(values)-1),19+(v-low)*48/span))
     for a,b in zip(points,points[1:]): drawing.add(Line(a[0],a[1],b[0],b[1],strokeColor=colors.HexColor("#E07A5F"),strokeWidth=2))
     for x,y in points: drawing.add(Circle(x,y,3,fillColor=colors.HexColor("#E07A5F"),strokeColor=None))
-    drawing.add(String(25,115,f"{high:g} kg",fontName=font,fontSize=8)); drawing.add(String(25,5,f"{low:g} kg",fontName=font,fontSize=8))
+    drawing.add(String(3,82,f"最高 {high:g} kg",fontName=font,fontSize=8)); drawing.add(String(3,17,f"最低 {low:g} kg",fontName=font,fontSize=8))
     first_date = _date(weights[0].get("measuredAt")); last_date = _date(weights[-1].get("measuredAt"))
-    drawing.add(String(25,115,first_date,fontName=font,fontSize=7,textAnchor="start"))
-    drawing.add(String(445,5,last_date,fontName=font,fontSize=7,textAnchor="end")); return drawing
+    drawing.add(String(50,3,first_date,fontName=font,fontSize=7,textAnchor="start"))
+    drawing.add(String(440,3,last_date,fontName=font,fontSize=7,textAnchor="end")); return drawing
 
 def _write_pdf(path,data,job):
     # 使用 ReportLab 內建 CID 字型，確保中英文字元、數字與日期都能被閱讀器正確映射。
@@ -112,19 +136,26 @@ def _write_pdf(path,data,job):
     except KeyError:
         font = "Helvetica"
     styles=getSampleStyleSheet();
-    title=ParagraphStyle("zh-title",fontName=font,fontSize=27,leading=38,alignment=TA_CENTER,textColor=colors.HexColor("#3D332D"),spaceAfter=8)
-    h1=ParagraphStyle("zh-h1",fontName=font,fontSize=17,leading=26,textColor=colors.HexColor("#3D332D"),spaceBefore=14,spaceAfter=7)
-    body=ParagraphStyle("zh-body",fontName=font,fontSize=10,leading=17,textColor=colors.HexColor("#3D332D"),wordWrap="CJK",spaceAfter=4)
-    small=ParagraphStyle("zh-small",fontName=font,fontSize=9,leading=15,textColor=colors.HexColor("#6F625A"),wordWrap="CJK",spaceAfter=3)
+    title=ParagraphStyle("zh-title",fontName=font,fontSize=27,leading=38,alignment=TA_CENTER,textColor=colors.black,spaceAfter=8)
+    h1=ParagraphStyle("zh-h1",fontName=font,fontSize=16,leading=23,textColor=colors.black,spaceBefore=10,spaceAfter=5,keepWithNext=True)
+    section_style=ParagraphStyle("ReportSection",parent=h1,keepWithNext=True)
+    daily_heading=ParagraphStyle("daily-heading",fontName=font,fontSize=11,leading=17,textColor=colors.black,spaceBefore=9,spaceAfter=3,keepWithNext=True)
+    body=ParagraphStyle("zh-body",fontName=font,fontSize=10,leading=17,textColor=colors.black,wordWrap="CJK",spaceAfter=4)
+    small=ParagraphStyle("zh-small",fontName=font,fontSize=9,leading=15,textColor=colors.black,wordWrap="CJK",spaceAfter=3)
     toc=ParagraphStyle("zh-toc", parent=h1, alignment=TA_CENTER, spaceBefore=6, spaceAfter=10)
     pet_names = "、".join(str(p.get("name") or "毛孩") for p in data["pets"])
     export_time = _now().astimezone(TAIPEI).strftime("%Y/%m/%d %H:%M")
-    section_defs=[("毛孩基本資料", True), ("健康紀錄摘要", any(data[k] for k in ("weights","healthEvents","medicalVisits"))), ("體重趨勢", bool(data["weights"])), ("健康事件", bool(data["healthEvents"])), ("就醫紀錄", bool(data["medicalVisits"])), ("疫苗紀錄", bool(data["vaccinations"])), ("用藥紀錄", bool(data["medications"])), ("驅蟲紀錄", bool(data["dewormings"])), ("提醒", bool(data["reminders"]))]
-    story=[Spacer(1,28*mm),Paragraph("MEGO",small),Spacer(1,3*mm),Paragraph("健康照護報告",title),Spacer(1,10*mm),Table([[Paragraph(f"<b>毛孩</b><br/>{_s(pet_names)}",body),Paragraph(f"<b>匯出時間</b><br/>{export_time}",body)]],colWidths=[82*mm,82*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,-1),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.6,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),10],["RIGHTPADDING",(0,0),(-1,-1),10],["TOPPADDING",(0,0),(-1,-1),9],["BOTTOMPADDING",(0,0),(-1,-1),9]])),Spacer(1,9*mm),Paragraph("這份報告整理毛孩的健康與照護紀錄，方便日常查看，也能在就醫時提供獸醫參考。",body),Spacer(1,5*mm),Paragraph("內容來自飼主在 MEGO 中的紀錄，未填寫的欄位會標示為「未填寫」。",small),PageBreak(),Paragraph("報告目錄",toc)]
-    story += [Paragraph(f"{index}　{_s(label)}",body) for index,(label,enabled) in enumerate(section_defs,1) if enabled]
-    story += [Spacer(1,5*mm)]
-    story += [PageBreak()]
-    for pet in data["pets"]:
+    range_start,range_end=_range(job["request"])
+    report_period="全部紀錄" if range_start is None else f"{_date(range_start.isoformat())}－{_date(range_end.isoformat())}"
+    toc_flowable=TableOfContents()
+    toc_flowable.levelStyles=[ParagraphStyle("toc-level-0",fontName=font,fontSize=11,leading=20,textColor=colors.black,leftIndent=8,firstLineIndent=0)]
+    story=[Spacer(1,28*mm),Paragraph("MEGO",small),Spacer(1,3*mm),Paragraph("健康照護報告",title),Spacer(1,10*mm),Table([[Paragraph(f"<b>毛孩</b><br/>{_s(pet_names)}",body),Paragraph(f"<b>匯出時間</b><br/>{export_time}",body),Paragraph(f"<b>資料期間</b><br/>{_s(report_period)}",body)]],colWidths=[55*mm,55*mm,55*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,-1),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.6,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.4,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),8],["RIGHTPADDING",(0,0),(-1,-1),8],["TOPPADDING",(0,0),(-1,-1),9],["BOTTOMPADDING",(0,0),(-1,-1),9]])),Spacer(1,9*mm),Paragraph("這份報告整理毛孩的健康與照護紀錄，方便日常查看，也能在就醫時提供獸醫參考。",body),Spacer(1,5*mm),Paragraph("內容來自飼主在 MEGO 中的紀錄；未填寫欄位會標示為「未填寫」。本報告是照護紀錄整理，不代表疾病診斷，也不能取代獸醫專業評估。",small),PageBreak(),Paragraph("報告目錄",toc),toc_flowable,PageBreak()]
+    def add_section_heading(label, pet_name):
+        heading=Paragraph(_s(label),section_style)
+        heading.toc_title=f"{_s(pet_name)}｜{_s(label)}"
+        story.append(heading)
+
+    for pet_index,pet in enumerate(data["pets"]):
         _check(job); pid=pet["id"]
         gender = {"male": "公", "female": "母"}.get(pet.get("gender") or pet.get("sex"), pet.get("gender") or pet.get("sex"))
         birthday = pet.get("birthday") or pet.get("birthDate")
@@ -134,12 +165,30 @@ def _write_pdf(path,data,job):
             [Paragraph("<b>生日</b>",small),Paragraph(_date(birthday),body),Paragraph("<b>結紮</b>",small),Paragraph(_s('已結紮' if pet.get('neutered') else '未設定或未結紮'),body)],
             [Paragraph("<b>毛色</b>",small),Paragraph(_s(pet.get('coatColor')),body),Paragraph("<b>明顯特徵</b>",small),Paragraph(_s(pet.get('distinctiveFeatures')),body)],
         ],colWidths=[22*mm,57*mm,25*mm,60*mm],style=TableStyle([["BACKGROUND",(0,0),(0,-1),colors.HexColor("#FFF4E8")],["BACKGROUND",(2,0),(2,-1),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),7],["RIGHTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]]))
-        story += [Paragraph(_s(pet.get("name", "毛孩")),h1),pet_table,Spacer(1,5*mm)]
+        story += [Paragraph(_s(pet.get("name", "毛孩")),h1)]
+        add_section_heading("毛孩基本資料", str(pet.get("name") or "毛孩"))
+        story += [pet_table,Spacer(1,5*mm)]
         groups={k:[x for x in data[k] if x.get("petId")==pid] for k in COLLECTIONS}
+        pet_name=str(pet.get("name") or "毛孩")
         if job["request"].include_ai_summary:
-            summary = "；".join([f"體重 {len(groups["weights"])} 筆", f"健康事件 {len(groups["healthEvents"])} 筆", f"就醫 {len(groups["medicalVisits"])} 筆", f"用藥 {len(groups["medications"])} 筆", f"驅蟲 {len(groups["dewormings"])} 筆"]) + "。"
-            if not any(groups[k] for k in ("weights", "healthEvents", "medicalVisits")): summary = "目前紀錄不足，尚無法建立完整摘要。"
-            summary_table=Table([[Paragraph("<b>體重</b>",small),Paragraph(f"{len(groups['weights'])} 筆",body),Paragraph("<b>健康事件</b>",small),Paragraph(f"{len(groups['healthEvents'])} 筆",body)], [Paragraph("<b>就醫</b>",small),Paragraph(f"{len(groups['medicalVisits'])} 筆",body),Paragraph("<b>提醒</b>",small),Paragraph(f"{len(groups['reminders'])} 筆",body)]],colWidths=[25*mm,52*mm,25*mm,52*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,-1),colors.HexColor("#F6F1EB")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]]))
+            summary = "；".join([
+                f"日常 {len(groups['dailyLogs'])} 筆",
+                f"體重 {len(groups['weights'])} 筆",
+                f"健康事件 {len(groups['healthEvents'])} 筆",
+                f"就醫 {len(groups['medicalVisits'])} 筆",
+                f"疫苗 {len(groups['vaccinations'])} 筆",
+                f"用藥 {len(groups['medications'])} 筆",
+                f"驅蟲 {len(groups['dewormings'])} 筆",
+                f"提醒 {len(groups['reminders'])} 筆",
+            ]) + "。"
+            if not any(groups[k] for k in ("dailyLogs", "weights", "healthEvents", "medicalVisits")):
+                summary = "目前紀錄不足，尚無法建立完整摘要。"
+            summary_table=Table([
+                [Paragraph("<b>日常</b>",small),Paragraph(f"{len(groups['dailyLogs'])} 筆",body),Paragraph("<b>體重</b>",small),Paragraph(f"{len(groups['weights'])} 筆",body)],
+                [Paragraph("<b>健康事件</b>",small),Paragraph(f"{len(groups['healthEvents'])} 筆",body),Paragraph("<b>就醫</b>",small),Paragraph(f"{len(groups['medicalVisits'])} 筆",body)],
+                [Paragraph("<b>疫苗</b>",small),Paragraph(f"{len(groups['vaccinations'])} 筆",body),Paragraph("<b>用藥</b>",small),Paragraph(f"{len(groups['medications'])} 筆",body)],
+                [Paragraph("<b>驅蟲</b>",small),Paragraph(f"{len(groups['dewormings'])} 筆",body),Paragraph("<b>提醒</b>",small),Paragraph(f"{len(groups['reminders'])} 筆",body)],
+            ],colWidths=[25*mm,52*mm,25*mm,52*mm],style=TableStyle([["BACKGROUND",(0,0),(0,-1),colors.HexColor("#F6F1EB")],["BACKGROUND",(2,0),(2,-1),colors.HexColor("#F6F1EB")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]]))
             vet_points=[]
             if groups['healthEvents']:
                 latest=sorted(groups['healthEvents'], key=lambda x: str(x.get('occurredAt') or ''), reverse=True)[0]
@@ -151,7 +200,18 @@ def _write_pdf(path,data,job):
             if pending:
                 vet_points.append(f"尚未完成提醒：{pending} 項")
             vet_summary=Paragraph('<b>給獸醫參考的重點</b><br/>' + '<br/>'.join(f"• {_s(point)}" for point in vet_points) if vet_points else '<b>給獸醫參考的重點</b><br/>目前沒有需要特別標示的近期資料。', body)
-            story += [Paragraph("健康紀錄摘要",h1),summary_table,Spacer(1,3*mm),Paragraph(_s(summary),body),vet_summary,Spacer(1,2*mm),Paragraph("本報告依 MEGO 中由飼主記錄的資料整理，內容僅供健康紀錄與就醫溝通參考，不代表疾病診斷，也不能取代獸醫專業評估。",small), Spacer(1,5*mm)]
+            add_section_heading("健康紀錄摘要", pet_name)
+            story += [summary_table,Spacer(1,3*mm),Paragraph(_s(summary),body),vet_summary,Spacer(1,2*mm),Paragraph("本報告依 MEGO 中由飼主記錄的資料整理，內容僅供健康紀錄與就醫溝通參考，不代表疾病診斷，也不能取代獸醫專業評估。",small), Spacer(1,5*mm)]
+        if groups["dailyLogs"]:
+            add_section_heading("日常紀錄", pet_name)
+            level_names={"low":"偏少","normal":"正常","high":"偏多","slightly_low":"稍沒精神","hard":"偏硬","soft":"偏軟","watery":"水狀"}
+            field_labels=(("waterLevel","喝水"),("foodLevel","飼料"),("energyLevel","精神"),("stoolLevel","便便"))
+            for record in sorted(groups["dailyLogs"],key=lambda item:str(item.get("localDate") or item.get("loggedAt") or "")):
+                story.append(Paragraph(_date(record.get("localDate") or record.get("loggedAt")),daily_heading))
+                states="　｜　".join(f"{label}：{level_names.get(record.get(field), '未填寫')}" for field,label in field_labels)
+                story.append(Paragraph(_s(states),body))
+                if record.get("notes"):
+                    story.append(Paragraph(f"補充備註：{_s(record['notes'])}",small))
         if groups["weights"]:
             ordered_weights=sorted(groups["weights"], key=lambda x: str(x.get("measuredAt") or ""))
             latest_weight=ordered_weights[-1]
@@ -161,50 +221,68 @@ def _write_pdf(path,data,job):
             if previous_weight:
                 previous_value=float(previous_weight.get("weightKg") or 0)
                 weight_note += f"；較前次{'增加' if latest_value > previous_value else '減少' if latest_value < previous_value else '沒有變化'} {abs(latest_value-previous_value):g} kg"
-            story += [Paragraph("體重趨勢",h1), Paragraph(_s(weight_note),body), _chart(ordered_weights,font)]
+            add_section_heading("體重趨勢", pet_name)
+            story += [Paragraph(_s(weight_note),body), _chart(ordered_weights,font)]
         if groups["healthEvents"]:
-            story += [Paragraph("健康事件",h1)]
+            add_section_heading("健康事件", pet_name)
             for event in sorted(groups["healthEvents"], key=lambda x: str(x.get("occurredAt") or ""), reverse=True):
                 severity = {'mild':'輕微','moderate':'中等','severe':'嚴重'}.get(event.get('severity'), event.get('severity'))
-                story.append(KeepTogether([Table([[Paragraph(f"<b>{_date(event.get('occurredAt'))}</b>",small),Paragraph(f"<b>{_s(event.get('summary') or event.get('type'))}</b><br/>程度：{_s(severity)}<br/>{_s(event.get('notes'))}",body)]],colWidths=[33*mm,131*mm],style=TableStyle([["BACKGROUND",(0,0),(0,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),8],["RIGHTPADDING",(0,0),(-1,-1),8],["TOPPADDING",(0,0),(-1,-1),7],["BOTTOMPADDING",(0,0),(-1,-1),7]]))]))
+                event_title = _s(event.get('summary') or event.get('type'))
+                story += [
+                    Paragraph(f"{_date(event.get('occurredAt'))}｜{event_title}", daily_heading),
+                    Paragraph(f"程度：{_s(severity)}", body),
+                ]
+                if event.get('notes'):
+                    story.append(Paragraph(f"補充備註：{_s(event['notes'])}", small))
         if groups["medicalVisits"]:
-            story += [Paragraph("就醫紀錄",h1)]
+            add_section_heading("就醫紀錄", pet_name)
             for visit in sorted(groups["medicalVisits"], key=lambda x: str(x.get("visitedAt") or ""), reverse=True):
-                visit_rows = [[Paragraph("看診日期",small),Paragraph(_date(visit.get('visitedAt')),body)],[Paragraph("醫院",small),Paragraph(_s(visit.get('clinicName')),body)],[Paragraph("看診原因",small),Paragraph(_s(visit.get('reason')),body)],[Paragraph("治療／用藥說明",small),Paragraph(_s(visit.get('treatmentNotes')),body)],[Paragraph("下次回診",small),Paragraph(_date(visit.get('followUpAt')),body)]]
-                story.append(KeepTogether([Table(visit_rows,colWidths=[34*mm,130*mm],style=TableStyle([["BACKGROUND",(0,0),(0,-1),colors.HexColor("#F1F8F2")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#C9E3D0")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#DDE9DF")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),8],["RIGHTPADDING",(0,0),(-1,-1),8],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])),Spacer(1,3*mm)]))
+                story += [Paragraph(f"{_date(visit.get('visitedAt'))}｜{_s(visit.get('clinicName'))}", daily_heading)]
+                for label, value in (
+                    ("看診原因", visit.get('reason')),
+                    ("治療／用藥說明", visit.get('treatmentNotes')),
+                    ("下次回診", _date(visit.get('followUpAt'))),
+                ):
+                    story.append(Paragraph(f"<b>{label}：</b>{_s(value)}", body))
+                story.append(Spacer(1,3*mm))
         if groups["vaccinations"]:
-            story += [Paragraph("疫苗紀錄",h1)]
+            add_section_heading("疫苗紀錄", pet_name)
             rows=[[Paragraph("接種日期",small),Paragraph("疫苗",small),Paragraph("醫院",small),Paragraph("下次接種",small)]]
             rows += [[Paragraph(_date(x.get('administeredAt')),body),Paragraph(_s(x.get('vaccineName')),body),Paragraph(_s(x.get('hospitalName')),body),Paragraph(_date(x.get('nextDueAt')),body)] for x in groups["vaccinations"]]
-            story.append(Table(rows,colWidths=[31*mm,51*mm,45*mm,37*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),6],["RIGHTPADDING",(0,0),(-1,-1),6],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
+            story.append(Table(rows,colWidths=[31*mm,51*mm,45*mm,37*mm],repeatRows=1,style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),6],["RIGHTPADDING",(0,0),(-1,-1),6],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
         if groups["medications"]:
-            story += [Paragraph("用藥紀錄",h1)]
-            rows=[[Paragraph("開始",small),Paragraph("藥品",small),Paragraph("用法",small),Paragraph("結束",small)]]
-            rows += [[Paragraph(_date(x.get('startDate')),body),Paragraph(_s(x.get('name')),body),Paragraph(f"{_s(x.get('instructions'))}（每日 {_s(x.get('timesPerDay'))} 次）",body),Paragraph(_date(x.get('endDate')),body)] for x in groups["medications"]]
-            story.append(Table(rows,colWidths=[38*mm,38*mm,70*mm,18*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#F1F8F2")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#C9E3D0")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#DDE9DF")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),6],["RIGHTPADDING",(0,0),(-1,-1),6],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
+            add_section_heading("用藥紀錄", pet_name)
+            for medication in sorted(groups["medications"], key=lambda x: str(x.get("startDate") or "")):
+                story.append(Paragraph(f"{_date(medication.get('startDate'))}｜{_s(medication.get('name'))}", daily_heading))
+                story.append(Paragraph(
+                    f"<b>用法：</b>{_s(medication.get('instructions'))}（每日 {_s(medication.get('timesPerDay'))} 次）<br/>"
+                    f"<b>結束日期：</b>{_date(medication.get('endDate'))}",
+                    body,
+                ))
         if groups["dewormings"]:
-            story += [Paragraph("驅蟲紀錄",h1)]
+            add_section_heading("驅蟲紀錄", pet_name)
             rows=[[Paragraph("日期",small),Paragraph("項目",small),Paragraph("用量",small),Paragraph("下次",small)]]
             rows += [[Paragraph(_date(x.get('administeredAt')),body),Paragraph(_s(x.get('productName') or x.get('type')),body),Paragraph(_s(x.get('dosageText')),body),Paragraph(_date(x.get('nextDueAt')),body)] for x in groups["dewormings"]]
-            story.append(Table(rows,colWidths=[31*mm,54*mm,45*mm,34*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),6],["RIGHTPADDING",(0,0),(-1,-1),6],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
+            story.append(Table(rows,colWidths=[31*mm,54*mm,45*mm,34*mm],repeatRows=1,style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),6],["RIGHTPADDING",(0,0),(-1,-1),6],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
         if groups["reminders"]:
-            story += [Paragraph("提醒",h1)]
+            add_section_heading("提醒", pet_name)
             reminder_rows=[[Paragraph("日期",small),Paragraph("事項",small),Paragraph("狀態",small)]]
             for reminder in sorted(groups["reminders"], key=lambda x: str(x.get("scheduledAt") or "")):
                 status={'pending':'待完成','completed':'已完成','skipped':'已略過','snoozed':'已延後'}.get(reminder.get('status'), reminder.get('status'))
                 reminder_rows.append([Paragraph(_date(reminder.get('scheduledAt')),body),Paragraph(_s(reminder.get('title')),body),Paragraph(_s(status),body)])
-            story.append(Table(reminder_rows,colWidths=[35*mm,95*mm,34*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),7],["RIGHTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
-        story += [Spacer(1,4*mm), Paragraph("照護提醒",h1), Paragraph("本報告協助整理日常照護紀錄，若毛孩出現持續或緊急症狀，請直接諮詢獸醫。報告內容不取代獸醫診斷。",small)]
-        story.append(PageBreak())
+            story.append(Table(reminder_rows,colWidths=[35*mm,95*mm,34*mm],repeatRows=1,style=TableStyle([["BACKGROUND",(0,0),(-1,0),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"TOP"],["LEFTPADDING",(0,0),(-1,-1),7],["RIGHTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]])))
+        if pet_index < len(data["pets"])-1:
+            story.append(PageBreak())
     def page(canvas,doc):
         # 頁尾使用標準字型，確保各手機 PDF 閱讀器都能顯示日期與頁碼。
         canvas.saveState()
         canvas.setFillColor(colors.black)
-        canvas.setFont("Helvetica", 8)
+        canvas.setFont(font, 8)
         canvas.drawString(18*mm, 10*mm, "MEGO")
         canvas.drawRightString(195*mm, 10*mm, f"第 {canvas.getPageNumber()} 頁")
         canvas.restoreState()
-    SimpleDocTemplate(str(path),pagesize=A4,rightMargin=18*mm,leftMargin=18*mm,topMargin=16*mm,bottomMargin=18*mm,title="MEGO 健康照護報告").build(story,onFirstPage=page,onLaterPages=page)
+    report=MegoReportTemplate(str(path),pagesize=A4,rightMargin=18*mm,leftMargin=18*mm,topMargin=16*mm,bottomMargin=18*mm,title="MEGO 健康照護報告")
+    report.multiBuild(story,onFirstPage=page,onLaterPages=page)
 
 def _run(job):
     try:
@@ -214,16 +292,48 @@ def _run(job):
         path=ROOT/job["id"]/f"{base}.{ext}"; path.parent.mkdir(parents=True,exist_ok=True)
         _write_pdf(path,data,job)
         _check(job)
-        with LOCK: job.update(status="completed",progress=100,filePath=str(path),fileName=path.name,mimeType=mime,updatedAt=_now()); _persist(job)
+        with LOCK:
+            _check(job)
+            job.update(status="completed",progress=100,filePath=str(path),fileName=path.name,mimeType=mime,updatedAt=_now())
+            _persist(job)
     except Cancelled:
-        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="cancelled",updatedAt=_now()); _persist(job)
+        shutil.rmtree(ROOT/job["id"],ignore_errors=True)
+        if job.get("accountDeletion"):
+            with LOCK:
+                JOBS.pop(job["id"], None)
+                db.export_jobs.delete_one({"_id": job["id"]})
+        else:
+            job.update(status="cancelled",updatedAt=_now()); _persist(job)
     except Exception:
-        shutil.rmtree(ROOT/job["id"],ignore_errors=True); job.update(status="failed",error="匯出失敗，請稍後重試",updatedAt=_now()); _persist(job)
+        shutil.rmtree(ROOT/job["id"],ignore_errors=True)
+        if job.get("accountDeletion"):
+            with LOCK:
+                JOBS.pop(job["id"], None)
+                db.export_jobs.delete_one({"_id": job["id"]})
+        else:
+            job.update(status="failed",error="匯出失敗，請稍後重試",updatedAt=_now()); _persist(job)
 
 def create_job(user_id,request):
     _owned_pets(user_id,request); job={"id":uuid4().hex,"userId":user_id,"format":request.format,"status":"queued","progress":0,"createdAt":_now(),"updatedAt":_now(),"request":request,"cancelRequested":False}
     with LOCK: JOBS[job["id"]]=job; _persist(job)
     EXECUTOR.submit(_run,job); return _public(job)
+
+
+def delete_user_exports(user_id: str) -> None:
+    """Cancel account-owned report jobs and remove their generated files."""
+    with LOCK:
+        jobs = [job for job in JOBS.values() if job.get("userId") == user_id]
+        for job in jobs:
+            job["cancelRequested"] = True
+            job["accountDeletion"] = True
+        job_ids = {job["id"] for job in jobs}
+        for stored in db.export_jobs.find({"userId": user_id}, {"_id": 1}):
+            job_ids.add(str(stored["_id"]))
+
+    # Each export job has a dedicated directory underneath ROOT.
+    for job_id in job_ids:
+        shutil.rmtree(ROOT / job_id, ignore_errors=True)
+    db.export_jobs.delete_many({"userId": user_id})
 
 def cleanup_expired_exports(max_age_days: int = 7) -> None:
     """清理已完成或失敗且超過保留期限的匯出檔，避免暫存目錄持續增長。"""

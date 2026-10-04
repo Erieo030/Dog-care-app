@@ -35,7 +35,7 @@ export interface HealthDashboard {
     breed: string;
     gender: string;
     birthDate: string;
-    avatarUrl: string;
+    avatarAttachmentId?: string;
   };
   todayReminders: { items: Reminder[]; total: number; completed: number; pending: number };
   weight: {

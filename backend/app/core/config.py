@@ -10,6 +10,26 @@ from dotenv import load_dotenv
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
 
+DEFAULT_UPLOAD_MAX_MB = 10
+MIN_UPLOAD_MAX_MB = 1
+MAX_UPLOAD_MAX_MB = 50
+
+
+def _bounded_upload_max_mb() -> int:
+    try:
+        value = int(os.getenv("MEGO_UPLOAD_MAX_MB", str(DEFAULT_UPLOAD_MAX_MB)))
+    except ValueError:
+        return DEFAULT_UPLOAD_MAX_MB
+    return min(MAX_UPLOAD_MAX_MB, max(MIN_UPLOAD_MAX_MB, value))
+
+
+def _attachment_storage_dir() -> Path:
+    configured = os.getenv("ATTACHMENT_STORAGE_DIR", "").strip() or "backend/uploads"
+    path = Path(configured).expanduser()
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return path.resolve()
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -22,6 +42,8 @@ class Settings:
     auth_secret_key: str = ""
     access_token_minutes: int = 15
     refresh_token_days: int = 7
+    attachment_storage_dir: Path = PROJECT_ROOT / "backend" / "uploads"
+    upload_max_mb: int = DEFAULT_UPLOAD_MAX_MB
 
 
 @lru_cache
@@ -47,4 +69,6 @@ def get_settings() -> Settings:
         # Persistent login is intentionally capped at one week. Environment
         # configuration may shorten it, but must not extend it beyond 7 days.
         refresh_token_days=min(7, max(1, int(os.getenv("AUTH_REFRESH_TOKEN_DAYS", "7")))),
+        attachment_storage_dir=_attachment_storage_dir(),
+        upload_max_mb=_bounded_upload_max_mb(),
     )

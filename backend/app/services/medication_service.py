@@ -1,10 +1,10 @@
 from app.timezone import now_taipei, TAIPEI
-from datetime import datetime,timezone
+from datetime import datetime
 from fastapi import HTTPException
 from app.db import db
 from app.schemas.medication import MedicationRequest
 from app.schemas.reminder import ReminderCreateRequest
-from app.services.reminder_service import create_reminder,delete_reminder
+from app.services.reminder_service import create_reminder
 from app.services.timeline_service import delete_timeline_item,upsert_timeline_item
 from app.services.care_record_support import require_object_id, require_owned_pet, serialize_record
 def oid(v):

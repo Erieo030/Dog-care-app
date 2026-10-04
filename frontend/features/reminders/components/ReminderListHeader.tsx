@@ -6,6 +6,7 @@ import { Colors } from '../../../constants/Colors';
 
 type Props = {
   upcomingDays?: number;
+  scheduledDate?: string;
   count: number;
   showMissingSource: boolean;
   onCreate: () => void;
@@ -13,11 +14,18 @@ type Props = {
 
 export default function ReminderListHeader({
   upcomingDays,
+  scheduledDate,
   count,
   showMissingSource,
   onCreate,
 }: Props) {
   const todayOnly = upcomingDays === 0;
+  const selectedDateLabel = scheduledDate
+    ? new Date(`${scheduledDate}T12:00:00`).toLocaleDateString('zh-TW', {
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
   return (
     <>
       <AppButton
@@ -34,9 +42,19 @@ export default function ReminderListHeader({
           <Ionicons name="notifications-outline" size={18} color={Colors.primary} />
         </View>
         <View style={styles.flex}>
-          <Text style={styles.contextTitle}>{todayOnly ? '今天待做事項' : '已排程的照護事項'}</Text>
+          <Text style={styles.contextTitle}>
+            {selectedDateLabel
+              ? `${selectedDateLabel} 的提醒`
+              : todayOnly
+                ? '今天待做事項'
+                : '已排程的照護事項'}
+          </Text>
           <Text style={styles.contextHint}>
-            {todayOnly ? '只顯示今天尚未完成的提醒' : '依日期安排，最遠顯示未來一年'}
+            {selectedDateLabel
+              ? '顯示這一天已安排的提醒'
+              : todayOnly
+                ? '只顯示今天尚未完成的提醒'
+                : '依日期安排，最遠顯示未來一年'}
           </Text>
         </View>
         <Text style={styles.count}>{count} 項</Text>

@@ -1,6 +1,7 @@
-from app.timezone import now_taipei, TAIPEI
 """用途：聚合單一毛孩首頁健康摘要，避免前端平行下載完整 collection。"""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+
+from app.timezone import now_taipei
 
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
@@ -9,7 +10,6 @@ from fastapi import HTTPException
 from app.db import db
 from app.services.timeline_service import list_timeline
 
-_INDEXES_READY = False
 DIGESTIVE_TYPES = {"vomiting", "abnormal_stool", "low_appetite", "abnormal_drinking"}
 
 
@@ -22,18 +22,6 @@ def _ensure_owned_pet(pet_id: str, user_id: str) -> dict:
     if not pet:
         raise HTTPException(status_code=404, detail="找不到毛孩資料")
     return pet
-
-
-def _ensure_indexes() -> None:
-    global _INDEXES_READY
-    if _INDEXES_READY:
-        return
-    db.weight_records.create_index([("userId", 1), ("petId", 1), ("measuredAt", -1)], name="dashboard_weight_date")
-    db.health_events.create_index([("userId", 1), ("petId", 1), ("occurredAt", -1)], name="dashboard_health_date")
-    db.medical_visits.create_index([("userId", 1), ("petId", 1), ("visitedAt", -1)], name="dashboard_medical_date")
-    db.reminders.create_index([("userId", 1), ("petId", 1), ("scheduledAt", -1), ("status", 1)], name="dashboard_reminder_status_date")
-    db.timeline.create_index([("userId", 1), ("petId", 1), ("occurredAt", -1)], name="dashboard_timeline_date")
-    _INDEXES_READY = True
 
 
 def _serialize_weight(item: dict) -> dict:
@@ -71,9 +59,37 @@ def _health_category(event_type: str) -> str:
     return "other"
 
 
+def _health_category_counts(pet_id: str, since: datetime) -> tuple[int, dict[str, int]]:
+    rows = db.health_events.aggregate([
+        {"$match": {"petId": pet_id, "occurredAt": {"$gte": since}}},
+        {"$group": {"_id": "$type", "count": {"$sum": 1}}},
+    ])
+    category_counts = {key: 0 for key in ("digestive", "skin", "eye_ear", "injury", "other")}
+    total = 0
+    for row in rows:
+        count = row["count"]
+        total += count
+        category_counts[_health_category(row.get("_id") or "other")] += count
+    return total, category_counts
+
+
+def _reminder_counts(pet_id: str, since: datetime, until: datetime) -> tuple[int, int]:
+    rows = db.reminders.aggregate([
+        {"$match": {"petId": pet_id, "scheduledAt": {"$gte": since, "$lte": until}}},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+    ])
+    total = 0
+    completed = 0
+    for row in rows:
+        count = row["count"]
+        total += count
+        if row.get("_id") == "completed":
+            completed = count
+    return total, completed
+
+
 def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, range_days: int = 30) -> dict:
     pet = _ensure_owned_pet(pet_id, user_id)
-    _ensure_indexes()
     now = now_taipei()
     # JS getTimezoneOffset 是 UTC 減本地時間；用它把本地午夜換算成 UTC。
     local_now = now - timedelta(minutes=timezone_offset_minutes)
@@ -144,21 +160,14 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
         **({"stool": item["stoolLevel"]} if item.get("stoolLevel") is not None else {}),
     } for item in daily_logs]
 
-    health_30 = list(db.health_events.find(
-        {"petId": pet_id, "occurredAt": {"$gte": thirty_days_ago}}, {"type": 1}
-    ))
-    category_counts = {key: 0 for key in ["digestive", "skin", "eye_ear", "injury", "other"]}
-    for item in health_30:
-        category_counts[_health_category(item.get("type", "other"))] += 1
-    reminder_30_query = {"petId": pet_id, "scheduledAt": {"$gte": thirty_days_ago, "$lte": now}}
-    reminder_count = db.reminders.count_documents(reminder_30_query)
-    reminder_completed = db.reminders.count_documents({**reminder_30_query, "status": "completed"})
+    health_count, category_counts = _health_category_counts(pet_id, thirty_days_ago)
+    reminder_count, reminder_completed = _reminder_counts(pet_id, thirty_days_ago, now)
 
     return {
         "pet": {
             "id": str(pet["_id"]), "name": pet.get("name", ""),
             "breed": pet.get("breed", ""), "breedType": pet.get("breedType", "unknown"), "gender": pet.get("gender", ""),
-            "birthDate": pet.get("birthday", ""), "avatarUrl": pet.get("avatarUri", ""),
+            "birthDate": pet.get("birthday", ""), "avatarAttachmentId": pet.get("avatarAttachmentId"),
         },
         "todayReminders": {
             "items": reminder_items, "total": len(today_items),
@@ -174,7 +183,7 @@ def get_dashboard(pet_id: str, user_id: str, timezone_offset_minutes: int = 0, r
         "currentMedications": current_medications,
         "recentVaccination": recent_vaccination,
         "statistics30Days": {
-            "healthEventCount": len(health_30),
+            "healthEventCount": health_count,
             "medicalVisitCount": db.medical_visits.count_documents({"petId": pet_id, "visitedAt": {"$gte": thirty_days_ago}}),
             "reminderCount": reminder_count,
             "reminderCompletedCount": reminder_completed,

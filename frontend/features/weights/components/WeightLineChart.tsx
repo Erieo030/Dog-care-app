@@ -28,7 +28,9 @@ export function WeightLineChart({ items }: { items: WeightRecord[] }) {
   const plotLeft = 45;
   const plotTop = 8;
   const plotHeight = 145;
-  const plotWidth = Math.max(width - plotLeft - 12, 1);
+  // Measure the inner canvas (not the padded card) and reserve half a point
+  // radius at both ends so the first and last markers stay fully visible.
+  const plotWidth = Math.max(width - plotLeft - 8 - 4, 1);
   const points = chronological.map((item, index) => ({
     x: plotLeft + (index / (chronological.length - 1)) * plotWidth,
     y: plotTop + ((max - item.weightKg) / (max - min || 1)) * plotHeight,
@@ -37,8 +39,8 @@ export function WeightLineChart({ items }: { items: WeightRecord[] }) {
   const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
 
   return (
-    <View style={styles.chartCard} onLayout={onLayout}>
-      <View style={styles.chartCanvas}>
+    <View style={styles.chartCard}>
+      <View style={styles.chartCanvas} onLayout={onLayout}>
         <Text style={[styles.axisLabel, { top: 0 }]}>{max.toFixed(1)} kg</Text>
         <Text style={[styles.axisLabel, { top: plotHeight - 4 }]}>{min.toFixed(1)} kg</Text>
         <View style={[styles.axisLine, { left: plotLeft, top: plotTop, height: plotHeight }]} />

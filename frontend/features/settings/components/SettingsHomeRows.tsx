@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/Colors';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 
 export function SettingsHomeSection({
   title,
@@ -24,7 +25,8 @@ type RowProps = {
   onPress: () => void;
   danger?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
-  imageUri?: string;
+  imageAttachmentId?: string;
+  imageUserId?: string;
 };
 
 export function SettingsHomeRow({
@@ -33,7 +35,8 @@ export function SettingsHomeRow({
   onPress,
   danger = false,
   icon = 'ellipse-outline',
-  imageUri,
+  imageAttachmentId,
+  imageUserId,
 }: RowProps) {
   const scale = useRef(new Animated.Value(1)).current;
   return (
@@ -47,8 +50,13 @@ export function SettingsHomeRow({
         onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
       >
         <View style={styles.rowIcon}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.rowAvatar} />
+          {imageAttachmentId && imageUserId ? (
+            <AuthenticatedPetAvatar
+              attachmentId={imageAttachmentId}
+              userId={imageUserId}
+              style={styles.rowAvatar}
+              fallback={<Ionicons name={icon} size={19} color={danger ? Colors.danger : Colors.success} />}
+            />
           ) : (
             <Ionicons name={icon} size={19} color={danger ? Colors.danger : Colors.success} />
           )}
@@ -106,7 +114,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     overflow: 'hidden',
   },
-  rowAvatar: { width: 32, height: 32, resizeMode: 'cover' },
+  rowAvatar: { width: 32, height: 32, borderRadius: 10 },
   title: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.text },
   accessory: { maxWidth: '42%', flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
   value: { flexShrink: 1, fontSize: 13, color: Colors.subtext, textAlign: 'right' },

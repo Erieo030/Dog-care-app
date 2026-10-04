@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：以單一共用流程新增及編輯食慾、精神與喝水異常快速紀錄。 */
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -168,7 +169,7 @@ export default function ObservationHealthEventScreen({ route, navigation }: Prop
     );
   const safety = shouldShowObservationSafety(type, values, severity);
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

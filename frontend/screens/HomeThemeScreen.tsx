@@ -1,10 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：讓使用者選擇登入後首頁的居家照護世界。 */
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -34,7 +34,7 @@ export default function HomeThemeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
         showsVerticalScrollIndicator={false}

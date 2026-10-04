@@ -1,7 +1,6 @@
 /** 用途：集中提醒畫面的週期選項與「今晚」時間規則。 */
 import { RecurrenceRule, ReminderType } from '../types';
 
-export const TONIGHT_HOUR = 20;
 export const REMINDER_TYPES: Array<[ReminderType, string, RecurrenceRule]> = [
   ['vaccine', '疫苗', 'yearly'],
   ['deworming', '驅蟲', 'quarterly'],

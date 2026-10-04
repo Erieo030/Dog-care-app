@@ -34,7 +34,9 @@ export type HomeStackParamList = {
   TimelineOverview: undefined;
   AddPet: undefined;
   EditPet: undefined;
-  ReminderList: { focusReminderId?: string; upcomingDays?: number } | undefined;
+  ReminderList:
+    | { focusReminderId?: string; upcomingDays?: number; scheduledDate?: string }
+    | undefined;
   CreateReminder: { reminder?: Reminder; quickEntry?: boolean } | undefined;
   AbnormalType: { quickEntry?: boolean } | undefined;
   CreateHealthEvent: { type: HealthEventType; label: string; quickEntry?: boolean };
@@ -54,8 +56,6 @@ export type HomeStackParamList = {
   MedicalVisitList: undefined;
   MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean; quickEntry?: boolean };
   MedicalVisitDetail: { visitId: string };
-  AIChat: undefined;
-  VetVisitBrief: undefined;
 };
 export type ProfileStackParamList = {
   ProfileOverview: undefined;
@@ -78,4 +78,11 @@ export type MainTabParamList = {
   Timeline: NavigatorScreenParams<HomeStackParamList> | undefined;
   Health: NavigatorScreenParams<HomeStackParamList> | undefined;
   Profile: NavigatorScreenParams<ProfileStackParamList> | undefined;
+};
+
+/** Full-screen authenticated routes presented above the persistent tab navigator. */
+export type RootStackParamList = {
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  AIChat: undefined;
+  VetVisitBrief: undefined;
 };

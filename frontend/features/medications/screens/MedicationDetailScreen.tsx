@@ -9,6 +9,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../../components/AppButton';
+import { RecordActionButton } from '../../../components/RecordActionButton';
 import { Colors } from '../../../constants/Colors';
 import { useTabContentBottomPadding } from '../../../components/navigation/useTabContentBottomPadding';
 import ScreenState from '../../../components/ScreenState';
@@ -40,30 +41,30 @@ export function MedicationDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    setRecord(null);
-    setError('');
-    setLoading(true);
-    if (!userId || !recordId) {
-      setError('找不到帳號或用藥紀錄');
-      setLoading(false);
-      return;
-    }
-    getMedication(userId, recordId, controller.signal)
-      .then((response) => {
-        if (!cancelled) setRecord(response.record);
-      })
-      .catch((caught) => {
-        if (!cancelled) setError((caught as Error).message || '無法載入用藥紀錄');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      controller.abort();
-      cancelled = true;
-    };
+      const controller = new AbortController();
+      let cancelled = false;
+      setRecord(null);
+      setError('');
+      setLoading(true);
+      if (!userId || !recordId) {
+        setError('找不到帳號或用藥紀錄');
+        setLoading(false);
+        return;
+      }
+      getMedication(userId, recordId, controller.signal)
+        .then((response) => {
+          if (!cancelled) setRecord(response.record);
+        })
+        .catch((caught) => {
+          if (!cancelled) setError((caught as Error).message || '無法載入用藥紀錄');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        controller.abort();
+        cancelled = true;
+      };
       // retryKey intentionally re-runs this focused request after the retry action.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recordId, retryKey, userId]),
@@ -133,22 +134,23 @@ export function MedicationDetailScreen() {
         />
         <MedicationDetailRow label="用餐時間" value={mealTimingLabels[record.mealTiming]} />
         <MedicationDetailRow label="提醒時間" value={record.reminderTimes.join('、') || '未設定'} />
-        <MedicationDetailRow label="補充備註" value={record.notes || '未填寫'} multiline />
+        {record.notes ? (
+          <MedicationDetailRow label="補充備註" value={record.notes} multiline />
+        ) : null}
       </View>
 
       <View style={styles.actionRow}>
-        <AppButton
-          title="編輯紀錄"
-          variant="primary"
-          fullWidth={false}
-          style={[styles.actionButton, styles.primary]}
+        <RecordActionButton
+          kind="edit"
+          label="編輯紀錄"
+          style={styles.actionButton}
           onPress={() => navigation.navigate('MedicationForm', { record })}
         />
         <AppButton
           title="複製新增"
           variant="secondary"
           fullWidth={false}
-          style={[styles.actionButton, styles.secondary]}
+          style={[styles.secondary, styles.actionButton]}
           onPress={() => navigation.navigate('MedicationForm', { record, duplicate: true })}
         />
       </View>
@@ -174,10 +176,9 @@ export function MedicationDetailScreen() {
           />
         </>
       ) : null}
-      <AppButton
-        title={submitting ? '刪除中…' : '刪除'}
-        variant="danger"
-        fullWidth={false}
+      <RecordActionButton
+        kind="delete"
+        label={submitting ? '刪除中…' : '刪除'}
         disabled={submitting}
         busy={submitting}
         style={styles.deleteButton}

@@ -1,0 +1,24 @@
+{"id":"v5-vaccine-dev-01","split":"dev","question":"狗狗需要打哪些疫苗？是不是每隻都照同一套時間表？","expected_doc":"care-canine-vaccination","expected_section":"核心疫苗與依風險評估的疫苗"}
+{"id":"v5-vaccine-dev-02","split":"dev","question":"我們住台灣，狂犬病疫苗第一次大約幾個月要打？之後呢？","expected_doc":"care-canine-vaccination","expected_section":"台灣犬隻狂犬病疫苗"}
+{"id":"v5-vaccine-dev-03","split":"dev","question":"狗狗疫苗手冊找不到了，我可以自己估算後補打一劑嗎？","expected_doc":"care-canine-vaccination","expected_section":"飼主如何管理疫苗紀錄"}
+{"id":"v5-vaccine-test-01","split":"test","question":"常去寄宿和狗公園，非核心疫苗要不要考慮？","expected_doc":"care-canine-vaccination","expected_section":"核心疫苗與依風險評估的疫苗"}
+{"id":"v5-vaccine-test-02","split":"test","question":"國外疫苗指引的間隔可以直接當作台灣狂犬病規定嗎？","expected_doc":"care-canine-vaccination","expected_section":"台灣犬隻狂犬病疫苗"}
+{"id":"v5-vaccine-test-03","split":"test","question":"疫苗紀錄最好記下哪些資訊？","expected_doc":"care-canine-vaccination","expected_section":"飼主如何管理疫苗紀錄"}
+{"id":"v5-parasite-dev-01","split":"dev","question":"一種驅蟲藥是不是就能防所有體內外寄生蟲？","expected_doc":"care-canine-parasite-prevention","expected_section":"驅蟲規劃要依狗狗與所在地調整"}
+{"id":"v5-parasite-dev-02","split":"dev","question":"心絲蟲是怎麼傳染的？如果中間漏了預防藥怎麼辦？","expected_doc":"care-canine-parasite-prevention","expected_section":"心絲蟲：先確認檢查與預防安排"}
+{"id":"v5-parasite-dev-03","split":"dev","question":"平常怎麼減少狗狗接觸腸道寄生蟲？","expected_doc":"care-canine-parasite-prevention","expected_section":"腸道及外寄生蟲的日常管理"}
+{"id":"v5-parasite-test-01","split":"test","question":"在台灣應該照搬美國 CAPC 的驅蟲及檢查週期嗎？","expected_doc":"care-canine-parasite-prevention","expected_section":"腸道及外寄生蟲的日常管理"}
+{"id":"v5-parasite-test-02","split":"test","question":"狗狗從沒吃過心絲蟲預防藥，能不能直接補兩倍？","expected_doc":"care-canine-parasite-prevention","expected_section":"心絲蟲：先確認檢查與預防安排"}
+{"id":"v5-parasite-test-03","split":"test","question":"驅蟲紀錄要保存產品的哪些資料？","expected_doc":"care-canine-parasite-prevention","expected_section":"管理驅蟲與檢查紀錄"}
+{"id":"v5-nutrition-dev-01","split":"dev","question":"選擇狗狗主食時，生命階段和健康狀況有什麼影響？","expected_doc":"care-canine-nutrition-weight","expected_section":"飲食要配合狗狗的個體狀況"}
+{"id":"v5-nutrition-dev-02","split":"dev","question":"只看體重數字可以判斷狗狗胖或瘦嗎？","expected_doc":"care-canine-nutrition-weight","expected_section":"一起看體重、體態與變化趨勢"}
+{"id":"v5-nutrition-dev-03","split":"dev","question":"WSAVA 成犬熱量表的數字可以直接當成每隻狗每天要吃的量嗎？","expected_doc":"care-canine-nutrition-weight","expected_section":"熱量與減重不要直接照表套用"}
+{"id":"v5-nutrition-test-01","split":"test","question":"要記哪些飲食和身體變化，才方便跟獸醫討論？","expected_doc":"care-canine-nutrition-weight","expected_section":"換食與飲食紀錄"}
+{"id":"v5-nutrition-test-02","split":"test","question":"狗狗有慢性病時，可以自己換成網路推薦的處方飼料嗎？","expected_doc":"care-canine-nutrition-weight","expected_section":"飲食要配合狗狗的個體狀況"}
+{"id":"v5-nutrition-test-03","split":"test","question":"狗狗最近體態改變，除了體重也要觀察什麼？","expected_doc":"care-canine-nutrition-weight","expected_section":"一起看體重、體態與變化趨勢"}
+{"id":"v5-none-dev-01","split":"dev","question":"狗狗五公斤，這款驅蟲藥要餵幾毫升？","expected_doc":"NONE","expected_section":""}
+{"id":"v5-none-dev-02","split":"dev","question":"我家狗狗的血液檢查數值代表什麼疾病？","expected_doc":"NONE","expected_section":""}
+{"id":"v5-none-dev-03","split":"dev","question":"附近現在還有哪間獸醫院營業？","expected_doc":"NONE","expected_section":""}
+{"id":"v5-none-test-01","split":"test","question":"我家狗狗這次血液檢查的數值代表哪一種疾病？","expected_doc":"NONE","expected_section":""}
+{"id":"v5-none-test-02","split":"test","question":"請幫我列出我家附近今天營業中的獸醫院和電話。","expected_doc":"NONE","expected_section":""}
+{"id":"v5-none-test-03","split":"test","question":"根據牠的體重，直接告訴我每天要餵幾克減肥飼料。","expected_doc":"NONE","expected_section":""}

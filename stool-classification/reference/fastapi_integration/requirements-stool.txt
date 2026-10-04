@@ -1,0 +1,8 @@
+# 糞便分類推論所需（加入既有後端的依賴清單；版本可配合 server，下列為 Colab 驗證過的版本）
+onnxruntime>=1.17      # 驗證版本 1.30.0；模型為 ONNX opset 17
+numpy>=1.24            # 驗證版本 2.1.3
+Pillow>=10.0           # 驗證版本 11.3.0
+python-multipart>=0.0.9   # FastAPI 接收上傳檔案需要；後端已有則免
+# 測試用
+pytest
+httpx

@@ -1,4 +1,10 @@
 import type { TimelineItem, TimelineType } from '../../types';
+import {
+  addDateKeyDays,
+  localDateKey,
+  taipeiDateKey,
+  taipeiDayStart,
+} from '../../utils/taipeiDate';
 import { RECORD_CATEGORY_COLORS, RecordCategoryKey } from '../../constants/RecordCategoryColors';
 
 export const TIMELINE_PAGE_SIZE = 50;
@@ -35,16 +41,21 @@ export function getTimelineCategory(type: TimelineType): TimelineCategory {
 }
 
 export function getLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return localDateKey(date);
 }
 
 export function getMonthRange(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1);
-  const end = new Date(month.getFullYear(), month.getMonth() + 1, 1);
-  return { startAt: start.toISOString(), endAt: end.toISOString() };
+  const startKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+  const endKey = addDateKeyDays(
+    `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-${String(
+      new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate(),
+    ).padStart(2, '0')}`,
+    1,
+  );
+  return {
+    startAt: new Date(taipeiDayStart(startKey)).toISOString(),
+    endAt: new Date(taipeiDayStart(endKey)).toISOString(),
+  };
 }
 
 export function buildCalendarDays(month: Date): Date[] {
@@ -65,7 +76,7 @@ export function getItemsForLocalDate(items: TimelineItem[], date: Date): Timelin
   return items
     .filter((item) => {
       const timestamp = new Date(item.occurredAt);
-      return Number.isFinite(timestamp.getTime()) && getLocalDateKey(timestamp) === key;
+      return Number.isFinite(timestamp.getTime()) && taipeiDateKey(timestamp) === key;
     })
     .sort(
       (left, right) => new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime(),
@@ -74,6 +85,10 @@ export function getItemsForLocalDate(items: TimelineItem[], date: Date): Timelin
 
 export function getTimelineCategoriesForDay(items: TimelineItem[]): TimelineCategory[] {
   return [...new Set(items.map((item) => getTimelineCategory(item.type)))];
+}
+
+export function getTimelineCategoriesForTypes(types: TimelineType[]): TimelineCategory[] {
+  return [...new Set(types.map(getTimelineCategory))];
 }
 
 export function formatTimelineDateHeading(date: Date, today = new Date()): string {

@@ -1,8 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：新增或編輯體重，驗證公斤數與有效測量日期並防止重複提交。 */
 import React, { useState } from 'react';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
-import { Alert, View, SafeAreaView, StyleSheet, Text, TextInput } from 'react-native';
+import { Alert, View, StyleSheet, Text, TextInput } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/AppButton';
@@ -99,7 +100,7 @@ export default function WeightFormScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

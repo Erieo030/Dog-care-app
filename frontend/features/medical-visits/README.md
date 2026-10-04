@@ -8,4 +8,6 @@
 - `screens/MedicalVisitFormScreen.tsx`：表單狀態、驗證、儲存 API、回診提醒同步。
 - `screens/MedicalVisitDetailScreen.tsx`：讀取、編輯、刪除、分享與附件操作。
 
+詳情頁將編輯與分享摘要列為主要操作，刪除獨立放在其後作次要操作；分享、刪除確認、附件及 API 行為不變。
+
 表單驗證、就醫 API、附件上傳與導航仍保留在畫面層；UI 子元件不發送請求。

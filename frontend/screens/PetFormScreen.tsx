@@ -1,10 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 毛孩新增與編輯共用表單，集中處理欄位驗證與健康資料輸入。 */
 import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -25,6 +25,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/AppButton';
 import { emptyPetData, PetData } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import PetAvatarPicker from '../features/pets/components/PetAvatarPicker';
 import PetFormTextField from '../features/pets/components/PetFormTextField';
 import {
@@ -36,7 +37,7 @@ interface PetFormScreenProps {
   title: string;
   submitLabel: string;
   initialData?: PetData;
-  onSubmit: (data: PetData) => void;
+  onSubmit: (data: PetData) => Promise<void> | void;
   onCancel?: () => void;
   bottomContentPadding?: number;
 }
@@ -49,11 +50,14 @@ export default function PetFormScreen({
   onCancel,
   bottomContentPadding,
 }: PetFormScreenProps) {
+  const { session } = useAuth();
   const [form, setForm] = useState<PetData>({ ...emptyPetData, ...initialData });
+  const [saving, setSaving] = useState(false);
   const update = <K extends keyof PetData>(key: K, value: PetData[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  const submit = () => {
+  const submit = async () => {
+    if (saving) return;
     if (!form.name.trim() || !form.gender || !form.breed.trim() || !form.arrivalDate.trim()) {
       Alert.alert('提示', '請填寫姓名、性別、品種與到家日期');
       return;
@@ -67,12 +71,17 @@ export default function PetFormScreen({
       Alert.alert('提示', '到家日期請使用 YYYY-MM-DD 格式');
       return;
     }
-    onSubmit({
-      ...form,
-      name: form.name.trim(),
-      gender: form.gender,
-      breed: form.breed.trim(),
-    });
+    setSaving(true);
+    try {
+      await onSubmit({
+        ...form,
+        name: form.name.trim(),
+        gender: form.gender,
+        breed: form.breed.trim(),
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderFields = (items: PetFormTextFieldData[]) =>
@@ -86,7 +95,7 @@ export default function PetFormScreen({
     ));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -110,7 +119,10 @@ export default function PetFormScreen({
 
           <PetAvatarPicker
             avatarUri={form.avatarUri}
+            avatarAttachmentId={form.avatarAttachmentId}
+            userId={session?.userId}
             onChange={(uri) => update('avatarUri', uri)}
+            onAttachmentChange={(attachmentId) => update('avatarAttachmentId', attachmentId)}
           />
 
           <Text style={styles.sectionHeading}>基本資料</Text>
@@ -182,8 +194,9 @@ export default function PetFormScreen({
           </View>
 
           <AppButton
-            title={submitLabel}
+            title={saving ? (form.avatarUri ? '正在上傳照片並儲存…' : '正在儲存…') : submitLabel}
             variant="primary"
+            busy={saving}
             style={styles.submitButton}
             textStyle={styles.submitText}
             onPress={submit}
@@ -192,6 +205,7 @@ export default function PetFormScreen({
             <AppButton
               title="取消"
               variant="secondary"
+              disabled={saving}
               style={styles.cancelButton}
               textStyle={styles.cancelText}
               onPress={onCancel}

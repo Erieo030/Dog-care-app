@@ -6,6 +6,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../../components/AppButton';
+import { RecordActionButton } from '../../../components/RecordActionButton';
 import { Colors } from '../../../constants/Colors';
 import { useTabContentBottomPadding } from '../../../components/navigation/useTabContentBottomPadding';
 import ScreenState from '../../../components/ScreenState';
@@ -36,30 +37,30 @@ export function VaccinationDetailScreen() {
   const recordId = route.params?.recordId;
   useFocusEffect(
     useCallback(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    setRecord(null);
-    setError('');
-    setLoading(true);
-    if (!userId || !recordId) {
-      setError('找不到帳號或疫苗紀錄');
-      setLoading(false);
-      return;
-    }
-    getVaccination(userId, recordId, controller.signal)
-      .then((response) => {
-        if (!cancelled) setRecord(response.record);
-      })
-      .catch((caught) => {
-        if (!cancelled) setError((caught as Error).message || '無法載入疫苗紀錄');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      controller.abort();
-      cancelled = true;
-    };
+      const controller = new AbortController();
+      let cancelled = false;
+      setRecord(null);
+      setError('');
+      setLoading(true);
+      if (!userId || !recordId) {
+        setError('找不到帳號或疫苗紀錄');
+        setLoading(false);
+        return;
+      }
+      getVaccination(userId, recordId, controller.signal)
+        .then((response) => {
+          if (!cancelled) setRecord(response.record);
+        })
+        .catch((caught) => {
+          if (!cancelled) setError((caught as Error).message || '無法載入疫苗紀錄');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        controller.abort();
+        cancelled = true;
+      };
       // retryKey intentionally re-runs this focused request after the retry action.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recordId, retryKey, userId]),
@@ -109,39 +110,33 @@ export function VaccinationDetailScreen() {
         </View>
       </View>
       <View style={styles.detailGroup}>
-        <DetailRow
-          label="接種日期"
-          value={new Date(record.administeredAt).toLocaleDateString('zh-TW')}
-        />
-        <DetailRow label="動物醫院" value={record.hospitalName || '未填寫'} />
+        {record.hospitalName ? <DetailRow label="動物醫院" value={record.hospitalName} /> : null}
         <DetailRow
           label="下次接種"
           value={
             record.nextDueAt ? new Date(record.nextDueAt).toLocaleDateString('zh-TW') : '尚未安排'
           }
         />
-        <DetailRow label="補充備註" value={record.notes || '未填寫'} />
+        {record.notes ? <DetailRow label="補充備註" value={record.notes} /> : null}
       </View>
       <View style={styles.actionRow}>
-        <AppButton
-          title="編輯紀錄"
-          variant="primary"
-          fullWidth={false}
-          style={[styles.actionButton, styles.primary]}
+        <RecordActionButton
+          kind="edit"
+          label="編輯紀錄"
+          style={styles.actionButton}
           onPress={() => navigation.navigate('VaccinationForm', { record })}
         />
         <AppButton
           title="複製新增"
           variant="secondary"
           fullWidth={false}
-          style={[styles.actionButton, styles.secondary]}
+          style={[styles.secondary, styles.actionButton]}
           onPress={() => navigation.navigate('VaccinationForm', { record, duplicate: true })}
         />
       </View>
-      <AppButton
-        title={deleting ? '刪除中…' : '刪除'}
-        variant="danger"
-        fullWidth={false}
+      <RecordActionButton
+        kind="delete"
+        label={deleting ? '刪除中…' : '刪除'}
         style={styles.deleteButton}
         onPress={deleteRecord}
         disabled={deleting}

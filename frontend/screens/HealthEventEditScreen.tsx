@@ -1,8 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：編輯健康異常紀錄既有的通用欄位，保留詳細資料與本機圖片 URI。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -144,7 +144,7 @@ export default function HealthEventEditScreen({ route, navigation }: Props) {
     );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

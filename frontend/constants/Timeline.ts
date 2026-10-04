@@ -17,6 +17,7 @@ export const TIMELINE_META: Record<TimelineType, { label: string; icon: string }
 export const openTimelineSource = (
   navigation: NativeStackNavigationProp<HomeStackParamList>,
   item: TimelineItem,
+  selectedDate?: string,
 ) => {
   if (!item.sourceId) {
     Alert.alert('無法開啟', '這筆時間軸缺少來源資料。');
@@ -25,12 +26,24 @@ export const openTimelineSource = (
   switch (item.type) {
     case 'reminder_completed':
       if (item.linkedSourceType && item.linkedSourceId) {
-        if (item.linkedSourceType === 'vaccination') navigation.navigate('VaccinationDetail', { recordId: item.linkedSourceId });
-        else if (item.linkedSourceType === 'deworming') navigation.navigate('DewormingDetail', { recordId: item.linkedSourceId });
-        else if (item.linkedSourceType === 'medication') navigation.navigate('MedicationDetail', { recordId: item.linkedSourceId });
-        else if (item.linkedSourceType === 'medical_visit') navigation.navigate('MedicalVisitDetail', { visitId: item.linkedSourceId });
-        else navigation.navigate('ReminderList', { focusReminderId: item.sourceId });
-      } else navigation.navigate('ReminderList', { focusReminderId: item.sourceId });
+        if (item.linkedSourceType === 'vaccination')
+          navigation.navigate('VaccinationDetail', { recordId: item.linkedSourceId });
+        else if (item.linkedSourceType === 'deworming')
+          navigation.navigate('DewormingDetail', { recordId: item.linkedSourceId });
+        else if (item.linkedSourceType === 'medication')
+          navigation.navigate('MedicationDetail', { recordId: item.linkedSourceId });
+        else if (item.linkedSourceType === 'medical_visit')
+          navigation.navigate('MedicalVisitDetail', { visitId: item.linkedSourceId });
+        else
+          navigation.navigate('ReminderList', {
+            focusReminderId: item.sourceId,
+            scheduledDate: selectedDate,
+          });
+      } else
+        navigation.navigate('ReminderList', {
+          focusReminderId: item.sourceId,
+          scheduledDate: selectedDate,
+        });
       break;
     case 'health_event':
       navigation.navigate('HealthEventDetail', { eventId: item.sourceId });

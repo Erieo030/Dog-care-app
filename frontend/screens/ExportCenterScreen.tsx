@@ -1,8 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：設定資料範圍、追蹤匯出進度，並分享或儲存完成檔案。 */
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -105,7 +105,7 @@ export default function ExportCenterScreen() {
   };
   const busy = job && ['queued', 'processing'].includes(job.status);
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
         <View style={styles.intro}>
           <View style={styles.introIcon}>
@@ -219,9 +219,13 @@ export default function ExportCenterScreen() {
             )}
           </View>
         )}
-        <Text style={styles.notice}>
-          報告會整理毛孩資料、健康紀錄、提醒與就醫資訊，不包含圖片。
-        </Text>
+        <View style={styles.notice}>
+          <View style={styles.noticeHeading}>
+            <Ionicons name="information-circle-outline" size={18} color={Colors.success} />
+            <Text style={styles.noticeTitle}>報告內容</Text>
+          </View>
+          <Text style={styles.noticeText}>整理毛孩資料、健康紀錄、提醒與就醫資訊；不包含圖片。</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -338,5 +342,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary,
   },
-  notice: { color: Colors.subtext, fontSize: 12, lineHeight: 18, marginTop: 20 },
+  notice: {
+    marginTop: 22,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: Colors.surfaceSoft,
+    gap: 5,
+  },
+  noticeHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  noticeTitle: { color: Colors.text, fontSize: 13, fontWeight: '800' },
+  noticeText: { color: Colors.subtext, fontSize: 12, lineHeight: 18 },
 });

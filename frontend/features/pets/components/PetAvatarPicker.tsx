@@ -2,16 +2,26 @@ import React from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppButton } from '../../../components/AppButton';
+import { RecordActionButton } from '../../../components/RecordActionButton';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 import { Colors } from '../../../constants/Colors';
 import { getMediaPermissionCopy, requestMediaPermission } from '../../../services/mediaPermissionService';
 
 type Props = {
   avatarUri: string;
+  avatarAttachmentId?: string;
+  userId?: string;
   onChange: (uri: string) => void;
+  onAttachmentChange: (attachmentId: string | undefined) => void;
 };
 
-export default function PetAvatarPicker({ avatarUri, onChange }: Props) {
+export default function PetAvatarPicker({
+  avatarUri,
+  avatarAttachmentId,
+  userId,
+  onChange,
+  onAttachmentChange,
+}: Props) {
   const chooseFromLibrary = async () => {
     try {
       const permission = await requestMediaPermission('library');
@@ -62,6 +72,17 @@ export default function PetAvatarPicker({ avatarUri, onChange }: Props) {
     <View style={styles.avatarSection}>
       {avatarUri ? (
         <Image source={{ uri: avatarUri }} style={styles.avatar} />
+      ) : avatarAttachmentId && userId ? (
+        <AuthenticatedPetAvatar
+          attachmentId={avatarAttachmentId}
+          userId={userId}
+          style={styles.avatar}
+          fallback={(
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Ionicons name="paw" size={42} color={Colors.primary} />
+            </View>
+          )}
+        />
       ) : (
         <View style={styles.avatarFallback}>
           <Ionicons name="paw" size={42} color={Colors.primary} />
@@ -78,14 +99,15 @@ export default function PetAvatarPicker({ avatarUri, onChange }: Props) {
             <Text style={styles.imageButtonText}>拍照</Text>
           </TouchableOpacity>
         </View>
-        {avatarUri ? (
-          <AppButton
-            title="移除圖片"
-            variant="danger"
-            fullWidth={false}
-            textStyle={styles.removeText}
+        {avatarUri || avatarAttachmentId ? (
+          <RecordActionButton
+            kind="delete"
+            label="移除圖片"
             style={styles.removeButton}
-            onPress={() => onChange('')}
+            onPress={() => {
+              onChange('');
+              onAttachmentChange(undefined);
+            }}
           />
         ) : null}
       </View>
@@ -139,11 +161,6 @@ const styles = StyleSheet.create({
   imageButtonText: { color: Colors.primary, fontSize: 12, fontWeight: '700' },
   removeButton: {
     alignSelf: 'flex-start',
-    minHeight: 44,
-    minWidth: 64,
-    justifyContent: 'center',
     marginTop: 4,
-    paddingHorizontal: 8,
   },
-  removeText: { color: Colors.danger, fontSize: 12, fontWeight: '700' },
 });

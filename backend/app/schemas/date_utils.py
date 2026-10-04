@@ -1,9 +1,11 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import TAIPEI
 from datetime import datetime, timezone
 from typing import Any
 
 def normalize_datetime(value: Any) -> Any:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, datetime):
+        result = value
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
         seconds = value / 1000 if abs(value) >= 100_000_000_000 else value
         result = datetime.fromtimestamp(seconds, timezone.utc)
     elif isinstance(value, str) and value.strip():

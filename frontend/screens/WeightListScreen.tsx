@@ -1,9 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：顯示全量體重摘要、期間篩選、折線趨勢與可管理的歷史紀錄。 */
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   RefreshControl,
-  SafeAreaView,
   FlatList,
   Text,
   TouchableOpacity,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppButton } from '../components/AppButton';
+import { RecordActionButton } from '../components/RecordActionButton';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
@@ -42,42 +42,50 @@ export default function WeightListScreen({ navigation, route }: Props) {
   const [items, setItems] = useState<WeightRecord[]>([]);
   const [summary, setSummary] = useState<WeightSummary>(EMPTY_WEIGHT_SUMMARY);
   const [period, setPeriod] = useState<WeightPeriod>(route.params?.focusRecordId ? 'all' : 7);
+  const [historyExpanded, setHistoryExpanded] = useState(Boolean(route.params?.focusRecordId));
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const requestId = useRef(0);
+  const hasLoadedRef = useRef(false);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const current = ++requestId.current;
-    if (!selectedPet || !session?.userId) {
-      setItems([]);
-      setSummary(EMPTY_WEIGHT_SUMMARY);
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-    try {
-      setError('');
-      const result = await service.getWeights(session.userId, selectedPet.id, signal);
-      if (current !== requestId.current) return;
-      setItems(result.records);
-      setSummary(result.summary);
-    } catch (requestError) {
-      if (current === requestId.current && !signal?.aborted)
-        setError((requestError as Error).message || '無法載入體重紀錄');
-    } finally {
-      if (current === requestId.current) {
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      const current = ++requestId.current;
+      if (!selectedPet || !session?.userId) {
+        setItems([]);
+        setSummary(EMPTY_WEIGHT_SUMMARY);
+        hasLoadedRef.current = true;
         setLoading(false);
         setRefreshing(false);
+        return;
       }
-    }
-  }, [selectedPet, session?.userId]);
+      try {
+        setError('');
+        const result = await service.getWeights(session.userId, selectedPet.id, signal);
+        if (current !== requestId.current) return;
+        setItems(result.records);
+        setSummary(result.summary);
+      } catch (requestError) {
+        if (current === requestId.current && !signal?.aborted)
+          setError((requestError as Error).message || '無法載入體重紀錄');
+      } finally {
+        if (current === requestId.current) {
+          hasLoadedRef.current = true;
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [selectedPet, session?.userId],
+  );
 
   useFocusEffect(
     useCallback(() => {
       const controller = new AbortController();
-      setLoading(true);
+      // Keep the list mounted when returning from edit so FlatList retains its scroll position.
+      if (!hasLoadedRef.current) setLoading(true);
       void load(controller.signal);
       return () => {
         controller.abort();
@@ -87,6 +95,7 @@ export default function WeightListScreen({ navigation, route }: Props) {
   );
 
   const filteredItems = useMemo(() => filterWeightsByPeriod(items, period), [items, period]);
+  const visibleHistory = historyExpanded ? filteredItems : filteredItems.slice(0, 3);
 
   const refresh = () => {
     setRefreshing(true);
@@ -129,9 +138,9 @@ export default function WeightListScreen({ navigation, route }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <FlatList
-        data={filteredItems}
+        data={visibleHistory}
         keyExtractor={(item) => item.id}
         removeClippedSubviews
         initialNumToRender={8}
@@ -141,15 +150,6 @@ export default function WeightListScreen({ navigation, route }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         ListHeaderComponent={
           <>
-            <AppButton
-              variant="primary"
-              style={styles.primary}
-              onPress={() => navigation.navigate('WeightForm', {})}
-              accessibilityLabel="更新體重"
-            >
-              <Ionicons name="add" size={20} color="#FFF" />
-              <Text style={styles.primaryText}>更新體重</Text>
-            </AppButton>
             <View style={styles.listContext}>
               <View style={styles.contextIcon}>
                 <Ionicons name="scale-outline" size={18} color={Colors.success} />
@@ -178,7 +178,29 @@ export default function WeightListScreen({ navigation, route }: Props) {
             </View>
             <Text style={styles.heading}>體重趨勢</Text>
             <WeightLineChart items={filteredItems} />
-            <Text style={styles.heading}>歷史紀錄</Text>
+            <Text style={styles.heading}>歷史紀錄（{filteredItems.length} 筆）</Text>
+            {filteredItems.length > 3 ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ expanded: historyExpanded }}
+                accessibilityLabel={
+                  historyExpanded
+                    ? '收合體重歷史紀錄至 3 筆'
+                    : `查看全部 ${filteredItems.length} 筆體重紀錄`
+                }
+                onPress={() => setHistoryExpanded((expanded) => !expanded)}
+                style={styles.historyToggle}
+              >
+                <Text style={styles.historyToggleText}>
+                  {historyExpanded ? '收合至 3 筆' : `查看全部 ${filteredItems.length} 筆`}
+                </Text>
+                <Ionicons
+                  name={historyExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={17}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+            ) : null}
             {route.params?.focusRecordId &&
               !items.some((item) => item.id === route.params?.focusRecordId) && (
                 <Text style={styles.sourceMissing}>來源體重紀錄可能已刪除或不屬於目前毛孩。</Text>
@@ -202,24 +224,23 @@ export default function WeightListScreen({ navigation, route }: Props) {
               <Text style={styles.notes}>{item.notes?.trim() || '無補充備註'}</Text>
             </View>
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.rowAction}
-                accessibilityRole="button"
+              <RecordActionButton
+                kind="edit"
+                label="編輯"
                 accessibilityLabel={`編輯體重 ${item.weightKg} 公斤`}
                 onPress={() => navigation.navigate('WeightForm', { record: item })}
                 disabled={Boolean(deletingId)}
-              >
-                <Text style={styles.link}>編輯</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={styles.rowAction}
-                accessibilityRole="button"
+              />
+              <RecordActionButton
+                kind="delete"
+                label={deletingId === item.id ? '刪除中…' : '刪除'}
                 accessibilityLabel={`刪除體重 ${item.weightKg} 公斤`}
                 onPress={() => remove(item)}
                 disabled={Boolean(deletingId)}
-              >
-                <Text style={styles.delete}>{deletingId === item.id ? '刪除中…' : '刪除'}</Text>
-              </TouchableOpacity>
+                busy={deletingId === item.id}
+                style={styles.rowAction}
+              />
             </View>
           </View>
         )}

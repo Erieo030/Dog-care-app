@@ -1,11 +1,12 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SoftButton, SoftEntrance } from '../../../components/SoftMotion';
 import { Colors } from '../../../constants/Colors';
 import type { HomeTheme } from '../../../constants/HomeThemes';
 import type { Pet } from '../../../types';
 import { calculatePetAge } from '../homeContent';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 
 type Props = {
   selectedPet: Pet;
@@ -31,10 +32,16 @@ export function HomePetHeader({ selectedPet, pets, theme, compact, onEdit, onOpe
         style={[styles.petSummary, compact && styles.petSummaryCompact]}
         onPress={onEdit}
       >
-        {selectedPet.avatarUrl ? (
-          <Image
-            source={{ uri: selectedPet.avatarUrl }}
+        {selectedPet.avatarAttachmentId ? (
+          <AuthenticatedPetAvatar
+            attachmentId={selectedPet.avatarAttachmentId}
+            userId={selectedPet.userId}
             style={[styles.avatarSmall, compact && styles.avatarCompact]}
+            fallback={(
+              <View style={[styles.avatarFallbackSmall, compact && styles.avatarCompact]}>
+                <Ionicons name="paw" size={21} color={Colors.primary} />
+              </View>
+            )}
           />
         ) : (
           <View style={[styles.avatarFallbackSmall, compact && styles.avatarCompact]}>
@@ -134,11 +141,13 @@ const styles = StyleSheet.create({
   petNameSmall: { fontSize: 17, fontWeight: '800', color: Colors.text },
   mutedSmall: { color: Colors.subtext, fontSize: 13, marginTop: 2 },
   editIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 15,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   switchButton: {
     flexDirection: 'row',

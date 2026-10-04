@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：依異常類型呈現快速選項，支援時間、嚴重程度、圖片與備註。 */
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/AppButton';
@@ -100,7 +101,7 @@ export default function CreateHealthEventScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

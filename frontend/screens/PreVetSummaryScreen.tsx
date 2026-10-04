@@ -1,11 +1,14 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert, SafeAreaView, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePet } from '../contexts/PetContext';
 import { Colors } from '../constants/Colors';
+import type { RootStackParamList } from '../navigation/types';
 import { getVetVisitBrief, VetBriefSection, VetVisitBrief } from '../services/aiService';
 import { DashboardWeightPoint } from '../types';
 import {
@@ -22,7 +25,6 @@ import {
 } from '../features/ai/pre-vet/components/PreVetBriefSections';
 import { preVetStyles as styles } from '../features/ai/pre-vet/preVetStyles';
 import { PreVetNarrativeCard } from '../features/ai/pre-vet/components/PreVetNarrativeCard';
-import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import {
   DEFAULT_PRE_VET_SECTIONS,
   PRE_VET_RANGES,
@@ -32,8 +34,9 @@ import {
 } from '../features/ai/pre-vet/preVetContent';
 import { buildPreVetShareMessage } from '../features/ai/pre-vet/preVetShare';
 
-export default function PreVetSummaryScreen() {
-  const bottomContentPadding = useTabContentBottomPadding();
+type Props = NativeStackScreenProps<RootStackParamList, 'VetVisitBrief'>;
+
+export default function PreVetSummaryScreen({ navigation }: Props) {
   const { session } = useAuth();
   const { selectedPet } = usePet();
   const [range, setRange] = useState<(typeof PRE_VET_RANGES)[number]>(7);
@@ -128,16 +131,25 @@ export default function PreVetSummaryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+      <View style={styles.pageHeader}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="返回 MEGO AI 對話"
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={23} color={Colors.text} />
+        </TouchableOpacity>
+        <View style={styles.pageHeaderCopy}>
           <Text style={styles.title}>就醫前摘要</Text>
           <Text style={styles.subtitle}>選擇要帶去看診的資料，整理成容易閱讀的重點。</Text>
         </View>
-
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.rangeRow}>
           {PRE_VET_RANGES.map((value) => (
             <TouchableOpacity
@@ -296,9 +308,18 @@ export default function PreVetSummaryScreen() {
               </TouchableOpacity>
               {narrativeToolsExpanded && (
                 <View style={styles.aiTool}>
-                  <Text style={styles.aiToolDescription}>
-                    按下後，MEGO AI 會依勾選項目與毛孩基本資料整理重點；健康異常、日常與體重依所選天數整理，其他已選項目則提供目前或最近的照護資訊。未勾選的紀錄不會提供給 AI。內容僅供溝通參考，不作診斷或用藥建議。
-                  </Text>
+                  <View style={styles.aiToolCopyGroup}>
+                    <Text style={styles.aiToolCopyTitle}>整理範圍</Text>
+                    <Text style={styles.aiToolDescription}>
+                      依勾選項目與毛孩基本資料整理重點。健康異常、日常與體重依所選天數整理；其他已選項目提供目前或最近的照護資訊。
+                    </Text>
+                  </View>
+                  <View style={styles.aiToolCopyGroup}>
+                    <Text style={styles.aiToolCopyTitle}>資料與用途</Text>
+                    <Text style={styles.aiToolDescription}>
+                      未勾選的紀錄不會提供給 AI。內容僅供看診溝通參考，不作診斷或用藥建議。
+                    </Text>
+                  </View>
                   <TouchableOpacity
                     accessibilityRole="button"
                     accessibilityLabel="產生看診溝通重點"

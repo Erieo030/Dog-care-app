@@ -3,7 +3,7 @@ from fastapi import HTTPException
 
 from app.timezone import now_taipei
 
-AI_DATA_CONSENT_VERSION = "2026-09-28-v1"
+AI_DATA_CONSENT_VERSION = "2026-10-04-v2"
 
 
 def _users_collection():

@@ -3,7 +3,7 @@ import os
 
 from fastapi import APIRouter, Query
 from app.schemas.chat import ChatRequest
-from app.services.ai_context_service import build_context
+from app.services.ai_context_service import build_context, ensure_owned_pet
 from app.services.health_monitor_service import monitor
 from app.schemas.ai import AIContext
 router=APIRouter(tags=["ai"] )
@@ -12,6 +12,11 @@ router=APIRouter(tags=["ai"] )
 def usage(user_id: str = Query(alias="userId")):
     from app.services.ai_usage_service import get_usage
     return {"success": True, "message": "AI 用量已取得", "data": get_usage(user_id)}
+
+@router.get("/ai/usage/history")
+def usage_history(user_id: str = Query(alias="userId"), days: int = Query(default=7, ge=1, le=30)):
+    from app.services.ai_usage_service import get_usage_history
+    return {"success": True, "message": "AI 使用紀錄已取得", "data": get_usage_history(user_id, days)}
 
 @router.get("/ai/data-consent")
 def ai_data_consent(user_id: str = Query(alias="userId")):
@@ -57,7 +62,11 @@ async def chat(pet_id: str, payload: ChatRequest, user_id: str = Query(alias="us
     if not message:
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail="message 不可為空白")
+    # A general question can skip build_context, so validate the path pet
+    # independently before any model/provider work is allowed to run.
+    ensure_owned_pet(pet_id, user_id)
     from app.services.ai.chat_service import ChatService, classify, general_context_data, general_context_groups
+    from app.services.ai.rag_context_service import retrieve_canine_knowledge
     from app.services.ai.factory import get_llm_provider
     provider = get_llm_provider()
     intent = classify(message)
@@ -75,7 +84,14 @@ async def chat(pet_id: str, payload: ChatRequest, user_id: str = Query(alias="us
             context_data = build_context(pet_id, user_id, payload.range)
             context = AIContext.model_validate(context_data)
             context_payload, context_sources = general_context_data(message, context, monitor(context_data))
-        answer = await ChatService(provider).answer_general(message, context_payload, context_sources)
+        knowledge_results = await retrieve_canine_knowledge(message) if getattr(provider, "available", False) else []
+        answer = await ChatService(provider).answer_general(
+            message,
+            context_payload,
+            context_sources,
+            knowledge_results,
+            [turn.model_dump() for turn in payload.history],
+        )
         answer["conversationId"] = payload.conversationId
         if usage is not None:
             from app.services.ai_usage_service import finalize

@@ -1,0 +1,127 @@
+{
+  "model_version": "efficientnet_b0-split_v1-p3v2-dbf9106a",
+  "architecture": "efficientnet_b0",
+  "task": "image classification (stool appearance, 4 classes)",
+  "class_order": [
+    "Diarrhea",
+    "Lack-of-Water",
+    "Normal",
+    "Soft-Poop"
+  ],
+  "input": {
+    "name": "images",
+    "shape": [
+      "batch",
+      3,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "layout": "NCHW, RGB"
+  },
+  "output": {
+    "name": "probs",
+    "shape": [
+      "batch",
+      4
+    ],
+    "meaning": "softmax probabilities in class_order"
+  },
+  "preprocess": {
+    "input_size": [
+      224,
+      224
+    ],
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "autocontrast": true,
+    "steps": [
+      "EXIF transpose",
+      "convert RGB",
+      "PIL ImageOps.autocontrast",
+      "resize to 224x224 BILINEAR (stretch, no crop)",
+      "float32 / 255",
+      "(x - mean) / std",
+      "HWC -> CHW, add batch dim"
+    ]
+  },
+  "low_confidence_threshold": 0.9,
+  "low_confidence_note": "max prob below threshold -> respond \"cannot determine, please retake or choose manually\"",
+  "metrics": {
+    "val": {
+      "accuracy": 0.9178082191780822,
+      "macro_f1": 0.9151208547083375
+    },
+    "test": {
+      "accuracy": 0.8706896551724138,
+      "macro_f1": 0.870205686630369,
+      "macro_f1_ci95": [
+        0.8027265652894562,
+        0.9274682832497814
+      ],
+      "n": 116
+    },
+    "deploy_pipeline_test": {
+      "deploy_test_accuracy": 0.853448275862069,
+      "deploy_test_macro_f1": 0.8529948795300283
+    },
+    "low_confidence": {
+      "low_conf_threshold": 0.9,
+      "target_accepted_acc_on_val": 0.95,
+      "val_coverage": 0.8949771689497716,
+      "val_accepted_acc": 0.9336734693877551,
+      "test_coverage": 0.8017241379310345,
+      "test_accepted_acc": 0.9247311827956989
+    }
+  },
+  "cpu_latency_colab_ms": {
+    "preprocess_ms": 5.71,
+    "onnx_1thread_p50_ms": 13.66,
+    "onnx_1thread_p95_ms": 15.3,
+    "onnx_allthreads_p50_ms": 13.75,
+    "onnx_allthreads_p95_ms": 15.12,
+    "onnx_MB": 16.04
+  },
+  "training": {
+    "data_version": "split_v1",
+    "seed": 0,
+    "config": "phase3_v2/experiment_config_used.json",
+    "epochs_run": 30,
+    "checkpoint_sha256": "ff8de55331a60569e778c5033cad9e8c824da6edbf2d680e8caf0cce0993486d",
+    "env": {
+      "python": "3.13.15",
+      "torch": "2.11.0+cu128",
+      "torchvision": "0.26.0+cu128",
+      "ultralytics": "8.4.170",
+      "sklearn": "1.6.1",
+      "cuda": "12.8",
+      "gpu": "Tesla T4"
+    }
+  },
+  "export": {
+    "onnx_opset": 17,
+    "onnx_sha256": "dbf9106aea4e2a5929f7778f3fc88c31d81b46cc163a8c7c8ab57d89e80e75da",
+    "torch": "2.11.0+cu130",
+    "onnx": "1.23.1",
+    "onnxruntime_verified": "1.30.0",
+    "parity": {
+      "max_abs_diff_torch_vs_onnx": 6.817281246185303e-06,
+      "agree_native_vs_onnx_plain": 1.0,
+      "max_prob_diff_native_vs_onnx_plain": 1.6570091247558594e-05,
+      "agree_native_vs_onnx_deploy": 0.9827586206896551,
+      "deploy_test_accuracy": 0.853448275862069,
+      "deploy_test_macro_f1": 0.8529948795300283,
+      "onnx_bytes": 16042653
+    }
+  },
+  "dataset": "Dog poo v1 (Roboflow 2024-09-16), CC BY 4.0, https://universe.roboflow.com/test-iznis/dog-poo",
+  "disclaimer": "Appearance classification consistent with dataset labels; NOT a veterinary diagnosis."
+}

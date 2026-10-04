@@ -135,7 +135,14 @@ export const vaccinationStyles = StyleSheet.create({
   detailLabel: { color: Colors.subtext, fontSize: 12 },
   detailValue: { color: Colors.text, lineHeight: 20, marginTop: 4 },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  actionButton: { flex: 1, marginVertical: 0 },
+  actionButton: {
+    flex: 1,
+    height: 44,
+    minHeight: 44,
+    marginVertical: 0,
+    paddingVertical: 0,
+    borderRadius: 12,
+  },
   secondary: {
     borderWidth: 1,
     borderColor: Colors.success,

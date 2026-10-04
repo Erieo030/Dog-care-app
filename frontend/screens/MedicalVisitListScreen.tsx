@@ -1,9 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：顯示目前毛孩依日期排序的就醫紀錄列表與完整畫面狀態。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   FlatList,
   Image,
   StyleSheet,
@@ -71,7 +71,7 @@ export default function MedicalVisitListScreen({ navigation }: Props) {
   );
   if (loading) return <ScreenState loading text="正在載入就醫紀錄…" />;
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.container}>
       <FlatList
         data={error ? [] : items}
         keyExtractor={(item) => item.id}

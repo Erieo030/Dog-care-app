@@ -101,7 +101,7 @@ export default function RegisterScreen({ onRegisterSuccess, onGoToLogin }: Regis
   ];
   return (
     <View style={styles.background}>
-      <SafeAreaView style={styles.root}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.root}

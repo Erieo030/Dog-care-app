@@ -1,15 +1,18 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../../constants/Colors';
 import type { ChatResponse } from '../../../services/aiService';
+import { AIChatMarkdown } from './AIChatMarkdown';
 
 export type AIChatMessage = {
   role: 'user' | 'assistant';
   text: string;
   result?: ChatResponse;
   sources?: ChatResponse['sources'];
+  knowledgeSources?: ChatResponse['knowledgeSources'];
+  contextTokens?: number;
 };
 
 const QUICK_PROMPTS = [
@@ -21,6 +24,8 @@ const QUICK_PROMPTS = [
 
 export function AIChatMessageBubble({ item }: { item: AIChatMessage }) {
   const isUser = item.role === 'user';
+  const [expanded, setExpanded] = useState(false);
+  const shouldCollapse = !isUser && (item.text.length > 180 || item.text.split('\n').length > 6);
   return (
     <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
       <View style={styles.bubbleHeader}>
@@ -38,13 +43,55 @@ export function AIChatMessageBubble({ item }: { item: AIChatMessage }) {
           {isUser ? '你' : 'MEGO AI'}
         </Text>
       </View>
-      <Text style={styles.bubbleText}>{item.text}</Text>
+      {isUser ? (
+        <Text style={styles.bubbleText}>{item.text}</Text>
+      ) : (
+        <AIChatMarkdown text={item.text} collapsed={shouldCollapse && !expanded} />
+      )}
+      {shouldCollapse && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? '收起 AI 完整回覆' : '展開 AI 完整回覆'}
+          accessibilityState={{ expanded }}
+          style={styles.expandAnswer}
+          onPress={() => setExpanded((value) => !value)}
+        >
+          <Text style={styles.expandAnswerText}>{expanded ? '收起' : '展開完整回覆'}</Text>
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={15}
+            color={Colors.primary}
+          />
+        </TouchableOpacity>
+      )}
       {!isUser && !!item.sources?.length && (
         <View style={styles.sources}>
           <Ionicons name="document-text-outline" size={13} color={Colors.success} />
           <Text style={styles.sourcesText}>
-            參考 MEGO 紀錄：{item.sources.map((source) => source.label).join('、')}
+            參考你的 MEGO 紀錄：{item.sources.map((source) => source.label).join('、')}
           </Text>
+        </View>
+      )}
+      {!isUser && !!item.knowledgeSources?.length && (
+        <View style={styles.knowledgeSources}>
+          <View style={styles.knowledgeHeading}>
+            <Ionicons name="book-outline" size={13} color={Colors.primary} />
+            <Text style={styles.knowledgeHeadingText}>參考資料</Text>
+          </View>
+          {item.knowledgeSources.map((source) => (
+            <TouchableOpacity
+              key={source.url}
+              accessibilityRole="link"
+              accessibilityLabel={`開啟參考資料：${source.title}`}
+              style={styles.knowledgeLink}
+              onPress={() => { void Linking.openURL(source.url).catch(() => undefined); }}
+            >
+              <Text style={styles.knowledgeLinkText}>
+                {source.title} · {source.section || source.documentTitle}
+              </Text>
+              <Ionicons name="open-outline" size={12} color={Colors.primary} />
+            </TouchableOpacity>
+          ))}
         </View>
       )}
     </View>
@@ -64,9 +111,14 @@ export function AIChatEmptyConversation({
         <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary} />
       </View>
       <Text style={styles.emptyConversationTitle}>從一個問題開始</Text>
-      <Text style={styles.intro}>
-        可以詢問毛孩照護紀錄，也可以問一般生活與知識問題。疾病診斷與用藥仍請交由獸醫判斷。
-      </Text>
+      <View style={styles.introGroup}>
+        <Text style={styles.introLabel}>可以詢問</Text>
+        <Text style={styles.intro}>毛孩照護紀錄、一般生活與知識問題</Text>
+      </View>
+      <View style={styles.safetyNote}>
+        <Ionicons name="heart-outline" size={16} color={Colors.success} />
+        <Text style={styles.safetyNoteText}>疾病診斷與用藥仍請交由獸醫判斷。</Text>
+      </View>
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel="準備看醫生"
@@ -145,7 +197,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyConversationTitle: { color: Colors.text, fontSize: 17, fontWeight: '800', marginBottom: -6 },
-  intro: { color: Colors.subtext, lineHeight: 21, fontSize: 14, textAlign: 'center' },
+  introGroup: { width: '100%', gap: 3 },
+  introLabel: { color: Colors.text, fontSize: 13, fontWeight: '800' },
+  intro: { color: Colors.subtext, lineHeight: 20, fontSize: 14 },
+  safetyNote: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+    padding: 10,
+    borderRadius: 13,
+    backgroundColor: Colors.successSoft,
+  },
+  safetyNoteText: { flex: 1, color: Colors.subtext, fontSize: 12, lineHeight: 18 },
   bubble: { maxWidth: '90%', paddingHorizontal: 16, paddingVertical: 13, borderRadius: 20 },
   userBubble: {
     alignSelf: 'flex-end',
@@ -164,6 +228,15 @@ const styles = StyleSheet.create({
   userBubbleLabel: { color: Colors.primary },
   assistantBubbleLabel: { color: Colors.success },
   bubbleText: { color: Colors.text, lineHeight: 23, fontSize: 16 },
+  expandAnswer: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 7,
+    paddingVertical: 3,
+  },
+  expandAnswerText: { color: Colors.primary, fontSize: 13, fontWeight: '800' },
   sources: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -174,4 +247,15 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   sourcesText: { flex: 1, color: Colors.success, fontSize: 12, lineHeight: 17 },
+  knowledgeSources: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    gap: 5,
+  },
+  knowledgeHeading: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  knowledgeHeadingText: { color: Colors.primary, fontSize: 12, fontWeight: '700' },
+  knowledgeLink: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  knowledgeLinkText: { color: Colors.primary, fontSize: 12, lineHeight: 17, textDecorationLine: 'underline' },
 });

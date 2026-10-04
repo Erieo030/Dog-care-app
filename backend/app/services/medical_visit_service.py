@@ -1,6 +1,5 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 """用途：處理具 ownership 的就醫 CRUD、附件、回診提醒與時間軸一致性。"""
-from datetime import datetime, timezone
 from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
 from bson.objectid import ObjectId

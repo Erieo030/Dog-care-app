@@ -11,7 +11,8 @@ from app.timezone import TAIPEI, now_taipei
 RANGES = {7, 15, 30, 90}
 
 
-def _owned(pet_id: str, user_id: str) -> dict:
+def ensure_owned_pet(pet_id: str, user_id: str) -> dict:
+    """Validate pet ownership for every AI route, including context-free chat."""
     try:
         object_id = ObjectId(pet_id)
     except InvalidId as exc:
@@ -20,6 +21,11 @@ def _owned(pet_id: str, user_id: str) -> dict:
     if not pet:
         raise HTTPException(404, "找不到毛孩資料")
     return pet
+
+
+def _owned(pet_id: str, user_id: str) -> dict:
+    # Keep the existing private alias for internal callers during service cleanup.
+    return ensure_owned_pet(pet_id, user_id)
 
 
 def _clean(value):

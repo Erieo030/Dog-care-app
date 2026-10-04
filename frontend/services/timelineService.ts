@@ -1,6 +1,6 @@
 /** 用途：讀取具 ownership、類型篩選與分頁的毛孩統一時間軸。 */
 import { apiData } from './api';
-import { TimelinePage, TimelineType } from '../types';
+import { TimelineCalendar, TimelineItem, TimelinePage, TimelineType } from '../types';
 export const getTimelinePage = async (
   userId: string,
   petId: string,
@@ -28,3 +28,46 @@ export const getTimelinePage = async (
 };
 export const getRecentTimeline = async (userId: string, petId: string, limit = 5) =>
   (await getTimelinePage(userId, petId, { limit, skip: 0 })).items;
+
+export const getTimelineCalendar = async (
+  userId: string,
+  petId: string,
+  options: { startAt: string; endAt: string; timeZone?: string; signal?: AbortSignal },
+): Promise<TimelineCalendar> => {
+  const query = new URLSearchParams({
+    userId,
+    startAt: options.startAt,
+    endAt: options.endAt,
+    timeZone: options.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Taipei',
+  });
+  const path = `/api/pets/${petId}/timeline/calendar?${query.toString()}`;
+  return options.signal
+    ? apiData<TimelineCalendar>(path, { signal: options.signal })
+    : apiData<TimelineCalendar>(path);
+};
+
+export const getTimelineDay = async (
+  userId: string,
+  petId: string,
+  date: Date,
+  signal?: AbortSignal,
+): Promise<TimelineItem[]> => {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const items: TimelineItem[] = [];
+  let skip = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const page = await getTimelinePage(userId, petId, {
+      limit: 50,
+      skip,
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      signal,
+    });
+    items.push(...page.items);
+    skip = page.nextSkip;
+    hasMore = page.hasMore;
+  }
+  return items;
+};

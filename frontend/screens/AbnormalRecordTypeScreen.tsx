@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：以大型快速選項讓使用者在數秒內選擇異常類型。 */
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -27,7 +28,7 @@ export default function AbnormalRecordTypeScreen({ navigation, route }: Props) {
   const bottomContentPadding = useTabContentBottomPadding();
   const quickEntry = route.params?.quickEntry === true;
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
         <View style={styles.intro}>
           <View style={styles.introIcon}>

@@ -24,6 +24,7 @@ import {
   validDewormingDate,
   type DewormingDraft,
 } from '../types';
+import { toTaipeiDateValue } from '../../../utils/taipeiDate';
 
 const fields = [
   ['productName', '產品／藥品名稱（必填）'],
@@ -118,36 +119,38 @@ export function DewormingFormScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      {fields.filter(([key]) => key !== 'notes').map(([key, label]) => {
-        const isDate = key === 'administeredAt' || key === 'nextDueAt';
-        if (isDate)
+      {fields
+        .filter(([key]) => key !== 'notes')
+        .map(([key, label]) => {
+          const isDate = key === 'administeredAt' || key === 'nextDueAt';
+          if (isDate)
+            return (
+              <DatePickerField
+                key={key}
+                label={label}
+                value={validDewormingDate(draft[key])}
+                onChange={(date) => setField(key, toTaipeiDateValue(date))}
+                minimumDate={
+                  key === 'nextDueAt'
+                    ? validDewormingDate(draft.administeredAt) || new Date()
+                    : undefined
+                }
+                maximumDate={key === 'administeredAt' ? new Date() : undefined}
+              />
+            );
           return (
-            <DatePickerField
-              key={key}
-              label={label}
-              value={validDewormingDate(draft[key])}
-              onChange={(date) => setField(key, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)}
-              minimumDate={
-                key === 'nextDueAt'
-                  ? validDewormingDate(draft.administeredAt) || new Date()
-                  : undefined
-              }
-              maximumDate={key === 'administeredAt' ? new Date() : undefined}
-            />
+            <View key={key}>
+              <Text style={styles.label}>{label}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={`請輸入${label.replace('（必填）', '')}`}
+                placeholderTextColor={Colors.subtext}
+                value={typeof draft[key] === 'string' ? draft[key] : ''}
+                onChangeText={(value) => setField(key, value)}
+              />
+            </View>
           );
-        return (
-          <View key={key}>
-            <Text style={styles.label}>{label}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={`請輸入${label.replace('（必填）', '')}`}
-              placeholderTextColor={Colors.subtext}
-              value={typeof draft[key] === 'string' ? draft[key] : ''}
-              onChangeText={(value) => setField(key, value)}
-            />
-          </View>
-        );
-      })}
+        })}
       <SupplementalNotesField
         value={String(draft.notes ?? '')}
         onChange={(value) => setField('notes', value)}

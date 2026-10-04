@@ -8,7 +8,7 @@ test('login sends credentials through the shared API layer', async () => {
     success: true,
     userId: 'u1',
     hasPet: false,
-    petData: null,
+    pets: [],
   });
   await login('demo@example.com', 'password');
   expect(apiData).toHaveBeenCalledWith('/api/login', {

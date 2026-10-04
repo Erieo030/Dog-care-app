@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/Colors';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 import {
   buildCalendarDays,
   getLocalDateKey,
@@ -11,7 +12,8 @@ import {
 
 type Props = {
   petName?: string;
-  avatarUrl?: string;
+  avatarAttachmentId?: string;
+  userId?: string;
   month: Date;
   selectedDate: Date;
   markedDays: Record<string, TimelineCategory[]>;
@@ -26,7 +28,8 @@ const MONTHS = Array.from({ length: 12 }, (_, index) => `${index + 1} 月`);
 
 export default function TimelineHeader({
   petName,
-  avatarUrl,
+  avatarAttachmentId,
+  userId,
   month,
   selectedDate,
   markedDays,
@@ -57,8 +60,17 @@ export default function TimelineHeader({
   return (
     <View>
       <View style={styles.petHeader}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.petAvatar} />
+        {avatarAttachmentId && userId ? (
+          <AuthenticatedPetAvatar
+            attachmentId={avatarAttachmentId}
+            userId={userId}
+            style={styles.petAvatar}
+            fallback={(
+              <View style={styles.petAvatarFallback}>
+                <Ionicons name="paw-outline" size={21} color={Colors.primary} />
+              </View>
+            )}
+          />
         ) : (
           <View style={styles.petAvatarFallback}>
             <Ionicons name="paw-outline" size={21} color={Colors.primary} />

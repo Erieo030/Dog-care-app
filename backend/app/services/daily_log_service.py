@@ -1,5 +1,4 @@
-from app.timezone import now_taipei, TAIPEI
-from datetime import datetime,timezone
+from app.timezone import now_taipei
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException

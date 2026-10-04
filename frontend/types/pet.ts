@@ -8,7 +8,7 @@ export interface Pet {
   breedType?: 'purebred' | 'mixed' | 'unknown';
   birthDate?: string;
   adoptionDate?: string;
-  avatarUrl?: string;
+  avatarAttachmentId?: string;
   latestWeightKg?: number;
   latestWeightAt?: string;
   neutered: boolean;
@@ -20,6 +20,8 @@ export interface Pet {
 }
 export type PetFormData = Omit<Pet, 'id' | 'userId' | 'species' | 'gender'> & {
   gender: 'male' | 'female' | '';
+  /** 僅表單暫存的裝置 URI；不會送進 Pet JSON 欄位。 */
+  avatarUri?: string;
 };
 /** 建立與編輯毛孩表單的相容型別；欄位名稱保留後端 API convention。 */
 export interface PetData {
@@ -30,6 +32,7 @@ export interface PetData {
   breed: string;
   breedType: 'purebred' | 'mixed' | 'unknown';
   avatarUri: string;
+  avatarAttachmentId?: string;
   birthday: string;
   arrivalDate: string;
   neutered: boolean;

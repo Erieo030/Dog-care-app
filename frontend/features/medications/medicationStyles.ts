@@ -153,11 +153,7 @@ export const medicationStyles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   reminderAction: {
-    minHeight: 44,
-    minWidth: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
+    minWidth: 76,
   },
   reminderHint: { color: '#6A5A50', flex: 1 },
   notice: { color: '#666', marginTop: 14 },
@@ -194,5 +190,12 @@ export const medicationStyles = StyleSheet.create({
   detailValue: { color: Colors.text, fontSize: 15, fontWeight: '600', flex: 1, textAlign: 'right' },
   detailValueMultiline: { lineHeight: 21 },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  actionButton: { flex: 1, marginVertical: 0 },
+  actionButton: {
+    flex: 1,
+    height: 44,
+    minHeight: 44,
+    marginVertical: 0,
+    paddingVertical: 0,
+    borderRadius: 12,
+  },
 });

@@ -50,7 +50,6 @@ def _session_payload(user_id: str, email: str) -> dict:
         "userId": user_id,
         "email": email,
         "hasPet": bool(pets),
-        "petData": pets[0] if pets else None,
         "pets": pets,
         "accessToken": access_token,
         "refreshToken": refresh_token,
@@ -72,7 +71,6 @@ def refresh_user_session(refresh_token: str) -> dict:
         "userId": user_id,
         "email": str(user["email"]),
         "hasPet": bool(pets),
-        "petData": pets[0] if pets else None,
         "pets": pets,
         "accessToken": access_token,
         "refreshToken": next_refresh_token,
@@ -92,15 +90,12 @@ def register_user(data: RegisterRequest) -> dict:
 
 
 def login_user(data: LoginRequest) -> dict:
-    """驗證帳密並回傳全部毛孩；petData 保留為第一隻毛孩以相容舊前端。"""
+    """驗證帳密並回傳全部毛孩。"""
     user = db.users.find_one({"email": data.email})
     if not user:
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
     password_hash = user.get("passwordHash")
-    valid_password = _verify_password(data.password, password_hash) if password_hash else hmac.compare_digest(str(user.get("password", "")), data.password)
-    if not valid_password:
+    if not password_hash or not _verify_password(data.password, password_hash):
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
-    if not password_hash:
-        db.users.update_one({"_id": user["_id"]}, {"$set": {"passwordHash": _hash_password(data.password)}, "$unset": {"password": ""}})
     user_id = str(user["_id"])
     return _session_payload(user_id, data.email)

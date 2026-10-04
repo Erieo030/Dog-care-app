@@ -9,22 +9,18 @@ type Props = {
   item: Reminder;
   focused: boolean;
   busyId: string | null;
-  onEdit: () => void;
   onComplete: () => void;
   onSnooze: () => void;
-  onSkip: () => void;
-  onRemove: () => void;
+  onMore: () => void;
 };
 
 export default function ReminderListCard({
   item,
   focused,
   busyId,
-  onEdit,
   onComplete,
   onSnooze,
-  onSkip,
-  onRemove,
+  onMore,
 }: Props) {
   const active = item.status === 'pending' || item.status === 'snoozed';
   const busy = busyId !== null;
@@ -55,20 +51,11 @@ export default function ReminderListCard({
       <View style={styles.row}>
         {active ? (
           <>
-            {item.sourceType !== 'medical_visit' ? (
-              <Action label="編輯" disabled={busy} onPress={onEdit} />
-            ) : null}
-            <Action label="完成" disabled={busy} onPress={onComplete} />
+            <Action label="完成" disabled={busy} onPress={onComplete} primary />
             <Action label="延後" disabled={busy} onPress={onSnooze} />
-            <Action label="略過" disabled={busy} onPress={onSkip} />
           </>
         ) : null}
-        <Action
-          label={busyId === item.id ? '處理中…' : '刪除'}
-          disabled={busy}
-          danger
-          onPress={onRemove}
-        />
+        <Action label="更多" disabled={busy} onPress={onMore} />
       </View>
     </View>
   );
@@ -77,22 +64,22 @@ export default function ReminderListCard({
 function Action({
   label,
   onPress,
-  danger = false,
+  primary = false,
   disabled = false,
 }: {
   label: string;
   onPress: () => void;
-  danger?: boolean;
+  primary?: boolean;
   disabled?: boolean;
 }) {
   return (
     <AppButton
       title={label}
-      variant={danger ? 'danger' : 'secondary'}
+      variant={primary ? 'primary' : 'secondary'}
       fullWidth={false}
       disabled={disabled}
       busy={disabled}
-      style={[danger ? styles.dangerAction : styles.action, disabled && styles.disabled]}
+      style={[styles.action, disabled && styles.disabled]}
       onPress={onPress}
     />
   );
@@ -133,15 +120,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 10,
   },
-  dangerAction: {
-    minHeight: 44,
-    minWidth: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
   actionText: { color: Colors.text, fontWeight: '700' },
-  danger: { color: '#B34A42' },
   disabled: { opacity: 0.5 },
 });

@@ -19,6 +19,7 @@ import { createVaccination, updateVaccination } from '../../../services/vaccinat
 import type { Vaccination } from '../../../types';
 import { vaccinationStyles as styles } from '../vaccinationStyles';
 import { createBlankVaccinationDraft, validVaccinationDate, type VaccinationDraft } from '../types';
+import { toTaipeiDateValue } from '../../../utils/taipeiDate';
 const fields = [
   ['vaccineName', '疫苗名稱（必填）'],
   ['administeredAt', '接種日期（必填）'],
@@ -96,36 +97,38 @@ export function VaccinationFormScreen() {
           <Text style={styles.formHint}>保留接種日期與下次安排，日後更容易回看。</Text>
         </View>
       </View>
-      {fields.filter(([key]) => key !== 'notes').map(([key, label]) => {
-        const isDate = key === 'administeredAt' || key === 'nextDueAt';
-        if (isDate)
+      {fields
+        .filter(([key]) => key !== 'notes')
+        .map(([key, label]) => {
+          const isDate = key === 'administeredAt' || key === 'nextDueAt';
+          if (isDate)
+            return (
+              <DatePickerField
+                key={`${key}-${String(draft[key])}`}
+                label={label}
+                value={validVaccinationDate(draft[key])}
+                onChange={(date) => setField(key, toTaipeiDateValue(date))}
+                minimumDate={
+                  key === 'nextDueAt'
+                    ? validVaccinationDate(draft.administeredAt) || new Date()
+                    : undefined
+                }
+                maximumDate={key === 'administeredAt' ? new Date() : undefined}
+              />
+            );
           return (
-            <DatePickerField
-              key={`${key}-${String(draft[key])}`}
-              label={label}
-              value={validVaccinationDate(draft[key])}
-              onChange={(date) => setField(key, `${date.toISOString().slice(0, 10)}T12:00:00.000Z`)}
-              minimumDate={
-                key === 'nextDueAt'
-                  ? validVaccinationDate(draft.administeredAt) || new Date()
-                  : undefined
-              }
-              maximumDate={key === 'administeredAt' ? new Date() : undefined}
-            />
+            <View key={key}>
+              <Text style={styles.label}>{label}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={`請輸入${label.replace('（必填）', '')}`}
+                placeholderTextColor={Colors.subtext}
+                value={typeof draft[key] === 'string' ? draft[key] : ''}
+                onChangeText={(value) => setField(key, value)}
+              />
+            </View>
           );
-        return (
-          <View key={key}>
-            <Text style={styles.label}>{label}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={`請輸入${label.replace('（必填）', '')}`}
-              placeholderTextColor={Colors.subtext}
-              value={typeof draft[key] === 'string' ? draft[key] : ''}
-              onChangeText={(value) => setField(key, value)}
-            />
-          </View>
-        );
-      })}
+        })}
       <SupplementalNotesField
         value={String(draft.notes ?? '')}
         onChange={(value) => setField('notes', value)}

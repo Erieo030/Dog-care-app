@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { RecordActionButton } from './RecordActionButton';
 import { Attachment, AttachmentSourceType } from '../types';
 import { getValidAccessToken } from '../services/api';
 import {
@@ -144,13 +145,15 @@ export default function AttachmentPicker({
                 onError={() => setFailed((x) => ({ ...x, [item.id]: true }))}
               />
             )}
-            <TouchableOpacity
+            <RecordActionButton
+              kind="delete"
+              label="移除"
+              iconOnly
+              accessibilityLabel="移除附件"
               disabled={busy || disabled}
               style={s.remove}
               onPress={() => remove(item)}
-            >
-              <Text style={s.removeText}>移除</Text>
-            </TouchableOpacity>
+            />
           </View>
         ))}
       </ScrollView>
@@ -193,14 +196,10 @@ const s = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-    minWidth: 56,
-    minHeight: 44,
-    paddingHorizontal: 8,
-    borderBottomLeftRadius: 14,
-    borderTopRightRadius: 12,
-    backgroundColor: '#0009',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    minWidth: 40,
+    minHeight: 40,
+    borderRadius: 12,
   },
-  removeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });

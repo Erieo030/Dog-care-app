@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Alert, Image, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../../components/AppButton';
@@ -32,6 +32,7 @@ import {
   VisibilityKey,
 } from '../identityFields';
 import { useTabContentBottomPadding } from '../../../components/navigation/useTabContentBottomPadding';
+import AuthenticatedPetAvatar from '../../../components/AuthenticatedPetAvatar';
 
 const BASE = (
   process.env.EXPO_PUBLIC_LOST_PET_BASE_URL ||
@@ -188,8 +189,13 @@ export function LostPetSettingsScreen({ navigation }: Props) {
       />
       <View style={styles.petCard}>
         <View style={styles.petAvatar}>
-          {selectedPet?.avatarUrl ? (
-            <Image source={{ uri: selectedPet.avatarUrl }} style={styles.petAvatarImage} />
+          {selectedPet?.avatarAttachmentId && userId ? (
+            <AuthenticatedPetAvatar
+              attachmentId={selectedPet.avatarAttachmentId}
+              userId={userId}
+              style={styles.petAvatarImage}
+              fallback={<Ionicons name="paw" size={28} color={Colors.primary} />}
+            />
           ) : (
             <Ionicons name="paw" size={28} color={Colors.primary} />
           )}
@@ -240,11 +246,17 @@ export function LostPetSettingsScreen({ navigation }: Props) {
         ))}
       </View>
       <Text style={styles.sectionTitle}>毛孩資料的公開範圍</Text>
-      <Text style={styles.note}>關閉的項目仍會保留在 App，只是不會出現在公開掃描頁。</Text>
+      <Text style={styles.note}>
+        <Text style={styles.noteLead}>關閉項目不會公開</Text>
+        {'\n'}資料仍會保留在 App，只是不會出現在公開掃描頁。
+      </Text>
       <View style={styles.optionSurface}>
         {toggleOptions(petVisibilityFields)}
       </View>
       <Text style={styles.sectionTitle}>聯絡資料的公開範圍</Text>
+      <Text style={styles.note}>
+        掃描者只會看到已開啟且已填寫的聯絡方式；至少公開一種，對方才能聯絡你。
+      </Text>
       <View style={styles.optionSurface}>
         {toggleOptions(contactVisibilityFields)}
       </View>
@@ -253,8 +265,13 @@ export function LostPetSettingsScreen({ navigation }: Props) {
         <Text style={styles.previewSubheading}>以下內容會依目前的公開設定即時更新</Text>
         <View style={styles.previewPetRow}>
           <View style={styles.previewAvatar}>
-            {data.showAvatar && selectedPet?.avatarUrl ? (
-              <Image source={{ uri: selectedPet.avatarUrl }} style={styles.petAvatarImage} />
+            {data.showAvatar && selectedPet?.avatarAttachmentId && userId ? (
+              <AuthenticatedPetAvatar
+                attachmentId={selectedPet.avatarAttachmentId}
+                userId={userId}
+                style={styles.petAvatarImage}
+                fallback={<Text style={styles.previewAvatarLabel}>MEGO</Text>}
+              />
             ) : (
               <Text style={styles.previewAvatarLabel}>MEGO</Text>
             )}

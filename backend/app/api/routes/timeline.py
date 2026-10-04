@@ -2,9 +2,24 @@
 from datetime import datetime
 from typing import Literal
 from fastapi import APIRouter, Query
-from app.services.timeline_service import list_timeline
+from app.services.timeline_service import get_timeline_calendar, list_timeline
 
 router = APIRouter(tags=["timeline"])
+
+
+@router.get("/pets/{pet_id}/timeline/calendar")
+def get_timeline_calendar_summary(
+    pet_id: str,
+    user_id: str = Query(alias="userId"),
+    start_at: datetime = Query(alias="startAt"),
+    end_at: datetime = Query(alias="endAt"),
+    timezone_name: str = Query(default="Asia/Taipei", alias="timeZone", max_length=64),
+):
+    return {
+        "success": True,
+        "message": "取得月曆標記成功",
+        "data": get_timeline_calendar(pet_id, user_id, start_at, end_at, timezone_name),
+    }
 
 @router.get("/pets/{pet_id}/timeline")
 def get_timeline(

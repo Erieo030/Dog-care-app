@@ -6,11 +6,13 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import { useAuth } from './AuthContext';
 import * as petService from '../services/petService';
+import { deleteAttachment, uploadPetAvatarImage } from '../services/attachmentService';
 import { Pet, PetFormData } from '../types';
 
 interface PetContextValue {
@@ -35,30 +37,42 @@ export function PetProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadRequestId = useRef(0);
 
   useEffect(() => {
+    // Invalidate refreshes before replacing one account's pet list with another's.
+    loadRequestId.current += 1;
     const nextPets = session?.pets ?? [];
     setPets(nextPets);
     setSelectedPetId(nextPets[0]?.id ?? null);
+    setIsLoading(false);
+    setIsRefreshing(false);
+    setError(null);
   }, [session]);
 
   const loadPets = useCallback(
     async (refreshing = false) => {
       if (!session?.userId) return;
+      const requestId = ++loadRequestId.current;
+      const userId = session.userId;
       if (refreshing) setIsRefreshing(true);
       else setIsLoading(true);
       setError(null);
       try {
-        const result = await petService.listPets(session.userId);
+        const result = await petService.listPets(userId);
+        if (requestId !== loadRequestId.current) return;
         setPets(result);
         setSelectedPetId((current) =>
           result.some((pet) => pet.id === current) ? current : (result[0]?.id ?? null),
         );
       } catch (requestError) {
-        setError((requestError as Error).message || '無法載入毛孩資料');
+        if (requestId === loadRequestId.current)
+          setError((requestError as Error).message || '無法載入毛孩資料');
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (requestId === loadRequestId.current) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     },
     [session?.userId],
@@ -77,14 +91,47 @@ export function PetProvider({ children }: PropsWithChildren) {
       refreshPets: () => loadPets(true),
       createPet: async (data) => {
         if (!session?.userId) throw new Error('找不到登入使用者');
-        const pet = await petService.createPet(session.userId, data);
+        let pet = await petService.createPet(session.userId, {
+          ...data,
+          avatarUri: '',
+          avatarAttachmentId: undefined,
+        });
+        if (data.avatarUri) {
+          try {
+            const avatar = await uploadPetAvatarImage(session.userId, pet.id, data.avatarUri);
+            pet = await petService.updatePet(session.userId, pet.id, {
+              ...data,
+              avatarUri: '',
+              avatarAttachmentId: avatar.id,
+            });
+          } catch (error) {
+            await petService.deletePet(session.userId, pet.id).catch(() => undefined);
+            throw new Error(`毛孩照片上傳失敗，尚未完成新增：${(error as Error).message}`);
+          }
+        }
         setPets((current) => [...current, pet]);
         setSelectedPetId(pet.id);
         return pet;
       },
       updateSelectedPet: async (data) => {
         if (!session?.userId || !selectedPet) return;
-        const updated = await petService.updatePet(session.userId, selectedPet.id, data);
+        let avatarAttachmentId = data.avatarAttachmentId;
+        let uploadedAvatar: Awaited<ReturnType<typeof uploadPetAvatarImage>> | null = null;
+        if (data.avatarUri) {
+          uploadedAvatar = await uploadPetAvatarImage(session.userId, selectedPet.id, data.avatarUri);
+          avatarAttachmentId = uploadedAvatar.id;
+        }
+        let updated: Pet;
+        try {
+          updated = await petService.updatePet(session.userId, selectedPet.id, {
+            ...data,
+            avatarUri: '',
+            avatarAttachmentId,
+          });
+        } catch (error) {
+          if (uploadedAvatar) await deleteAttachment(session.userId, uploadedAvatar).catch(() => undefined);
+          throw error;
+        }
         setPets((current) => current.map((pet) => (pet.id === updated.id ? updated : pet)));
       },
       deleteSelectedPet: async () => {

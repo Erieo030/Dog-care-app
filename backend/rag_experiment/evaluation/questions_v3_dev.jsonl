@@ -1,0 +1,10 @@
+{"id":"v3-med-dev-1","split":"dev","question":"魚油不是藥，那可以不用問獸醫就先餵嗎？","expected_doc":"care-medication-safety","expected_section":"魚油與營養補充品"}
+{"id":"v3-med-dev-2","split":"dev","question":"保健粉、維他命這類也要先問過獸醫？","expected_doc":"care-medication-safety","expected_section":"魚油與營養補充品"}
+{"id":"v3-med-dev-3","split":"dev","question":"狗狗皮膚癢，可以塗我自己的藥膏嗎？","expected_doc":"care-medication-safety","expected_section":"不自行使用人用藥"}
+{"id":"v3-vet-dev-1","split":"dev","question":"狗狗吐了兩次，怎麼知道要不要直接去急診？","expected_doc":"care-vet-contact-signs","expected_section":"需要及早聯絡獸醫的狀況"}
+{"id":"v3-vet-dev-2","split":"dev","question":"牠今天不太吃但精神正常，我需要什麼時候問醫生？","expected_doc":"care-vet-contact-signs","expected_section":"需要及早聯絡獸醫的狀況"}
+{"id":"v3-vet-dev-3","split":"dev","question":"吐了好幾次還變得很沒力，現在先觀察嗎？","expected_doc":"care-vet-contact-signs","expected_section":"需要及早聯絡獸醫的狀況"}
+{"id":"v3-vet-dev-4","split":"dev","question":"牙齦發白又站不穩，要等一般門診嗎？","expected_doc":"care-vet-contact-signs","expected_section":"需要立即求助的警訊"}
+{"id":"v3-vet-dev-5","split":"dev","question":"便便像黑色柏油，這是可以先記錄觀察的狀況嗎？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v3-vet-dev-6","split":"dev","question":"拉肚子超過一天，而且不太有精神，怎麼處理比較好？","expected_doc":"care-vet-contact-signs","expected_section":"需要及早聯絡獸醫的狀況"}
+{"id":"v3-vet-dev-7","split":"dev","question":"狗狗突然呼吸很吃力，我要先找哪裡協助？","expected_doc":"care-vet-contact-signs","expected_section":"需要立即求助的警訊"}

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AIUsage, ChatSource } from './aiService';
+import { AIUsage, ChatKnowledgeSource, ChatSource } from './aiService';
 
 const key = (userId: string, petId: string) => `mego:ai-session:${userId}:${petId}`;
 const historyKey = (userId: string, petId: string) => `mego:ai-sessions:${userId}:${petId}`;
@@ -8,7 +8,13 @@ const createSessionId = () => {
   sessionIdSequence = (sessionIdSequence + 1) % Number.MAX_SAFE_INTEGER;
   return `session-${Date.now()}-${sessionIdSequence}`;
 };
-export type StoredMessage = { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] };
+export type StoredMessage = {
+  role: 'user' | 'assistant';
+  text: string;
+  sources?: ChatSource[];
+  knowledgeSources?: ChatKnowledgeSource[];
+  contextTokens?: number;
+};
 export type AISession = { sessionId?: string; messages?: StoredMessage[]; usage?: AIUsage };
 
 export async function loadAISession(userId: string, petId: string): Promise<AISession> {
@@ -39,6 +45,13 @@ export async function loadAISessions(userId: string, petId: string): Promise<AIS
 export async function deleteAISession(userId: string, petId: string, sessionId: string) {
   const sessions = await loadAISessions(userId, petId);
   await AsyncStorage.setItem(historyKey(userId, petId), JSON.stringify(sessions.filter((item) => item.id !== sessionId)));
+}
+
+export async function clearAccountAISessions(userId: string) {
+  const prefixes = [`mego:ai-session:${userId}:`, `mego:ai-sessions:${userId}:`];
+  const keys = await AsyncStorage.getAllKeys();
+  const ownedKeys = keys.filter((storedKey) => prefixes.some((prefix) => storedKey.startsWith(prefix)));
+  if (ownedKeys.length) await AsyncStorage.multiRemove(ownedKeys);
 }
 
 export async function activateAISession(userId: string, petId: string, session: AISessionRecord) {

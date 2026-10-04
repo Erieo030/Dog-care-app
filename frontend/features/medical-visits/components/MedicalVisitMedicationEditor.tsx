@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { AppButton } from '../../../components/AppButton';
+import { RecordActionButton } from '../../../components/RecordActionButton';
 import SupplementalNotesField from '../../../components/SupplementalNotesField';
 import DatePickerField from '../../../components/DatePickerField';
 import { Colors } from '../../../constants/Colors';
@@ -35,10 +35,9 @@ export default function MedicalVisitMedicationEditor({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>藥物 {index + 1}</Text>
-        <AppButton
-          title="刪除"
-          variant="danger"
-          fullWidth={false}
+        <RecordActionButton
+          kind="delete"
+          label="刪除"
           style={styles.removeButton}
           onPress={onRemove}
         />
@@ -115,11 +114,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { color: Colors.text, fontWeight: '800' },
   removeButton: {
-    minHeight: 44,
-    minWidth: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
   },
   label: {
     color: Colors.text,

@@ -1,11 +1,13 @@
 /** 用途：首頁照護入口、今日待辦與近期健康觀察。 */
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../constants/Colors';
+import { RECORD_CATEGORY_COLORS } from '../constants/RecordCategoryColors';
 import { HOME_THEMES } from '../constants/HomeThemes';
 import { HomeBackgroundScene } from '../components/home/HomeBackgroundScene';
 import { SoftButton, SoftEntrance } from '../components/SoftMotion';
@@ -183,7 +185,12 @@ export default function HomeScreen() {
             onEdit={() => navigation.navigate('EditPet')}
             onOpenPetSelector={() => setPetSelectorVisible(true)}
           />
-          <Text style={[s.shortcutHeading, compact && s.compactHeading]}>今天想做什麼？</Text>
+          <HomeSectionHeading
+            title="今天想做什麼？"
+            icon="sunny-outline"
+            color={RECORD_CATEGORY_COLORS.daily}
+            compact={compact}
+          />
           <View style={[s.shortcutRow, compact && s.compactGap]}>
             {DAILY_ACTIONS.map(([icon, label, route]) => (
               <HomeAction
@@ -214,16 +221,13 @@ export default function HomeScreen() {
               navigation.getParent()?.navigate('Timeline', { screen: 'HealthObservation' })
             }
           />
-          <Text
-            style={[
-              s.shortcutHeading,
-              compact && s.compactHeading,
-              s.managementHead,
-              compact && s.compactGap,
-            ]}
-          >
-            健康管理
-          </Text>
+          <HomeSectionHeading
+            title="健康管理"
+            icon="heart-circle-outline"
+            color={RECORD_CATEGORY_COLORS.care}
+            compact={compact}
+            variant="care"
+          />
           <View style={s.managementRow}>
             {CARE_ACTIONS.map(([icon, label, route]) => (
               <HomeAction
@@ -251,11 +255,56 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+function HomeSectionHeading({
+  title,
+  icon,
+  color,
+  compact,
+  variant = 'daily',
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  compact: boolean;
+  variant?: 'daily' | 'care';
+}) {
+  return (
+    <View
+      style={[
+        s.sectionHeading,
+        variant === 'care' && s.managementHead,
+        compact && variant === 'care' && s.compactGap,
+      ]}
+    >
+      <View style={s.sectionHeadingRow}>
+        <View style={[s.sectionHeadingIcon, { borderColor: color }]}>
+          <Ionicons name={icon} size={18} color={color} />
+        </View>
+        <Text style={[s.shortcutHeading, compact && s.compactHeading]}>{title}</Text>
+      </View>
+      <View style={[s.headingAccent, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { flex: 1, paddingHorizontal: 16, zIndex: 1 },
   flex: { flex: 1, minWidth: 0 },
   mutedSmall: { color: Colors.subtext, fontSize: 12, marginTop: 3 },
+  sectionHeading: { alignSelf: 'flex-start', marginBottom: 1 },
+  sectionHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionHeadingIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 11,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,249,242,0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headingAccent: { width: 22, height: 3, borderRadius: 2, marginLeft: 38, marginTop: 1 },
   shortcutHeading: {
     color: Colors.text,
     fontSize: 20,
@@ -273,7 +322,7 @@ const s = StyleSheet.create({
     marginTop: 10,
     marginBottom: 5,
   },
-  managementHead: { marginTop: 17, marginBottom: 1 },
+  managementHead: { marginTop: 17 },
   managementRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

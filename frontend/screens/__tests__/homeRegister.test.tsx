@@ -38,6 +38,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@react-navigation/bottom-tabs', () => ({ useBottomTabBarHeight: () => 72 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
+jest.mock('../../components/AuthenticatedPetAvatar', () => 'AuthenticatedPetAvatar');
 jest.mock('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
 jest.mock('../../components/SoftMotion', () => ({
   SoftButton: 'SoftButton',

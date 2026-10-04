@@ -1,4 +1,4 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 """用途：處理具 ownership 的提醒 CRUD、完成／略過冪等、延後與重複提醒。"""
 from calendar import monthrange
 from datetime import datetime, timedelta, timezone

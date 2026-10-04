@@ -1,10 +1,12 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：顯示就醫完整內容，提供編輯、連動刪除與規則式文字分享。 */
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/AppButton';
+import { RecordActionButton } from '../components/RecordActionButton';
 import { Colors } from '../constants/Colors';
 import { useTabContentBottomPadding } from '../components/navigation/useTabContentBottomPadding';
 import AttachmentGallery from '../components/AttachmentGallery';
@@ -34,29 +36,32 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [sharePreparing, setSharePreparing] = useState(false);
   const requestId = useRef(0);
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const current = ++requestId.current;
-    setItem(null);
-    if (!session?.userId || !selectedPet) {
-      setError('找不到目前選取的毛孩');
-      setLoading(false);
-      return;
-    }
-    try {
-      setError('');
-      const result = await service.getMedicalVisit(session.userId, route.params.visitId, signal);
-      if (current !== requestId.current) return;
-      if (result.petId !== selectedPet.id) {
-        setError('此紀錄不屬於目前選取的毛孩');
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      const current = ++requestId.current;
+      setItem(null);
+      if (!session?.userId || !selectedPet) {
+        setError('找不到目前選取的毛孩');
+        setLoading(false);
         return;
       }
-      setItem(result);
-    } catch (e) {
-      if (current === requestId.current) setError((e as Error).message || '無法載入就醫紀錄');
-    } finally {
-      if (current === requestId.current) setLoading(false);
-    }
-  }, [route.params.visitId, selectedPet, session?.userId]);
+      try {
+        setError('');
+        const result = await service.getMedicalVisit(session.userId, route.params.visitId, signal);
+        if (current !== requestId.current) return;
+        if (result.petId !== selectedPet.id) {
+          setError('此紀錄不屬於目前選取的毛孩');
+          return;
+        }
+        setItem(result);
+      } catch (e) {
+        if (current === requestId.current) setError((e as Error).message || '無法載入就醫紀錄');
+      } finally {
+        if (current === requestId.current) setLoading(false);
+      }
+    },
+    [route.params.visitId, selectedPet, session?.userId],
+  );
   useFocusEffect(
     useCallback(() => {
       const controller = new AbortController();
@@ -121,7 +126,7 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
     );
   const rows = buildMedicalVisitDetailRows(item);
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.container}>
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottomContentPadding }]}>
         <View style={s.detailHero}>
           <View style={s.detailHeroIcon}>
@@ -139,13 +144,12 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
         <View style={s.actions}>
-          <AppButton
-            title="編輯"
-            variant="primary"
-            fullWidth={false}
+          <RecordActionButton
+            kind="edit"
+            label="編輯"
             disabled={deleting || sharePreparing}
             busy={deleting || sharePreparing}
-            style={s.edit}
+            style={s.actionButton}
             onPress={() => navigation.navigate('MedicalVisitForm', { visit: item })}
           />
           <AppButton
@@ -157,16 +161,15 @@ export default function MedicalVisitDetailScreen({ route, navigation }: Props) {
             style={s.share}
             onPress={share}
           />
-          <AppButton
-            title={deleting ? '刪除中…' : '刪除'}
-            variant="danger"
-            fullWidth={false}
-            disabled={deleting || sharePreparing}
-            busy={deleting}
-            style={s.delete}
-            onPress={remove}
-          />
         </View>
+        <RecordActionButton
+          kind="delete"
+          label={deleting ? '刪除中…' : '刪除就醫紀錄'}
+          disabled={deleting || sharePreparing}
+          busy={deleting}
+          style={s.deleteAction}
+          onPress={remove}
+        />
         <MedicalVisitDetailRows rows={rows} />
         <Text style={s.heading}>藥物</Text>
         <MedicalVisitMedicationCards medications={item.medications ?? []} />
@@ -193,34 +196,23 @@ const s = StyleSheet.create({
   detailEyebrow: { color: Colors.primary, fontSize: 13, fontWeight: '800', marginBottom: 2 },
   detailTitle: { color: Colors.text, fontSize: 24, fontWeight: '800' },
   detailHint: { color: Colors.subtext, fontSize: 13, lineHeight: 19, marginTop: 4 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  edit: {
+  actions: { flexDirection: 'row', gap: 10, marginBottom: 4 },
+  actionButton: {
     flex: 1,
-    minWidth: 80,
-    backgroundColor: Colors.primary,
-    padding: 13,
-    borderRadius: 18,
-    alignItems: 'center',
+    minWidth: 0,
   },
-  editText: { color: '#FFF', fontWeight: '800' },
   share: {
     flex: 1,
-    minWidth: 100,
+    minWidth: 0,
+    minHeight: 44,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.primary,
-    padding: 13,
-    borderRadius: 14,
+    borderColor: Colors.border,
+    padding: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
   shareText: { color: Colors.primary, fontWeight: '800' },
-  delete: {
-    minHeight: 44,
-    minWidth: 72,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteText: { color: '#C34D4D', fontWeight: '800' },
+  deleteAction: { alignSelf: 'flex-start', marginBottom: 12 },
   heading: { color: Colors.text, fontSize: 18, fontWeight: '800', marginTop: 24, marginBottom: 10 },
 });

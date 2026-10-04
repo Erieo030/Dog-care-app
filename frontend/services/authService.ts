@@ -7,8 +7,7 @@ export interface AuthResponse {
   userId: string;
   email: string;
   hasPet: boolean;
-  petData: Pet | null;
-  pets?: Pet[];
+  pets: Pet[];
   accessToken: string;
   refreshToken: string;
   tokenType: 'Bearer';
@@ -39,3 +38,9 @@ export const logout = (refreshToken: string) =>
     method: 'POST',
     body: JSON.stringify({ refreshToken }),
   });
+
+export const deleteAccount = (password: string) =>
+  apiData<{ success: boolean }>('/api/account/delete', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }, 30000);

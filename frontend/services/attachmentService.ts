@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
-import { ATTACHMENT_ALLOWED_MIME, ATTACHMENT_MAX_BYTES } from '../constants/Attachments';
+import { ATTACHMENT_ALLOWED_MIME, ATTACHMENT_MAX_BYTES, MEGO_UPLOAD_MAX_MB } from '../constants/Attachments';
 import { Attachment, AttachmentSourceType } from '../types';
 import { API_BASE_URL, apiData, apiRequest, ApiError } from './api';
 import { requestMediaPermission } from './mediaPermissionService';
@@ -31,7 +31,7 @@ const compress = async (asset: ImagePicker.ImagePickerAsset) => {
   const file = new FileSystem.File(result.uri);
   if (!file.exists || file.size == null) throw new ApiError('無法讀取處理後的圖片');
   if (file.size > ATTACHMENT_MAX_BYTES)
-    throw new ApiError('圖片壓縮後仍超過 10 MB，請選擇較小的圖片');
+    throw new ApiError(`圖片壓縮後仍超過 ${MEGO_UPLOAD_MAX_MB} MB，請選擇較小的圖片`);
   const mimeType = format === ImageManipulator.SaveFormat.PNG ? 'image/png' : 'image/jpeg';
   if (!(ATTACHMENT_ALLOWED_MIME as readonly string[]).includes(mimeType))
     throw new ApiError('只支援 JPG、JPEG、PNG 圖片');
@@ -77,6 +77,37 @@ export async function pickAndUploadAttachments(input: {
     uploaded.push(body.data);
   }
   return uploaded;
+}
+
+export async function uploadPetAvatarImage(
+  userId: string,
+  petId: string,
+  uri: string,
+): Promise<Attachment> {
+  let processed = await ImageManipulator.manipulateAsync(uri, [], {
+    compress: 0.78,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  if (processed.width > 1600) {
+    processed = await ImageManipulator.manipulateAsync(
+      processed.uri,
+      [{ resize: { width: 1600 } }],
+      { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG },
+    );
+  }
+  const file = new FileSystem.File(processed.uri);
+  if (!file.exists || file.size == null) throw new ApiError('無法讀取處理後的頭像');
+  if (file.size > ATTACHMENT_MAX_BYTES) throw new ApiError(`頭像壓縮後仍超過 ${MEGO_UPLOAD_MAX_MB} MB，請選擇較小的圖片`);
+
+  const form = new FormData();
+  form.append('file', file, `mego-avatar-${Date.now()}.jpg`);
+  form.append('width', String(processed.width));
+  form.append('height', String(processed.height));
+  const body = await apiRequest<{ data: Attachment }>(
+    `/api/pets/${petId}/attachments?userId=${encodeURIComponent(userId)}`,
+    { method: 'POST', headers: { Accept: 'application/json' }, body: form },
+  );
+  return body.data;
 }
 
 export const attachmentUri = (item: Attachment, userId: string, retry = 0) => {

@@ -7,6 +7,7 @@ import {
   DefaultTheme,
   NavigationContainer,
 } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +20,9 @@ import {
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
 import PetSetupStack from './PetSetupStack';
-import { MainTabParamList } from './types';
+import AIChatScreen from '../screens/AIChatScreen';
+import PreVetSummaryScreen from '../screens/PreVetSummaryScreen';
+import { RootStackParamList } from './types';
 
 const MINIMUM_SPLASH_DURATION_MS = 2000;
 const splashStartedAt = Date.now();
@@ -28,7 +31,8 @@ const splashStartedAt = Date.now();
 SplashScreen.setOptions({ duration: 0, fade: false });
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-const navigationRef = createNavigationContainerRef<MainTabParamList>();
+const AppStack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function RootNavigator() {
   const { session, isLoading } = useAuth();
@@ -79,9 +83,12 @@ export default function RootNavigator() {
       subscribeToNotificationResponses((target) => {
         if (!session || target.userId !== session.userId || !navigationRef.isReady()) return;
         if (pets.some((pet) => pet.id === target.petId)) selectPet(target.petId);
-        navigationRef.navigate('Home', {
-          screen: 'ReminderList',
-          params: { focusReminderId: target.reminderId },
+        navigationRef.navigate('MainTabs', {
+          screen: 'Home',
+          params: {
+            screen: 'ReminderList',
+            params: { focusReminderId: target.reminderId },
+          },
         });
       }),
     [session, pets, selectPet],
@@ -95,7 +102,20 @@ export default function RootNavigator() {
       theme={navigationTheme}
       onReady={handleNavigationReady}
     >
-      {!session ? <AuthStack /> : pets.length ? <MainTabs /> : <PetSetupStack />}
+      {!session ? (
+        <AuthStack />
+      ) : pets.length ? (
+        <AppStack.Navigator
+          id="AuthenticatedAppStack"
+          screenOptions={{ headerShown: false, animation: 'none', contentStyle: { backgroundColor: 'transparent' } }}
+        >
+          <AppStack.Screen name="MainTabs" component={MainTabs} />
+          <AppStack.Screen name="AIChat" component={AIChatScreen} />
+          <AppStack.Screen name="VetVisitBrief" component={PreVetSummaryScreen} />
+        </AppStack.Navigator>
+      ) : (
+        <PetSetupStack />
+      )}
     </NavigationContainer>
   );
 }

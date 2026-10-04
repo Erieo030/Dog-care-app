@@ -10,6 +10,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../../../components/AppButton';
+import { RecordActionButton } from '../../../components/RecordActionButton';
 import SupplementalNotesField from '../../../components/SupplementalNotesField';
 import { Colors } from '../../../constants/Colors';
 import DatePickerField from '../../../components/DatePickerField';
@@ -28,6 +29,7 @@ import {
   timeValue,
   type MedicationDraft,
 } from '../types';
+import { localDateKey } from '../../../utils/taipeiDate';
 
 const fields = [
   ['name', '藥品名稱（必填）'],
@@ -134,39 +136,43 @@ export function MedicationFormScreen() {
         </View>
       </View>
 
-      {fields.filter(([key]) => key !== 'notes').map(([key, label]) => {
-        const isDate = key === 'startDate' || key === 'endDate';
-        if (isDate) {
-          const value = draft[key];
+      {fields
+        .filter(([key]) => key !== 'notes')
+        .map(([key, label]) => {
+          const isDate = key === 'startDate' || key === 'endDate';
+          if (isDate) {
+            const value = draft[key];
+            return (
+              <DatePickerField
+                key={key}
+                label={label}
+                value={value ? new Date(`${value}T12:00:00`) : undefined}
+                onChange={(date) => setField(key, localDateKey(date))}
+                minimumDate={
+                  key === 'endDate' && draft.startDate
+                    ? new Date(`${draft.startDate}T12:00:00`)
+                    : undefined
+                }
+                maximumDate={key === 'startDate' ? new Date() : undefined}
+              />
+            );
+          }
           return (
-            <DatePickerField
-              key={key}
-              label={label}
-              value={value ? new Date(`${value}T12:00:00`) : undefined}
-              onChange={(date) => setField(key, date.toISOString().slice(0, 10))}
-              minimumDate={
-                key === 'endDate' && draft.startDate
-                  ? new Date(`${draft.startDate}T12:00:00`)
-                  : undefined
-              }
-              maximumDate={key === 'startDate' ? new Date() : undefined}
-            />
+            <View key={key}>
+              <Text style={styles.label}>{label}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={`請輸入${label.replace('（必填）', '')}`}
+                placeholderTextColor={Colors.subtext}
+                value={String(draft[key] ?? '')}
+                keyboardType={key === 'timesPerDay' ? 'numeric' : 'default'}
+                onChangeText={(value) =>
+                  setField(key, key === 'timesPerDay' ? Number(value) : value)
+                }
+              />
+            </View>
           );
-        }
-        return (
-          <View key={key}>
-            <Text style={styles.label}>{label}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={`請輸入${label.replace('（必填）', '')}`}
-              placeholderTextColor={Colors.subtext}
-              value={String(draft[key] ?? '')}
-              keyboardType={key === 'timesPerDay' ? 'numeric' : 'default'}
-              onChangeText={(value) => setField(key, key === 'timesPerDay' ? Number(value) : value)}
-            />
-          </View>
-        );
-      })}
+        })}
       <SupplementalNotesField
         value={String(draft.notes ?? '')}
         onChange={(value) => setField('notes', value)}
@@ -204,20 +210,18 @@ export function MedicationFormScreen() {
       {draft.reminderTimes.map((time) => (
         <View key={time} style={styles.reminderRow}>
           <Text style={styles.reminderHint}>每天 {time}</Text>
-          <AppButton
-            title="編輯"
-            variant="secondary"
-            fullWidth={false}
+          <RecordActionButton
+            kind="edit"
+            label="編輯"
             style={styles.reminderAction}
             onPress={() => {
               setEditingReminderTime(time);
               setField('reminderTimeDraft', time);
             }}
           />
-          <AppButton
-            title="刪除"
-            variant="danger"
-            fullWidth={false}
+          <RecordActionButton
+            kind="delete"
+            label="刪除"
             style={styles.reminderAction}
             onPress={() =>
               setField(

@@ -1,8 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：列出目前毛孩的健康異常紀錄，並連結至詳細頁。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   RefreshControl,
-  SafeAreaView,
   FlatList,
   StyleSheet,
   Text,
@@ -83,7 +83,7 @@ export default function HealthEventListScreen({ navigation }: Props) {
 
   if (loading) return <ScreenState loading text="載入中…" />;
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <FlatList
         data={error ? [] : items}
         keyExtractor={(item) => item.id}

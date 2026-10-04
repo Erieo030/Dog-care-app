@@ -1,8 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：提供 10～20 秒可完成的嘔吐專屬新增與編輯快速表單。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -199,7 +199,7 @@ export default function VomitingHealthEventScreen({ route, navigation }: Props) 
     );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

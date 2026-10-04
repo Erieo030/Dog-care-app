@@ -1,8 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：建立或編輯提醒；後端成功後同步裝置 Local Notification。 */
 import React, { useState } from 'react';
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -143,7 +143,7 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >
@@ -190,7 +190,13 @@ export default function CreateReminderScreen({ navigation, route }: Props) {
             />
           ))}
         </View>
-        <Text style={styles.notice}>實際頻率請依獸醫建議與產品說明為準。</Text>
+        <View style={styles.notice}>
+          <Ionicons name="information-circle-outline" size={17} color={Colors.success} />
+          <View style={styles.noticeCopy}>
+            <Text style={styles.noticeTitle}>頻率參考</Text>
+            <Text style={styles.noticeText}>實際頻率請依獸醫建議與產品說明為準。</Text>
+          </View>
+        </View>
         <SupplementalNotesField value={notes} onChange={setNotes} maxLength={1000} />
         <AppButton
           title={submitting ? '儲存中…' : existing ? '儲存修改' : '建立提醒'}
@@ -273,7 +279,18 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   inputText: { color: Colors.text },
-  notice: { color: Colors.subtext, fontSize: 12, marginTop: 10 },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 10,
+    padding: 11,
+    borderRadius: 14,
+    backgroundColor: Colors.successSoft,
+  },
+  noticeCopy: { flex: 1, gap: 2 },
+  noticeTitle: { color: Colors.text, fontSize: 12, fontWeight: '800' },
+  noticeText: { color: Colors.subtext, fontSize: 12, lineHeight: 17 },
   submit: {
     backgroundColor: Colors.primary,
     borderRadius: FORM_BUTTON_RADIUS,

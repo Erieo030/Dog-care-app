@@ -1,0 +1,34 @@
+{"id":"v4-dog-dev-01","split":"dev","question":"平常記便便時，除了形狀還適合記下哪些變化？","expected_doc":"care-stool-observation","expected_section":"日常觀察紀錄"}
+{"id":"v4-dog-dev-02","split":"dev","question":"如果要帶狗狗看診，診所會不會想看新鮮糞便？","expected_doc":"care-stool-observation","expected_section":"日常觀察紀錄"}
+{"id":"v4-dog-dev-03","split":"dev","question":"便便黑得像柏油，可以先在家觀察幾天嗎？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v4-dog-dev-04","split":"dev","question":"狗狗腹瀉又開始不吃東西，這些狀況要告訴獸醫嗎？","expected_doc":"care-stool-observation","expected_section":"需要聯絡獸醫的情況"}
+{"id":"v4-dog-dev-05","split":"dev","question":"哪些常見食材要收好，避免狗狗自己翻到吃掉？","expected_doc":"care-toxic-ingestion","expected_section":"常見需避免的食物"}
+{"id":"v4-dog-dev-06","split":"dev","question":"狗狗吞了木糖醇口香糖但還沒不舒服，我該先做什麼？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v4-dog-dev-07","split":"dev","question":"可能吃到巧克力但份量不清楚，需要等症狀出來再求助嗎？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v4-dog-dev-08","split":"dev","question":"狗狗誤吃到不明藥丸，我能不能先在家幫牠催吐？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v4-dog-dev-09","split":"dev","question":"狗狗皮膚紅癢，可以先擦我自己的藥膏嗎？","expected_doc":"care-medication-safety","expected_section":"不自行使用人用藥"}
+{"id":"v4-dog-dev-10","split":"dev","question":"藥袋內容看不清楚，也忘了診所怎麼交代，該怎麼確認？","expected_doc":"care-medication-safety","expected_section":"把用藥問題交給獸醫確認"}
+{"id":"v4-dog-dev-11","split":"dev","question":"處方藥漏了一次，可以下一次多餵一點補回來嗎？","expected_doc":"care-medication-safety","expected_section":"把用藥問題交給獸醫確認"}
+{"id":"v4-dog-dev-12","split":"dev","question":"魚油算保健品，第一次使用前還需要確認適不適合嗎？","expected_doc":"care-medication-safety","expected_section":"魚油與營養補充品"}
+{"id":"v4-dog-dev-13","split":"dev","question":"狗狗呼吸很吃力，可以等明天一般門診再處理嗎？","expected_doc":"care-vet-contact-signs","expected_section":"需要立即求助的警訊"}
+{"id":"v4-dog-dev-14","split":"dev","question":"狗狗突然昏倒又站不穩，應該找哪一種協助？","expected_doc":"care-vet-contact-signs","expected_section":"需要立即求助的警訊"}
+{"id":"v4-dog-dev-15","split":"dev","question":"反覆嘔吐而且精神變差，還適合繼續在家等看看嗎？","expected_doc":"care-vet-contact-signs","expected_section":"需要及早聯絡獸醫的狀況"}
+{"id":"v4-dog-dev-16","split":"dev","question":"首頁顯示今天狀況穩定，是不是就能確定沒有健康問題？","expected_doc":"app-health-observation","expected_section":"穩定、近期留意與持續留意"}
+{"id":"v4-dog-dev-17","split":"dev","question":"健康觀察會把嘔吐或受傷也算進日常趨勢嗎？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v4-dog-dev-18","split":"dev","question":"看診前摘要能選哪些紀錄類別和日期區間？","expected_doc":"app-pre-vet-summary","expected_section":"摘要可整理什麼"}
+{"id":"v4-dog-dev-19","split":"dev","question":"我取消勾選體重後，分享的就醫摘要還會帶入體重資料嗎？","expected_doc":"app-pre-vet-summary","expected_section":"摘要可整理什麼"}
+{"id":"v4-dog-dev-20","split":"dev","question":"沒記錄過的症狀，AI 摘要會自行推測補上嗎？","expected_doc":"app-pre-vet-summary","expected_section":"系統整理與 AI 補充"}
+{"id":"v4-dog-dev-21","split":"dev","question":"首頁的健康觀察主要看喝水、吃飯、精神和便便嗎？","expected_doc":"app-health-observation","expected_section":"健康觀察使用哪些資料"}
+{"id":"v4-dog-dev-22","split":"dev","question":"毛孩有明顯不舒服時，我需要等 MEGO 出現趨勢提示嗎？","expected_doc":"app-health-observation","expected_section":"穩定、近期留意與持續留意"}
+{"id":"v4-dog-dev-23","split":"dev","question":"進入就醫摘要頁面時，會立刻把資料送去產生 AI 文字嗎？","expected_doc":"app-pre-vet-summary","expected_section":"系統整理與 AI 補充"}
+{"id":"v4-dog-dev-24","split":"dev","question":"狗狗誤食後要聯絡醫院時，先準備哪些資訊比較好？","expected_doc":"care-toxic-ingestion","expected_section":"懷疑誤食時的處理"}
+{"id":"v4-dog-none-01","split":"dev","question":"狗狗八公斤，這款跳蚤藥要餵幾毫升？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-02","split":"dev","question":"附近哪間動物醫院現在還有夜間急診？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-03","split":"dev","question":"今天台北會下雨嗎？適合帶狗出去散步嗎？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-04","split":"dev","question":"我的狗狗生日是哪一天？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-05","split":"dev","question":"狗狗一直跛腳，這是不是骨折？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-06","split":"dev","question":"幼犬的核心疫苗需要打幾次、每次隔多久？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-07","split":"dev","question":"可以教我怎麼訓練狗狗不要撲人嗎？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-08","split":"dev","question":"柴犬每天要散步幾公里才算足夠？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-09","split":"dev","question":"貓咪一直不喝水，可能是哪一種疾病？","expected_doc":"NONE","expected_section":""}
+{"id":"v4-dog-none-10","split":"dev","question":"我要從台灣帶狗去日本，需要辦哪些輸出檢疫手續？","expected_doc":"NONE","expected_section":""}

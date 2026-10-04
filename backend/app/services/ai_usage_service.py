@@ -1,5 +1,6 @@
 from app.timezone import now_taipei
 import os
+from datetime import timedelta
 from fastapi import HTTPException
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
@@ -32,6 +33,40 @@ def get_usage(user_id: str) -> dict:
     if not valid_user:
         raise HTTPException(status_code=404, detail='找不到使用者資料')
     return _usage_for_user(user_id)
+
+
+def get_usage_history(user_id: str, days: int = 7) -> dict:
+    """Return a complete daily-count series in Taipei date order, newest first."""
+    try:
+        valid_user = db.users.find_one({'_id': ObjectId(user_id)}, {'_id': 1})
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail='找不到使用者資料') from exc
+    if not valid_user:
+        raise HTTPException(status_code=404, detail='找不到使用者資料')
+
+    days = max(1, min(30, int(days)))
+    end_date = now_taipei().date()
+    start_date = end_date - timedelta(days=days - 1)
+    start_key, end_key = start_date.isoformat(), end_date.isoformat()
+    stored = {
+        row['day']: int(row.get('count', 0))
+        for row in db.ai_usage.find({
+            'userId': user_id,
+            'day': {'$gte': start_key, '$lte': end_key},
+        }, {'day': 1, 'count': 1})
+    }
+    daily_usage = [
+        {'date': (end_date - timedelta(days=offset)).isoformat(),
+         'used': stored.get((end_date - timedelta(days=offset)).isoformat(), 0)}
+        for offset in range(days)
+    ]
+    return {
+        'periodDays': days,
+        'startDate': start_key,
+        'endDate': end_key,
+        'dailyUsage': daily_usage,
+        'totalUsed': sum(item['used'] for item in daily_usage),
+    }
 
 
 def _usage_for_user(user_id: str) -> dict:

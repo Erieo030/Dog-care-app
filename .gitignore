@@ -71,6 +71,8 @@ coverage/
 .logs/
 backend/uploads/
 backend/exports/
+backend/models/stool_classifier/
+stool-classification/model/efficientnet_b0/model.onnx
 
 # Local databases, dumps and backups
 *.sqlite
@@ -110,3 +112,7 @@ FUNCTIONAL_LOGIC.md
 PROJECT.md
 SYSTEM_FLOW.md
 MEGO_APP_PRESENTATION.md
+
+# Local thesis and experiment records
+mego_thesis_report/
+測試紀錄/

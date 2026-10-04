@@ -38,3 +38,12 @@ export interface TimelinePage {
   hasMore: boolean;
   nextSkip: number;
 }
+
+export interface TimelineCalendarDay {
+  date: string;
+  types: TimelineType[];
+}
+
+export interface TimelineCalendar {
+  days: TimelineCalendarDay[];
+}

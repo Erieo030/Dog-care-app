@@ -111,7 +111,14 @@ export const dewormingStyles = StyleSheet.create({
   },
   primaryText: { color: '#fff', fontWeight: '700' },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  actionButton: { flex: 1, marginVertical: 0 },
+  actionButton: {
+    flex: 1,
+    height: 44,
+    minHeight: 44,
+    marginVertical: 0,
+    paddingVertical: 0,
+    borderRadius: 12,
+  },
   secondary: {
     borderWidth: 1,
     borderColor: Colors.success,

@@ -4,6 +4,7 @@
  * API：../../../services/medicationService.ts
  */
 import type { MedicationCourse, MedicationMealTiming } from '../../types';
+import { taipeiDateKey } from '../../utils/taipeiDate';
 
 export type MedicationDraft = {
   name: string;
@@ -31,7 +32,7 @@ export const createBlankMedicationDraft = (): MedicationDraft => ({
   name: '',
   instructions: '',
   timesPerDay: 1,
-  startDate: new Date().toISOString().slice(0, 10),
+  startDate: taipeiDateKey(),
   endDate: '',
   mealTiming: 'anytime',
   notes: '',

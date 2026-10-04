@@ -14,6 +14,7 @@ import {
   FORM_FIELD_RADIUS,
 } from '../../../constants/FormTokens';
 import type { PetFormTextField as PetFormTextFieldData } from '../petFormContent';
+import { localDateKey } from '../../../utils/taipeiDate';
 
 type Props = {
   field: PetFormTextFieldData;
@@ -29,13 +30,13 @@ export default function PetFormTextField({ field, value, onChange }: Props) {
       {isDate ? (
         <>
           <Text style={styles.label}>{field.label}</Text>
-        <DatePickerField
-          label=""
-          value={value ? new Date(`${value}T12:00:00`) : undefined}
-          placeholder={field.placeholder}
-          onChange={(date) => onChange(date.toISOString().slice(0, 10))}
-          maximumDate={new Date()}
-        />
+          <DatePickerField
+            label=""
+            value={value ? new Date(`${value}T12:00:00`) : undefined}
+            placeholder={field.placeholder}
+            onChange={(date) => onChange(localDateKey(date))}
+            maximumDate={new Date()}
+          />
         </>
       ) : field.multiline ? (
         <SupplementalNotesField
@@ -46,14 +47,14 @@ export default function PetFormTextField({ field, value, onChange }: Props) {
         />
       ) : (
         <>
-        <Text style={styles.label}>{field.label}</Text>
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChange}
-          placeholder={field.placeholder}
-          placeholderTextColor={Colors.subtext}
-        />
+          <Text style={styles.label}>{field.label}</Text>
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={onChange}
+            placeholder={field.placeholder}
+            placeholderTextColor={Colors.subtext}
+          />
         </>
       )}
     </View>

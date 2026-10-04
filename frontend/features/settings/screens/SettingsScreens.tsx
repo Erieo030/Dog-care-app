@@ -26,6 +26,9 @@ import {
   NotificationPermissionState,
 } from '../../../services/notificationService';
 import {
+  SettingsDocumentHero,
+  SettingsDocumentParagraph,
+  SettingsDocumentSection,
   SettingsPage as Page,
   SettingsRow as Row,
   settingsPalette as palette,
@@ -214,36 +217,49 @@ export function AboutScreen() {
 export function PrivacyPolicyScreen() {
   return (
     <Page>
-      <Text style={s.heading}>MEGO 隱私政策</Text>
-      <Text style={s.paragraph}>
-        MEGO
-        會依本政策處理你為照護毛孩而提供的資料，包括帳號資訊、毛孩基本資料、健康事件、體重、用藥、疫苗、驅蟲、就醫紀錄、提醒、附件與照片。
-      </Text>
-      <Text style={s.heading}>資料用途</Text>
-      <Text style={s.paragraph}>
-        這些資料只用於建立時間軸、提供提醒、產生匯出報告，以及在你主動使用 AI 助手時整理照護資訊。AI
-        回覆僅供紀錄整理與一般資訊參考，不代表醫療診斷。
-      </Text>
-      <Text style={s.heading}>MEGO AI 資料使用</Text>
-      <Text style={s.paragraph}>
-        首次開始 MEGO AI 對話前，App 會請你確認資料使用說明。使用生成式 AI
-        回答時，你輸入的問題會傳送至 MEGO 設定的 AI 服務；若問題需要個人化照護資訊，系統會依問題選取必要的毛孩基本資料或相關照護紀錄，例如過敏、慢性病、日常觀察、就醫或用藥紀錄，不會一併傳送所有紀錄。一般生活問題不會附帶毛孩紀錄。選擇稍後或關閉確認視窗時，不會開始該次 AI
-        對話或送出問題。
-      </Text>
-      <Text style={s.paragraph}>
-        AI 服務由 MEGO 設定的服務提供者處理，資料的處理與保存方式可能依實際服務及部署設定而異；本政策不承諾服務提供者的特定保存期限或使用方式。你可以在「設定 → AI
-        助手 → AI 資料使用說明」查看資料使用內容。請避免在問題或紀錄中提供完成照護整理不需要的敏感資訊。
-      </Text>
-      <Text style={s.heading}>資料分享與安全</Text>
-      <Text style={s.paragraph}>
-        MEGO 不會將你的資料用於廣告販售。使用同步或匯出功能時，必要資料可能傳送至提供該功能的服務；我們會依部署環境採取適當的存取控制與傳輸保護。
-      </Text>
-      <Text style={s.heading}>你的權利</Text>
-      <Text style={s.paragraph}>
-        你可以在 App
-        中查看、編輯、匯出或刪除自己建立的毛孩與照護紀錄。若要刪除帳號或提出隱私問題，請透過產品提供的聯絡方式與我們聯繫。
-      </Text>
-      <Text style={s.note}>本政策會在資料處理方式或服務功能重大變更時更新。</Text>
+      <SettingsDocumentHero
+        title="MEGO 隱私政策"
+        subtitle="了解你提供的資料如何用於毛孩照護記錄與 App 功能。"
+        icon="shield-checkmark-outline"
+      />
+      <SettingsDocumentSection title="資料與用途" index={1} icon="folder-open-outline">
+        <SettingsDocumentParagraph label="處理的資料">
+          MEGO 會依本政策處理你為照護毛孩而提供的資料，包括帳號資訊、毛孩基本資料、健康事件、體重、用藥、疫苗、驅蟲、就醫紀錄、提醒、附件與照片。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="使用目的">
+          這些資料只用於建立時間軸、提供提醒、產生匯出報告，以及在你主動使用 AI 助手時整理照護資訊。AI 回覆僅供紀錄整理與一般資訊參考，不代表醫療診斷。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="MEGO AI 資料使用" index={2} icon="sparkles-outline">
+        <SettingsDocumentParagraph label="對話資料">
+          首次開始 MEGO AI 對話前，App 會請你確認資料使用說明。使用生成式 AI 回答時，你輸入的問題與同一對話最近最多 10 則訊息會傳送至 MEGO 設定的 AI 服務，以延續對話脈絡；不同對話不會互相帶入。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="照護紀錄的選取">
+          若問題需要個人化照護資訊，系統會依問題選取必要的毛孩基本資料或相關照護紀錄，例如過敏、慢性病、日常觀察、就醫或用藥紀錄，不會一併傳送所有紀錄。一般生活問題不會附帶毛孩紀錄。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="服務處理與選擇">
+          選擇稍後或關閉確認視窗時，不會開始該次 AI 對話或送出問題。AI 服務由 MEGO 設定的服務提供者處理，資料的處理與保存方式可能依實際服務及部署設定而異；本政策不承諾服務提供者的特定保存期限或使用方式。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph>
+          你可以在「設定 → AI 助手 → AI 資料使用說明」查看資料使用內容。請避免在問題或紀錄中提供完成照護整理不需要的敏感資訊。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="資料分享與安全" index={3} icon="lock-closed-outline">
+        <SettingsDocumentParagraph>
+          MEGO 不會將你的資料用於廣告販售。使用同步或匯出功能時，必要資料可能傳送至提供該功能的服務；我們會依部署環境採取適當的存取控制與傳輸保護。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="照片與附件">
+          當你主動上傳毛孩頭像或照護紀錄照片時，照片檔案會傳送並保存在 MEGO 後端設定的檔案儲存區；MongoDB 保存照片的索引與所屬毛孩／紀錄等中繼資料，不直接保存照片檔案本身。刪除照片、相關毛孩或照護紀錄，或刪除帳號時，系統會一併清除對應照片檔案及中繼資料。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="你的權利" index={4} icon="person-circle-outline">
+        <SettingsDocumentParagraph>
+          你可以在 App 中查看、編輯、匯出或刪除自己建立的毛孩與照護紀錄；永久刪除帳號可前往「設定 → 我的帳號」。如有隱私問題，請透過產品提供的聯絡方式與我們聯繫。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph emphasis>
+          本政策會在資料處理方式或服務功能重大變更時更新。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
     </Page>
   );
 }
@@ -251,29 +267,38 @@ export function PrivacyPolicyScreen() {
 export function TermsOfUseScreen() {
   return (
     <Page>
-      <Text style={s.heading}>使用條款</Text>
-      <Text style={s.paragraph}>
-        使用 MEGO 即表示你同意使用本 App
-        建立與管理毛孩資料、健康紀錄、提醒、匯出及相關功能。你應提供真實且不侵害他人權利的內容，並妥善保管帳號登入資訊。
-      </Text>
-      <Text style={s.heading}>健康資訊限制</Text>
-      <Text style={s.paragraph}>
-        MEGO
-        是照護紀錄與整理工具，不提供疾病診斷、獸醫診斷替代、藥物處方或緊急醫療服務。用藥、疫苗、驅蟲與提醒內容請由飼主確認；毛孩出現嚴重或持續惡化症狀時，應立即聯絡合格動物醫院。
-      </Text>
-      <Text style={s.heading}>AI 助手與資料</Text>
-      <Text style={s.paragraph}>
-        首次使用生成式 AI，或 AI 資料使用說明更新時，須先確認該版本的說明。你輸入的問題會傳送至 MEGO 設定的 AI
-        服務；只有問題需要個人化照護資訊時，系統才會選取必要的毛孩資料或相關紀錄。選擇稍後或關閉確認視窗，不會開始該次 AI
-        對話。AI 內容可能不完整或不準確，不能取代獸醫專業判斷；請勿將 AI
-        回覆視為診斷或治療指示。
-      </Text>
-      <Text style={s.heading}>內容與服務</Text>
-      <Text style={s.paragraph}>
-        你對自己上傳的資料負責。不得利用本 App
-        從事違法、侵害他人權利或干擾服務的行為。功能可能因維護、版本更新或第三方服務狀態而調整。
-      </Text>
-      <Text style={s.note}>如不同意本條款，請停止使用 MEGO。</Text>
+      <SettingsDocumentHero
+        title="使用條款"
+        subtitle="使用 MEGO 前，請了解照護資訊、AI 功能與服務使用原則。"
+        icon="document-text-outline"
+      />
+      <SettingsDocumentSection title="帳號與 App 使用" index={1} icon="phone-portrait-outline">
+        <SettingsDocumentParagraph>
+          使用 MEGO 即表示你同意使用本 App 建立與管理毛孩資料、健康紀錄、提醒、匯出及相關功能。你應提供真實且不侵害他人權利的內容，並妥善保管帳號登入資訊。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="健康資訊限制" index={2} icon="medkit-outline">
+        <SettingsDocumentParagraph label="服務範圍">
+          MEGO 是照護紀錄與整理工具，不提供疾病診斷、獸醫診斷替代、藥物處方或緊急醫療服務。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="照護資訊請自行確認">
+          用藥、疫苗、驅蟲與提醒內容請由飼主確認；毛孩出現嚴重或持續惡化症狀時，應立即聯絡合格動物醫院。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="AI 助手與資料" index={3} icon="sparkles-outline">
+        <SettingsDocumentParagraph label="資料如何使用">
+          首次使用生成式 AI，或 AI 資料使用說明更新時，須先確認該版本的說明。你輸入的問題會傳送至 MEGO 設定的 AI 服務；同一對話最近最多 10 則訊息可能一併傳送以延續脈絡，不同對話不會互相帶入。只有問題需要個人化照護資訊時，系統才會選取必要的毛孩資料或相關紀錄。選擇稍後或關閉確認視窗，不會開始該次 AI 對話。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph label="回覆的使用限制" emphasis>
+          AI 內容可能不完整或不準確，不能取代獸醫專業判斷；請勿將 AI 回覆視為診斷或治療指示。
+        </SettingsDocumentParagraph>
+      </SettingsDocumentSection>
+      <SettingsDocumentSection title="內容與服務" index={4} icon="construct-outline">
+        <SettingsDocumentParagraph>
+          你對自己上傳的資料負責。不得利用本 App 從事違法、侵害他人權利或干擾服務的行為。功能可能因維護、版本更新或第三方服務狀態而調整。
+        </SettingsDocumentParagraph>
+        <SettingsDocumentParagraph emphasis>如不同意本條款，請停止使用 MEGO。</SettingsDocumentParagraph>
+      </SettingsDocumentSection>
     </Page>
   );
 }
@@ -364,5 +389,12 @@ const s = StyleSheet.create({
   },
   aboutParagraph: { fontSize: 15, lineHeight: 24, color: '#4A382E', marginBottom: 12 },
   heading: { fontSize: 19, fontWeight: '800', color: palette.text, marginTop: 24, marginBottom: 9 },
+  subsectionHeading: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: palette.sub,
+    marginTop: 9,
+    marginBottom: 4,
+  },
   paragraph: { fontSize: 15, lineHeight: 24, color: palette.text, marginBottom: 12 },
 });

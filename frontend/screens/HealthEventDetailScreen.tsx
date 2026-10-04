@@ -1,9 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：顯示健康異常紀錄完整內容，並提供編輯及確認刪除操作。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/Colors';
-import { AppButton } from '../components/AppButton';
+import { RecordActionButton } from '../components/RecordActionButton';
 import AttachmentGallery from '../components/AttachmentGallery';
 import { HEALTH_EVENT_LABELS, SEVERITY_LABELS } from '../constants/HealthEvents';
 import { normalizeVomitingDetails, vomitingDetailRows } from '../constants/Vomiting';
@@ -44,32 +44,35 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const requestId = useRef(0);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const currentRequest = ++requestId.current;
-    setItem(null);
-    if (!session?.userId || !selectedPet) {
-      setError('找不到目前選取的毛孩');
-      setLoading(false);
-      return;
-    }
-    try {
-      setError('');
-      const result = await service.getHealthEvent(session.userId, route.params.eventId, signal);
-      if (currentRequest !== requestId.current) return;
-      if (result.petId !== selectedPet.id) {
-        setError('此紀錄不屬於目前選取的毛孩');
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      const currentRequest = ++requestId.current;
+      setItem(null);
+      if (!session?.userId || !selectedPet) {
+        setError('找不到目前選取的毛孩');
+        setLoading(false);
         return;
       }
-      setItem(result);
-    } catch (requestError) {
-      if (currentRequest !== requestId.current) return;
-      setError((requestError as Error).message || '無法載入健康紀錄');
-    } finally {
-      if (currentRequest === requestId.current) {
-        setLoading(false);
+      try {
+        setError('');
+        const result = await service.getHealthEvent(session.userId, route.params.eventId, signal);
+        if (currentRequest !== requestId.current) return;
+        if (result.petId !== selectedPet.id) {
+          setError('此紀錄不屬於目前選取的毛孩');
+          return;
+        }
+        setItem(result);
+      } catch (requestError) {
+        if (currentRequest !== requestId.current) return;
+        setError((requestError as Error).message || '無法載入健康紀錄');
+      } finally {
+        if (currentRequest === requestId.current) {
+          setLoading(false);
+        }
       }
-    }
-  }, [route.params.eventId, selectedPet, session?.userId]);
+    },
+    [route.params.eventId, selectedPet, session?.userId],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -141,7 +144,7 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
               ([label, value]) => [label, String(value)] as [string, string],
             );
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
@@ -165,12 +168,11 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
           </Text>
         </View>
         <View style={styles.actions}>
-          <AppButton
-            title="編輯紀錄"
-            variant="primary"
-            fullWidth={false}
+          <RecordActionButton
+            kind="edit"
+            label="編輯紀錄"
             disabled={submitting}
-            style={styles.edit}
+            style={styles.actionButton}
             onPress={() => {
               if (item.type === 'vomiting')
                 navigation.navigate('VomitingHealthEvent', { eventId: item.id });
@@ -184,32 +186,23 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
               else navigation.navigate('HealthEventEdit', { eventId: item.id });
             }}
           />
-          <AppButton
-            title={submitting ? '刪除中…' : '刪除'}
-            variant="danger"
-            fullWidth={false}
+          <RecordActionButton
+            kind="delete"
+            label={submitting ? '刪除中…' : '刪除紀錄'}
             disabled={submitting}
-            style={styles.delete}
+            busy={submitting}
+            style={styles.actionButton}
             onPress={remove}
           />
         </View>
-        <Text style={styles.heading}>這次紀錄</Text>
-        <View style={styles.detailGroup}>
-          <Row label="異常類型" value={HEALTH_EVENT_LABELS[item.type]} />
-          <Row label="摘要" value={item.summary} />
-          <Row
-            label="發生時間"
-            value={new Date(item.occurredAt).toLocaleString('zh-TW', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          />
-          <Row label="嚴重程度" value={SEVERITY_LABELS[item.severity]} />
-          {!!item.notes && <Row label="補充備註" value={item.notes} />}
-        </View>
+        {!!item.notes && (
+          <>
+            <Text style={styles.heading}>補充備註</Text>
+            <View style={styles.detailGroup}>
+              <Row label="備註內容" value={item.notes} />
+            </View>
+          </>
+        )}
         {!!detailRows.length && (
           <>
             <Text style={styles.heading}>補充資訊</Text>
@@ -220,12 +213,8 @@ export default function HealthEventDetailScreen({ route, navigation }: Props) {
             </View>
           </>
         )}
-        <>
-          <Text style={styles.heading}>照片</Text>
-          <View style={styles.detailGroup}>
-            <AttachmentGallery items={item.attachments ?? []} userId={session!.userId} />
-          </View>
-        </>
+        <Text style={styles.heading}>照片</Text>
+        <AttachmentGallery items={item.attachments ?? []} userId={session!.userId} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -288,9 +277,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   severitySevere: { color: Colors.danger, backgroundColor: '#F9E5E2' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 2 },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 12 },
+  actionButton: { flex: 1 },
   edit: {
     flex: 1,
+    minHeight: 52,
+    justifyContent: 'center',
     backgroundColor: Colors.primary,
     padding: 13,
     borderRadius: 16,
@@ -298,12 +290,14 @@ const styles = StyleSheet.create({
   },
   editText: { color: '#FFF', fontWeight: '800' },
   delete: {
+    alignSelf: 'center',
     minHeight: 44,
-    minWidth: 72,
+    minWidth: 0,
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 10,
   },
   deleteText: { color: '#C34D4D', fontWeight: '800' },
   detailGroup: {

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from app.schemas.lost_pet import LostPetProfileRequest
 from app.services import lost_pet_service
 router=APIRouter(tags=['lost-pets'])
@@ -17,5 +17,9 @@ def rotate(pet_id:str,user_id:str=Query(alias='userId')):
 def disable(pet_id:str,user_id:str=Query(alias='userId')):lost_pet_service.disable(pet_id,user_id);return Response(status_code=204)
 @router.get('/public/lost-pets/{public_token}')
 def public_json(public_token:str):return lost_pet_service.public(public_token)
+@router.get('/public/lost-pets/{public_token}/avatar')
+def public_avatar(public_token:str):
+ path,mime_type=lost_pet_service.public_avatar(public_token)
+ return FileResponse(path,media_type=mime_type,headers={'Cache-Control':'private, no-store'})
 @router.get('/public/lost-pets/{public_token}/page',response_class=HTMLResponse)
 def public_page(public_token:str):return HTMLResponse(lost_pet_service.public_html(public_token))

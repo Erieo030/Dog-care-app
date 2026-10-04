@@ -1,5 +1,6 @@
 import { apiData } from './api';
 import { DailyLog } from '../types';
+import { taipeiDateKey } from '../utils/taipeiDate';
 const q = (u: string) => `userId=${encodeURIComponent(u)}`;
 export const getDailyLogs = (u: string, p: string, signal?: AbortSignal) => {
   const path = `/api/pets/${p}/daily-logs?${q(u)}`;
@@ -16,7 +17,7 @@ export const getDailyLog = (u: string, id: string, signal?: AbortSignal) => {
 export const getTodayDailyLog = (
   u: string,
   p: string,
-  date = new Date().toISOString().slice(0, 10),
+  date = taipeiDateKey(),
   signal?: AbortSignal,
 ) => {
   const path = `/api/pets/${p}/daily-logs/today?${q(u)}&localDate=${date}`;

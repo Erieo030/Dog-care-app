@@ -1,11 +1,12 @@
 """用途：提供註冊與登入的 HTTP API 端點。"""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from pydantic import BaseModel, Field
 
 from app.schemas import LoginRequest, RegisterRequest
 from app.services.auth_service import login_user, refresh_user_session, register_user
 from app.services.auth_tokens import revoke_refresh_session
+from app.services.account_deletion_service import delete_account
 
 router = APIRouter(tags=["authentication"])
 
@@ -16,6 +17,10 @@ class RefreshRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refreshToken: str | None = Field(default=None, max_length=512)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
 
 
 @router.post("/register")
@@ -40,3 +45,15 @@ def refresh(data: RefreshRequest):
 def logout(data: LogoutRequest):
     revoke_refresh_session(data.refreshToken)
     return {"success": True, "message": "已登出"}
+
+
+@router.post("/account/delete")
+def remove_account(
+    data: DeleteAccountRequest,
+    authorization: str | None = Header(default=None),
+):
+    from app.services.auth_tokens import authenticate_request_token
+
+    user_id = authenticate_request_token(authorization)
+    delete_account(user_id, data.password)
+    return {"success": True, "message": "帳號與相關資料已永久刪除"}

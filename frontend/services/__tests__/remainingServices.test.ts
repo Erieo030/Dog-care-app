@@ -3,6 +3,7 @@ import { getTodayDailyLog, createDailyLog } from '../dailyLogService';
 import { createExport, cancelExport } from '../exportService';
 import { getLostProfile, rotateLostToken, saveLostProfile } from '../lostPetService';
 import { loadSettings, timeOnDate, DEFAULT_SETTINGS } from '../settingsService';
+import { sendAIChat } from '../aiService';
 
 jest.mock('../api', () => ({ apiData: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -65,4 +66,25 @@ test('settings validates defaults and local time conversion', async () => {
   const date = timeOnDate('20:30', new Date('2026-08-08T00:00:00'));
   expect(date.getHours()).toBe(20);
   expect(date.getMinutes()).toBe(30);
+});
+
+test('AI chat sends only the latest ten turns for the active conversation', async () => {
+  request.mockResolvedValueOnce({ answer: '回覆', conversationId: 'session-1' });
+  const history = Array.from({ length: 12 }, (_, index) => ({
+    role: index % 2 ? ('assistant' as const) : ('user' as const),
+    content: `turn-${index}`,
+  }));
+  await sendAIChat('user-1', 'pet-1', 'follow-up', 30, 'session-1', 'general', history);
+  const body = JSON.parse(String(request.mock.calls[0][1]?.body));
+  expect(body.conversationId).toBe('session-1');
+  expect(body.history).toHaveLength(10);
+  expect(body.history[0].content).toBe('turn-2');
+  expect(body.history[9].content).toBe('turn-11');
+
+  request.mockResolvedValueOnce({ answer: '回覆', conversationId: 'session-1' });
+  await sendAIChat('user-1', 'pet-1', 'follow-up', 30, 'session-1', 'general', [
+    { role: 'assistant', content: '長回覆'.repeat(400) },
+  ]);
+  const boundedBody = JSON.parse(String(request.mock.calls[1][1]?.body));
+  expect(boundedBody.history[0].content).toHaveLength(1000);
 });

@@ -23,3 +23,20 @@ test('maps backend pet fields into the shared Pet type', () => {
     neutered: true,
   });
 });
+
+test('maps server avatar attachment references without persisting device URIs', () => {
+  const [pet] = normalizePets([
+    {
+      _id: 'p2',
+      userId: 'u1',
+      name: 'Mego',
+      gender: 'female',
+      breed: '米克斯',
+      arrivalDate: '2026-01-01',
+      avatarAttachmentId: 'attachment-2',
+    },
+  ]);
+  expect(pet.avatarAttachmentId).toBe('attachment-2');
+  expect(pet).not.toHaveProperty('avatarUrl');
+  expect(pet).not.toHaveProperty('avatarUri');
+});

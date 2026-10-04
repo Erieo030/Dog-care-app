@@ -2,8 +2,10 @@ import {
   buildCalendarDays,
   getItemsForLocalDate,
   getLocalDateKey,
+  getMonthRange,
   getTimelineCategory,
   getTimelineCategoriesForDay,
+  getTimelineCategoriesForTypes,
   TIMELINE_CATEGORIES,
 } from '../timelineContent';
 import { RECORD_CATEGORY_COLORS } from '../../../constants/RecordCategoryColors';
@@ -31,7 +33,15 @@ test('calendar creates complete weeks containing every day of a month', () => {
   expect(days.some((date) => getLocalDateKey(date) === '2026-09-30')).toBe(true);
 });
 
-test('selected-day records are filtered by local calendar date and ordered by time', () => {
+test('calendar API month range uses Taipei midnight boundaries', () => {
+  const range = getMonthRange(new Date(2026, 8, 15));
+  expect(range).toEqual({
+    startAt: '2026-08-31T16:00:00.000Z',
+    endAt: '2026-09-30T16:00:00.000Z',
+  });
+});
+
+test('selected-day records are filtered by Taipei calendar date and ordered by time', () => {
   const items = [
     makeItem({ id: 'late', occurredAt: '2026-09-26T12:30:00.000Z' }),
     makeItem({ id: 'other-day', occurredAt: '2026-09-25T12:30:00.000Z' }),
@@ -59,6 +69,13 @@ test('same-day repeated records share one marker per category', () => {
   ]);
 
   expect(categories).toEqual(['daily', 'health', 'weight']);
+});
+
+test('calendar summary types map to the same de-duplicated marker categories', () => {
+  expect(getTimelineCategoriesForTypes(['vaccination', 'medication', 'health_event'])).toEqual([
+    'care',
+    'health',
+  ]);
 });
 
 test('calendar legend uses the shared category palette', () => {

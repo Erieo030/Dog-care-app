@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：提供 10～20 秒可完成的排便異常專屬新增與編輯快速表單。 */
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -177,7 +178,7 @@ export default function StoolHealthEventScreen({ route, navigation }: Props) {
     );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
       >

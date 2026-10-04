@@ -1,5 +1,4 @@
-from app.timezone import now_taipei, TAIPEI
-from datetime import datetime
+from app.timezone import now_taipei
 from fastapi import APIRouter,Query,Response,status
 from app.schemas.daily_log import DailyLogCreateRequest,DailyLogUpdateRequest
 from app.services import daily_log_service

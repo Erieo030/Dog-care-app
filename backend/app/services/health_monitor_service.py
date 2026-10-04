@@ -1,5 +1,5 @@
 from app.timezone import now_taipei, TAIPEI
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta
 from app.schemas.ai import AIAlert, HealthMonitorResult
 
 class HealthMonitorConfig:

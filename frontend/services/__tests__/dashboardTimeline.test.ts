@@ -1,6 +1,6 @@
 import { apiData } from '../api';
 import { getHealthDashboard } from '../dashboardService';
-import { getTimelinePage, getRecentTimeline } from '../timelineService';
+import { getTimelineCalendar, getTimelineDay, getTimelinePage, getRecentTimeline } from '../timelineService';
 
 jest.mock('../api', () => ({ apiData: jest.fn() }));
 const request = apiData as jest.MockedFunction<typeof apiData>;
@@ -45,4 +45,27 @@ test('timeline forwards an optional cancellation signal', async () => {
   request.mockResolvedValueOnce({ items: [], hasMore: false, nextSkip: 0 });
   await getTimelinePage('u1', 'p1', { signal: controller.signal });
   expect(request.mock.calls[0][1]).toEqual({ signal: controller.signal });
+});
+
+test('calendar summary requests compact month markers with device timezone', async () => {
+  request.mockResolvedValueOnce({ days: [] });
+  await getTimelineCalendar('u1', 'p1', {
+    startAt: '2026-08-31T16:00:00.000Z',
+    endAt: '2026-09-30T16:00:00.000Z',
+    timeZone: 'Asia/Taipei',
+  });
+  expect(request.mock.calls[0][0]).toContain('/api/pets/p1/timeline/calendar?');
+  expect(request.mock.calls[0][0]).toContain('timeZone=Asia%2FTaipei');
+  expect(request.mock.calls[0][0]).not.toContain('skip=');
+});
+
+test('selected calendar day loads all detail pages for its local date', async () => {
+  request
+    .mockResolvedValueOnce({ items: [{ id: 'a' }], hasMore: true, nextSkip: 1 })
+    .mockResolvedValueOnce({ items: [{ id: 'b' }], hasMore: false, nextSkip: 2 });
+  const items = await getTimelineDay('u1', 'p1', new Date(2026, 8, 2));
+  expect(items.map((item) => item.id)).toEqual(['a', 'b']);
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(request.mock.calls[0][0]).toContain('startAt=2026-09-01T16%3A00%3A00.000Z');
+  expect(request.mock.calls[0][0]).toContain('endAt=2026-09-02T16%3A00%3A00.000Z');
 });

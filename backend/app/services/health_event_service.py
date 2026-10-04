@@ -1,7 +1,5 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 """用途：處理健康異常 CRUD、ownership、專屬摘要及時間軸一致性。"""
-from datetime import datetime, timezone
-
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException

@@ -1,7 +1,5 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 """用途：處理體重 CRUD、摘要同步、資料所有權與時間軸一致性。"""
-from datetime import datetime, timezone
-
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException

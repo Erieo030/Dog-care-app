@@ -1,10 +1,8 @@
-from app.timezone import now_taipei, TAIPEI
+from app.timezone import now_taipei
 import json
 import logging
-import os
 import time
 from hashlib import sha256
-from datetime import datetime, timezone
 from typing import Any
 from pydantic import ValidationError
 from app.schemas.ai import AIContext, HealthMonitorResult, HealthSummaryResponse

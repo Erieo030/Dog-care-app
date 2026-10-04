@@ -37,10 +37,10 @@ def _parse_structured_content(content: Any) -> dict[str, Any]:
 class ExternalModelService:
     name = "external_model_service"
     def __init__(self, base_url: str | None = None, api_key: str | None = None, timeout: float | None = None):
-        self.base_url = (base_url or os.getenv("AI_MODEL_API_URL", os.getenv("MODEL_SERVICE_BASE_URL", ""))).rstrip("/")
-        self.api_key = api_key if api_key is not None else os.getenv("AI_MODEL_API_KEY", os.getenv("MODEL_SERVICE_API_KEY", "")).strip()
-        self.timeout = timeout or float(os.getenv("AI_MODEL_TIMEOUT_SECONDS", os.getenv("MODEL_SERVICE_TIMEOUT_SECONDS", "45")))
-        self.text_model = os.getenv("AI_MODEL_NAME", os.getenv("MODEL_SERVICE_TEXT_MODEL", AI_MODELS["TEXT"]))
+        self.base_url = (base_url or os.getenv("AI_CHAT_API_URL") or os.getenv("AI_MODEL_API_URL", "")).rstrip("/")
+        self.api_key = api_key if api_key is not None else (os.getenv("AI_CHAT_API_KEY") or os.getenv("AI_MODEL_API_KEY", "")).strip()
+        self.timeout = timeout or float(os.getenv("AI_MODEL_TIMEOUT_SECONDS", "45"))
+        self.text_model = os.getenv("AI_MODEL_NAME", AI_MODELS["TEXT"])
 
     @property
     def available(self) -> bool:
@@ -66,7 +66,12 @@ class ExternalModelService:
         try:
             body=response.json()
             content=body["choices"][0]["message"].get("content")
-            return _parse_structured_content(content), body.get("model")
+            parsed = _parse_structured_content(content)
+            usage = body.get("usage") or {}
+            prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens")) if isinstance(usage, dict) else None
+            if isinstance(prompt_tokens, int) and prompt_tokens >= 0:
+                parsed["_prompt_tokens"] = prompt_tokens
+            return parsed, body.get("model")
         except ProviderError:
             raise
         except (KeyError, TypeError, ValueError) as exc:

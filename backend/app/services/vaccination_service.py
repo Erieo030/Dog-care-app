@@ -1,9 +1,6 @@
-from app.timezone import now_taipei, TAIPEI
-from datetime import datetime,timezone
+from app.timezone import now_taipei
 from fastapi import HTTPException
-from pymongo import ReturnDocument
 from app.db import db
-from app.schemas.vaccination import VaccinationRequest
 from app.services.timeline_service import delete_timeline_item,upsert_timeline_item
 from app.services.reminder_service import create_reminder,update_reminder
 from app.schemas.reminder import ReminderCreateRequest,ReminderUpdateRequest

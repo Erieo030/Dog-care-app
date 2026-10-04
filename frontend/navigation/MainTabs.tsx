@@ -7,7 +7,7 @@ import {
   type BottomTabBarButtonProps,
 } from '@react-navigation/bottom-tabs';
 import { PlatformPressable } from '@react-navigation/elements';
-import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
@@ -19,9 +19,7 @@ import CreateReminderScreen from '../screens/CreateReminderScreen';
 import DailyLogScreen from '../screens/DailyLogScreen';
 import HomeScreen from '../screens/HomeScreen';
 import HomeThemeScreen from '../screens/HomeThemeScreen';
-import AIChatScreen from '../screens/AIChatScreen';
 import AIAssistantHubScreen from '../screens/AIAssistantHubScreen';
-import PreVetSummaryScreen from '../screens/PreVetSummaryScreen';
 import { AddPetScreen, EditPetScreen } from '../screens/ManagePetScreen';
 import SettingsHomeScreen from '../screens/SettingsHomeScreen';
 import {
@@ -118,7 +116,6 @@ function HomeStack() {
           contentStyle: { backgroundColor: 'transparent' },
         }}
       />
-      <Stack.Screen name="VetVisitBrief" component={PreVetSummaryScreen} options={{ title: '' }} />
       <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: '今日紀錄' }} />
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: '新增毛孩' }} />
       <Stack.Screen name="EditPet" component={EditPetScreen} options={{ title: '編輯毛孩資料' }} />
@@ -155,16 +152,6 @@ function HealthStack() {
         name="HealthOverview"
         component={AIAssistantHubScreen}
         options={{ headerShown: false }}
-      />
-      <HealthStackNav.Screen
-        name="AIChat"
-        component={AIChatScreen}
-        options={{ headerShown: false }}
-      />
-      <HealthStackNav.Screen
-        name="VetVisitBrief"
-        component={PreVetSummaryScreen}
-        options={{ title: '' }}
       />
       {renderSharedHealthScreens(HealthStackNav)}
     </HealthStackNav.Navigator>
@@ -220,7 +207,7 @@ function ProfileStack() {
       <ProfileStackNav.Screen
         name="AIUsage"
         component={AIUsageScreen}
-        options={{ title: 'AI 助手額度' }}
+        options={{ title: 'AI 使用紀錄' }}
       />
       <ProfileStackNav.Screen
         name="AIDataUseInfo"
@@ -363,15 +350,12 @@ export default function MainTabs() {
       <Tabs.Screen
         name="Health"
         component={HealthStack}
-        options={({ route }) => ({
-          tabBarStyle: {
-            ...tabBarStyle,
-            display: getFocusedRouteNameFromRoute(route) === 'AIChat' ? 'none' : 'flex',
-          },
+        options={{
+          tabBarStyle,
           tabBarButton: TabBubbleButton,
           tabBarIcon: icon('chatbubble-ellipses-outline'),
           tabBarLabel: tabLabel('MEGO AI'),
-        })}
+        }}
         listeners={({ navigation, route }) => ({
           tabPress: () => resetTabStackToRoot(navigation, route.key, 'HealthOverview'),
         })}

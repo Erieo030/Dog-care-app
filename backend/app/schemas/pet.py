@@ -12,7 +12,7 @@ class PetFields(BaseModel):
     gender: Literal['male', 'female']
     breed: str = Field(min_length=1, max_length=50)
     breedType: Literal['purebred', 'mixed', 'unknown'] = 'unknown'
-    avatarUri: str = Field(default="", max_length=2000)
+    avatarAttachmentId: str | None = None
     birthday: str = Field(default='', pattern=r"^$|^\d{4}-\d{2}-\d{2}$")
     arrivalDate: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     neutered: bool = False

@@ -1,10 +1,11 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：呈現由日常紀錄推算出的近期健康趨勢，不混入健康異常事件。 */
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,6 +50,7 @@ export default function HealthObservationScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showCriteria, setShowCriteria] = useState(false);
   const requestRef = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -96,7 +98,7 @@ export default function HealthObservationScreen() {
   const watchAlerts = alerts.filter((alert) => alert.level === 'watch');
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomContentPadding }]}
         refreshControl={
@@ -113,6 +115,42 @@ export default function HealthObservationScreen() {
             </Text>
             <Text style={styles.subheading}>依最近 30 天的喝水、食量、精神與便便紀錄整理。</Text>
           </View>
+        </View>
+
+        <View style={styles.criteriaWrap}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showCriteria }}
+            onPress={() => setShowCriteria((visible) => !visible)}
+            style={styles.criteriaToggle}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={Colors.success} />
+            <Text style={styles.criteriaToggleText}>判斷方式</Text>
+            <Ionicons
+              name={showCriteria ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={Colors.subtext}
+            />
+          </Pressable>
+          {showCriteria && (
+            <View style={styles.criteriaDetails}>
+              <CriteriaRow
+                label="一般狀況"
+                text="連續 2 天開始提醒，連續 3 天列為持續留意"
+              />
+              <CriteriaRow
+                label="水狀便"
+                text="出現 1 天提醒，連續 2 天列為持續留意"
+              />
+              <CriteriaRow
+                label="食量偏多"
+                text="連續 3 天提醒，不升級為持續留意"
+              />
+              <Text style={styles.criteriaFootnote}>
+                恢復正常或中斷一天，連續天數會重新計算。
+              </Text>
+            </View>
+          )}
         </View>
 
         {loading && !result ? (
@@ -144,10 +182,10 @@ export default function HealthObservationScreen() {
         ) : (
           <>
             {continuedAlerts.length > 0 && (
-              <ObservationSection title="持續需要留意" alerts={continuedAlerts} />
+              <ObservationSection level="continued" alerts={continuedAlerts} />
             )}
             {watchAlerts.length > 0 && (
-              <ObservationSection title="近期需要留意" alerts={watchAlerts} />
+              <ObservationSection level="watch" alerts={watchAlerts} />
             )}
           </>
         )}
@@ -160,10 +198,40 @@ export default function HealthObservationScreen() {
   );
 }
 
-function ObservationSection({ title, alerts }: { title: string; alerts: HealthTrendAlert[] }) {
+function CriteriaRow({ label, text }: { label: string; text: string }) {
+  return (
+    <View style={styles.criteriaRow}>
+      <Text style={styles.criteriaLabel}>{label}</Text>
+      <Text style={styles.criteriaValue}>{text}</Text>
+    </View>
+  );
+}
+
+function ObservationSection({
+  level,
+  alerts,
+}: {
+  level: 'watch' | 'continued';
+  alerts: HealthTrendAlert[];
+}) {
+  const isContinued = level === 'continued';
+  const title = isContinued ? '持續留意' : '近期觀察';
+  const subtitle = isContinued ? '變化已連續數日' : '剛達到觀察條件';
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeading}>
+        <View style={[styles.sectionIcon, isContinued && styles.sectionIconContinued]}>
+          <Ionicons
+            name={isContinued ? 'time-outline' : 'eye-outline'}
+            size={18}
+            color={isContinued ? Colors.primary : Colors.success}
+          />
+        </View>
+        <View>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
       {alerts.map((alert) => (
         <View key={`${alert.category}-${alert.status}`} style={styles.card}>
           <View style={[styles.cardIcon, alert.level === 'continued' && styles.cardIconContinued]}>
@@ -208,6 +276,34 @@ const styles = StyleSheet.create({
   },
   heading: { color: Colors.text, fontSize: 19, fontWeight: '800' },
   subheading: { color: Colors.subtext, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  criteriaWrap: { marginTop: 10 },
+  criteriaToggle: {
+    minHeight: 40,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  criteriaToggleText: { color: Colors.success, fontSize: 13, fontWeight: '700' },
+  criteriaDetails: {
+    marginTop: 2,
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: Colors.successSoft,
+  },
+  criteriaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(82,109,96,0.18)',
+  },
+  criteriaLabel: { width: 72, color: '#526D60', fontSize: 12, fontWeight: '800' },
+  criteriaValue: { flex: 1, color: '#526D60', fontSize: 13, lineHeight: 19 },
+  criteriaFootnote: { color: '#526D60', fontSize: 12, lineHeight: 18, paddingVertical: 8 },
   loadingBox: { alignItems: 'center', paddingVertical: 52, gap: 12 },
   stableBox: {
     alignItems: 'center',
@@ -221,9 +317,26 @@ const styles = StyleSheet.create({
   stableArtwork: { width: 72, height: 72, marginBottom: 2 },
   muted: { color: Colors.subtext, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   section: { marginTop: 24 },
-  sectionTitle: { color: Colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  sectionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.successSoft,
+  },
+  sectionIconContinued: { backgroundColor: Colors.primarySoft },
+  sectionTitle: { color: Colors.text, fontSize: 17, lineHeight: 21, fontWeight: '800' },
+  sectionSubtitle: { color: Colors.subtext, fontSize: 12, lineHeight: 17, marginTop: 1 },
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     padding: 15,
     borderRadius: 18,

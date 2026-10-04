@@ -1,10 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：新增或編輯就醫紀錄，支援多筆藥物、附件與回診提醒同步。 */
 import React, { useRef, useState } from 'react';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Switch,
   Text,
@@ -155,7 +155,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
     }
   };
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={s.container}>
       <KeyboardAwareScrollView
         contentContainerStyle={[s.content, { paddingBottom: bottomContentPadding }]}
       >
