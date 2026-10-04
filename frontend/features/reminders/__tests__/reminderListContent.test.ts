@@ -34,14 +34,10 @@ const dateKey = (date: Date) =>
 describe('getVisibleReminders', () => {
   it('shows all reminders scheduled on the selected calendar date, including completed items', () => {
     const selectedDay = new Date(2026, 8, 28);
-    const nextDay = new Date(2026, 8, 29);
     const items = [
-      reminder('morning', new Date(2026, 8, 28, 8), 'completed'),
-      reminder('evening', new Date(2026, 8, 28, 20), 'pending'),
-      reminder(
-        'tomorrow',
-        new Date(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), 8),
-      ),
+      reminder('morning', new Date('2026-09-28T08:00:00+08:00'), 'completed'),
+      reminder('evening', new Date('2026-09-28T20:00:00+08:00'), 'pending'),
+      reminder('tomorrow', new Date('2026-09-29T08:00:00+08:00')),
     ];
 
     expect(

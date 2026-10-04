@@ -1,6 +1,7 @@
 /** 用途：讀取具 ownership、類型篩選與分頁的毛孩統一時間軸。 */
 import { apiData } from './api';
 import { TimelineCalendar, TimelineItem, TimelinePage, TimelineType } from '../types';
+import { addDateKeyDays, localDateKey, taipeiDayStart } from '../utils/taipeiDate';
 export const getTimelinePage = async (
   userId: string,
   petId: string,
@@ -52,8 +53,9 @@ export const getTimelineDay = async (
   date: Date,
   signal?: AbortSignal,
 ): Promise<TimelineItem[]> => {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const selectedDate = localDateKey(date);
+  const start = new Date(taipeiDayStart(selectedDate)).toISOString();
+  const end = new Date(taipeiDayStart(addDateKeyDays(selectedDate, 1))).toISOString();
   const items: TimelineItem[] = [];
   let skip = 0;
   let hasMore = true;
@@ -61,8 +63,8 @@ export const getTimelineDay = async (
     const page = await getTimelinePage(userId, petId, {
       limit: 50,
       skip,
-      startAt: start.toISOString(),
-      endAt: end.toISOString(),
+      startAt: start,
+      endAt: end,
       signal,
     });
     items.push(...page.items);
