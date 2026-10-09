@@ -32,6 +32,7 @@ export type HomeStackParamList = {
   MedicationDetail: { recordId: string };
   HealthOverview: undefined;
   TimelineOverview: undefined;
+  PhotosOverview: undefined;
   AddPet: undefined;
   EditPet: undefined;
   ReminderList:
@@ -54,7 +55,7 @@ export type HomeStackParamList = {
   WeightList: { focusRecordId?: string } | undefined;
   WeightForm: { record?: WeightRecord; quickEntry?: boolean };
   MedicalVisitList: undefined;
-  VetMap: { selectForVisit?: boolean } | undefined;
+  VetMap: { selectForVisit?: boolean; entry?: 'tab' } | undefined;
   MedicalVisitForm: {
     visit?: MedicalVisit;
     duplicate?: boolean;
@@ -82,6 +83,8 @@ export type ProfileStackParamList = {
 export type MainTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Timeline: NavigatorScreenParams<HomeStackParamList> | undefined;
+  Photos: NavigatorScreenParams<HomeStackParamList> | undefined;
+  Map: NavigatorScreenParams<HomeStackParamList> | undefined;
   Health: NavigatorScreenParams<HomeStackParamList> | undefined;
   Profile: NavigatorScreenParams<ProfileStackParamList> | undefined;
 };

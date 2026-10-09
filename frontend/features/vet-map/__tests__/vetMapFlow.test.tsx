@@ -1,12 +1,13 @@
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import VetMapScreen from '../VetMapScreen';
 
 const mockAnimate = jest.fn();
 const mockScroll = jest.fn();
+const mockFocusCleanups: Array<() => void> = [];
 jest.mock('react-native', () => {
   const React = require('react');
   return {
@@ -21,7 +22,10 @@ jest.mock('react-native', () => {
       return React.createElement('ScrollView', props);
     }),
     Alert: { alert: jest.fn() },
-    Linking: { openURL: jest.fn().mockResolvedValue(undefined) },
+    Linking: {
+      openURL: jest.fn().mockResolvedValue(undefined),
+      openSettings: jest.fn().mockResolvedValue(undefined),
+    },
     Keyboard: { dismiss: jest.fn() },
     Platform: { OS: 'ios', select: (options: { ios: string }) => options.ios },
     StyleSheet: { create: (value: object) => value },
@@ -44,7 +48,12 @@ jest.mock('../../../components/navigation/useTabContentBottomPadding', () => ({
   useTabContentBottomPadding: () => 96,
 }));
 jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+  useFocusEffect: (callback: () => () => void) =>
+    require('react').useEffect(() => {
+      const cleanup = callback();
+      mockFocusCleanups.push(cleanup);
+      return cleanup;
+    }, [callback]),
 }));
 jest.mock('expo-location', () => ({
   Accuracy: { Balanced: 3 },
@@ -59,18 +68,19 @@ const byLabel = (label: string) =>
   screen.root.findAll(
     (node) => node.props.accessibilityLabel === label && typeof node.type === 'string',
   )[0];
-const mount = async () => {
+const mount = async (params: object = { selectForVisit: true }) => {
   await act(async () => {
     screen = create(
       <VetMapScreen
         navigation={{ popTo, navigate, goBack: jest.fn() } as never}
-        route={{ params: { selectForVisit: true } } as never}
+        route={{ params } as never}
       />,
     );
   });
 };
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFocusCleanups.length = 0;
   (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ granted: true });
   (Location.getCurrentPositionAsync as jest.Mock).mockResolvedValue({
     coords: { latitude: 24.15, longitude: 120.68 },
@@ -99,6 +109,14 @@ test('selecting a hospital returns to the existing visit form and merges its par
   expect(navigate).not.toHaveBeenCalled();
 });
 
+test('the map tab browses hospitals without a back arrow or select-for-visit action', async () => {
+  await mount({ entry: 'tab' });
+  expect(byLabel('返回就醫紀錄')).toBeUndefined();
+  await act(async () => byLabel('查看仁愛犬醫院位置').props.onPress());
+  expect(byLabel('將仁愛犬醫院帶入就醫紀錄')).toBeUndefined();
+  expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+});
+
 test('map touches suspend outer scrolling until the touch ends or is cancelled', async () => {
   await mount();
   const map = byLabel('動物醫院地圖');
@@ -107,6 +125,14 @@ test('map touches suspend outer scrolling until the touch ends or is cancelled',
   expect(scroll().props.scrollEnabled).toBe(false);
   await act(async () => map.props.onTouchCancel());
   expect(scroll().props.scrollEnabled).toBe(true);
+});
+
+test('leaving during map interaction unlocks the scroll area before returning', async () => {
+  await mount({ entry: 'tab' });
+  await act(async () => byLabel('動物醫院地圖').props.onTouchStart());
+  expect(screen.root.findByType('ScrollView' as never).props.scrollEnabled).toBe(false);
+  await act(async () => mockFocusCleanups.forEach((cleanup) => cleanup()));
+  expect(screen.root.findByType('ScrollView' as never).props.scrollEnabled).toBe(true);
 });
 
 test('unverified locations remain selectable without creating a false map marker', async () => {
@@ -138,8 +164,30 @@ test('denied location permission does not hide the hospital roster', async () =>
   await mount();
   await act(async () => byLabel('使用目前位置').props.onPress());
   expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled();
-  expect(Alert.alert).toHaveBeenCalledWith('尚未開啟定位', expect.any(String));
+  expect(Alert.alert).toHaveBeenCalledWith('尚未開啟定位', expect.any(String), expect.any(Array));
+  const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+  await act(async () => buttons[1].onPress());
+  expect(Linking.openSettings).toHaveBeenCalledTimes(1);
   expect(byLabel('查看仁愛犬醫院位置')).toBeDefined();
+});
+
+test('cancelling location releases the controls and ignores a late native result', async () => {
+  let resolve!: (position: object) => void;
+  (Location.getCurrentPositionAsync as jest.Mock).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  await mount({ entry: 'tab' });
+  await act(async () => byLabel('使用目前位置').props.onPress());
+  expect(byLabel('使用目前位置').props.disabled).toBe(true);
+  await act(async () => byLabel('取消定位').props.onPress());
+  expect(byLabel('使用目前位置').props.disabled).toBe(false);
+  mockAnimate.mockClear();
+  await act(async () => resolve({ coords: { latitude: 24.2, longitude: 120.7 } }));
+  expect(mockAnimate).not.toHaveBeenCalled();
+  expect(byLabel('清除定位')).toBeUndefined();
+  expect(Alert.alert).not.toHaveBeenCalled();
 });
 
 test('location timeout releases the button for retry', async () => {

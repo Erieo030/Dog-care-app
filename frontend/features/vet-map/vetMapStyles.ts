@@ -57,7 +57,7 @@ export const styles = StyleSheet.create({
   },
   modeOption: {
     minWidth: 84,
-    height: 36,
+    minHeight: 44,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -101,7 +101,12 @@ export const styles = StyleSheet.create({
   listHeadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: Colors.text, fontSize: 18, fontWeight: '800' },
   resultCount: { color: Colors.subtext, fontSize: 12, marginTop: 3 },
-  clearLocation: { paddingVertical: 7, paddingHorizontal: 10 },
+  clearLocation: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
   clearLocationText: { color: Colors.success, fontSize: 12, fontWeight: '700' },
   hospitalRow: {
     minHeight: 82,

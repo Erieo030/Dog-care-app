@@ -12,7 +12,7 @@ import warnings
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import HTTPException, UploadFile
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.db import db
 from app.core.config import get_settings
@@ -233,6 +233,23 @@ def attachment_content(attachment_id: str, user_id: str) -> tuple[Path, str]:
     if not path.is_file():
         raise HTTPException(status_code=404, detail="附件檔案不存在")
     return path, item["mimeType"]
+
+
+def attachment_thumbnail(attachment_id: str, user_id: str) -> bytes:
+    """按需產生小圖，使用同一 ownership 檢查；不建立另一份永久圖片。"""
+    path, _mime = attachment_content(attachment_id, user_id)
+    try:
+        with Image.open(path) as source:
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((360, 360), Image.Resampling.LANCZOS)
+            rgba = image.convert("RGBA")
+            background = Image.new("RGB", rgba.size, (247, 244, 238))
+            background.paste(rgba, mask=rgba.getchannel("A"))
+            result = BytesIO()
+            background.save(result, format="JPEG", quality=75)
+            return result.getvalue()
+    except (OSError, Image.DecompressionBombError) as error:
+        raise HTTPException(415, "圖片暫時無法讀取") from error
 
 
 def public_pet_avatar_content(pet_id: str, attachment_id: str) -> tuple[Path, str]:

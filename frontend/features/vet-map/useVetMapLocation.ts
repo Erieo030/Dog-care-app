@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import type { Coordinate } from './vetMapContent';
 
@@ -8,17 +8,13 @@ import type { Coordinate } from './vetMapContent';
 export function useVetMapLocation(onLocated: (coordinate: Coordinate) => void) {
   const [locating, setLocating] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
+  const cancel = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLocating(false);
+  }, []);
 
-  useFocusEffect(
-    useCallback(
-      () => () => {
-        requestRef.current?.abort();
-        requestRef.current = null;
-        setLocating(false);
-      },
-      [],
-    ),
-  );
+  useFocusEffect(useCallback(() => cancel, [cancel]));
 
   const locate = useCallback(async () => {
     if (requestRef.current) return;
@@ -33,6 +29,16 @@ export function useVetMapLocation(onLocated: (coordinate: Coordinate) => void) {
         Alert.alert(
           '尚未開啟定位',
           '你仍可瀏覽醫院清單；若想依距離排序，可在手機設定中允許 MEGO 使用位置。',
+          [
+            { text: '繼續瀏覽', style: 'cancel' },
+            {
+              text: '前往手機設定',
+              onPress: () =>
+                void Linking.openSettings().catch(() =>
+                  Alert.alert('無法開啟手機設定', '請從手機設定手動管理定位權限。'),
+                ),
+            },
+          ],
         );
         return;
       }
@@ -61,5 +67,5 @@ export function useVetMapLocation(onLocated: (coordinate: Coordinate) => void) {
     }
   }, [onLocated]);
 
-  return { locating, locate };
+  return { locating, locate, cancel };
 }

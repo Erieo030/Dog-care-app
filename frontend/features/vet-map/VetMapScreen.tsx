@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, type Region } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { Colors } from '../../constants/Colors';
 import { useTabContentBottomPadding } from '../../components/navigation/useTabContentBottomPadding';
@@ -61,12 +62,14 @@ export default function VetMapScreen({ navigation, route }: Props) {
   const selectedHospital = hospitals.find((hospital) => hospital.id === selectedId);
   const hasMapLocations = hospitals.some(getHospitalCoordinate);
   const selectForVisit = route.params?.selectForVisit === true;
+  const isTabRoot = route.params?.entry === 'tab';
 
   const handleLocated = useCallback((coordinate: Coordinate) => {
     setOrigin(coordinate);
     setRegion({ ...coordinate, latitudeDelta: 0.08, longitudeDelta: 0.08 });
   }, []);
-  const { locating, locate } = useVetMapLocation(handleLocated);
+  const { locating, locate, cancel } = useVetMapLocation(handleLocated);
+  useFocusEffect(useCallback(() => () => setInteractingWithMap(false), []));
   useEffect(() => {
     if (mode === 'map') mapRef.current?.animateToRegion(region, 250);
   }, [mode, region]);
@@ -91,6 +94,7 @@ export default function VetMapScreen({ navigation, route }: Props) {
     const hospital = VET_HOSPITALS.find((item) => item.id === hospitalId);
     if (!hospital) return;
     Keyboard.dismiss();
+    setInteractingWithMap(false);
     setSelectedId(hospitalId);
     const coordinate = getHospitalCoordinate(hospital);
     setMode(coordinate ? 'map' : 'list');
@@ -108,17 +112,19 @@ export default function VetMapScreen({ navigation, route }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={selectForVisit ? '返回就醫紀錄表單' : '返回就醫紀錄'}
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={22} color={Colors.text} />
-          </TouchableOpacity>
+          {!isTabRoot && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={selectForVisit ? '返回就醫紀錄表單' : '返回就醫紀錄'}
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={22} color={Colors.text} />
+            </TouchableOpacity>
+          )}
           <View style={styles.headingCopy}>
             <Text style={styles.eyebrow}>MEGO 照護支援</Text>
-            <Text style={styles.title}>臺中動物醫院</Text>
+            <Text style={styles.title}>{isTabRoot ? '就醫地圖' : '臺中動物醫院'}</Text>
           </View>
           <View style={styles.headingIcon}>
             <Ionicons name="medical-outline" size={23} color={Colors.success} />
@@ -141,7 +147,12 @@ export default function VetMapScreen({ navigation, route }: Props) {
               style={styles.searchInput}
             />
             {!!query && (
-              <TouchableOpacity accessibilityLabel="清除搜尋" onPress={() => setQuery('')}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="清除搜尋"
+                hitSlop={12}
+                onPress={() => setQuery('')}
+              >
                 <Ionicons name="close-circle" size={19} color={Colors.subtext} />
               </TouchableOpacity>
             )}
@@ -215,7 +226,7 @@ export default function VetMapScreen({ navigation, route }: Props) {
                     coordinate={coordinate}
                     title={hospital.name}
                     description={hospital.address}
-                    pinColor={Colors.primary}
+                    pinColor={hospital.id === selectedId ? Colors.success : Colors.primary}
                     onPress={() => setSelectedId(hospital.id)}
                   />
                 ) : null;
@@ -263,16 +274,18 @@ export default function VetMapScreen({ navigation, route }: Props) {
               {origin ? '依直線距離排序' : '依官方名冊順序'} · {hospitals.length} 間
             </Text>
           </View>
-          {origin ? (
+          {origin || locating ? (
             <TouchableOpacity
               accessibilityRole="button"
+              accessibilityLabel={locating ? '取消定位' : '清除定位'}
               onPress={() => {
+                cancel();
                 setOrigin(undefined);
                 setRegion(TAICHUNG_REGION);
               }}
               style={styles.clearLocation}
             >
-              <Text style={styles.clearLocationText}>清除定位</Text>
+              <Text style={styles.clearLocationText}>{locating ? '取消定位' : '清除定位'}</Text>
             </TouchableOpacity>
           ) : null}
         </View>

@@ -11,14 +11,21 @@ import Animated, {
 import { useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
+import {
+  DOCK_EDGE,
+  DOCK_HORIZONTAL_PADDING,
+  TAB_ITEM_MARGIN,
+  getDockSlotWidth,
+} from './bottomNavigationLayout';
 
 export function BottomNavigationDock() {
   const insets = useSafeAreaInsets();
   const activeIndex = useNavigationState((state) => state.index);
+  const tabCount = useNavigationState((state) => state.routes.length);
   const reduceMotion = useReducedMotion();
   const hasMounted = useRef(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const slotWidth = Math.max((size.width - 48) / 4, 0);
+  const slotWidth = getDockSlotWidth(size.width, tabCount);
   const translateX = useSharedValue(0);
   const scale = useSharedValue(1);
   const bubbleStyle = useAnimatedStyle(() => ({
@@ -60,9 +67,7 @@ export function BottomNavigationDock() {
       onLayout={(event) => {
         const { width, height } = event.nativeEvent.layout;
         setSize((current) =>
-          current.width === width && current.height === height
-            ? current
-            : { width, height },
+          current.width === width && current.height === height ? current : { width, height },
         );
       }}
       style={styles.fill}
@@ -73,7 +78,7 @@ export function BottomNavigationDock() {
         style={[
           styles.activeBubble,
           {
-            width: Math.max(slotWidth - 8, 0),
+            width: Math.max(slotWidth - TAB_ITEM_MARGIN * 2, 0),
             height: Math.max(size.height - bottomInset - 11, 0),
           },
           bubbleStyle,
@@ -89,8 +94,8 @@ const styles = StyleSheet.create({
   },
   dock: {
     position: 'absolute',
-    left: 22,
-    right: 22,
+    left: DOCK_EDGE,
+    right: DOCK_EDGE,
     top: 1,
     borderRadius: 29,
     backgroundColor: 'rgba(255, 249, 241, 0.94)',
@@ -104,7 +109,7 @@ const styles = StyleSheet.create({
   },
   activeBubble: {
     position: 'absolute',
-    left: 28,
+    left: DOCK_HORIZONTAL_PADDING + TAB_ITEM_MARGIN,
     top: 6,
     borderRadius: 21,
     backgroundColor: Colors.primarySoft,

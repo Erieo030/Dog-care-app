@@ -98,7 +98,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
         <Section title="一般設定">
           <Row
             title="手機權限與提醒"
-            value="通知、相簿與相機"
+            value="通知、相簿、相機與定位"
             icon="phone-portrait-outline"
             onPress={() => navigation.navigate('NotificationSettings')}
           />

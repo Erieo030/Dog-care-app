@@ -1,4 +1,4 @@
-/** 用途：組合全部功能 Stack 與四個主要底部分頁。 */
+/** 用途：組合功能 Stack 與六個底部分頁；照片、地圖暫時為獨立入口。 */
 import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,12 +40,18 @@ import { HomeStackParamList, MainTabParamList, ProfileStackParamList } from './t
 import { Colors } from '../constants/Colors';
 import { BottomNavigationDock } from '../components/navigation/BottomNavigationDock';
 import { renderSharedHealthScreens } from './SharedHealthScreens';
+import CarePhotosScreen from '../features/care-photos/CarePhotosScreen';
+import VetMapScreen from '../features/vet-map/VetMapScreen';
+import {
+  DOCK_HORIZONTAL_PADDING,
+  TAB_ITEM_MARGIN,
+} from '../components/navigation/bottomNavigationLayout';
 
 const Tabs = createBottomTabNavigator<MainTabParamList>();
 
 const styles = StyleSheet.create({
   tabLabel: { alignItems: 'center', justifyContent: 'center', marginTop: 0 },
-  tabLabelText: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  tabLabelText: { fontSize: 11, lineHeight: 16, fontWeight: '600' },
   tabLabelActive: { fontWeight: '700' },
   tabIcon: {
     width: 24,
@@ -57,15 +63,44 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: TAB_ITEM_MARGIN,
     marginVertical: 5,
     borderRadius: 21,
+    minHeight: 44,
   },
 });
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 const HealthStackNav = createNativeStackNavigator<HomeStackParamList>();
 const TimelineStackNav = createNativeStackNavigator<HomeStackParamList>();
 const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
+const PhotosStackNav = createNativeStackNavigator<HomeStackParamList>();
+const MapStackNav = createNativeStackNavigator<HomeStackParamList>();
+
+function PhotosStack() {
+  return (
+    <PhotosStackNav.Navigator id="PhotosStack" screenOptions={getIosSwipeStackOptions()}>
+      <PhotosStackNav.Screen
+        name="PhotosOverview"
+        component={CarePhotosScreen}
+        options={{ headerShown: false }}
+      />
+      {renderSharedHealthScreens(PhotosStackNav)}
+    </PhotosStackNav.Navigator>
+  );
+}
+
+function MapStack() {
+  return (
+    <MapStackNav.Navigator id="MapStack" screenOptions={getIosSwipeStackOptions()}>
+      <MapStackNav.Screen
+        name="VetMap"
+        component={VetMapScreen}
+        initialParams={{ entry: 'tab' }}
+        options={{ headerShown: false, gestureEnabled: false }}
+      />
+    </MapStackNav.Navigator>
+  );
+}
 
 function resetTabStackToRoot(
   navigation: BottomTabNavigationProp<MainTabParamList>,
@@ -280,7 +315,12 @@ const tabLabel =
   (text: string) =>
   ({ focused, color }: { focused: boolean; color: string }) => (
     <View style={styles.tabLabel}>
-      <Text style={[styles.tabLabelText, focused && styles.tabLabelActive, { color }]}>{text}</Text>
+      <Text
+        numberOfLines={1}
+        style={[styles.tabLabelText, focused && styles.tabLabelActive, { color }]}
+      >
+        {text}
+      </Text>
     </View>
   );
 
@@ -299,7 +339,7 @@ export default function MainTabs() {
     // Match the selected bubble's top inset to its bottom inset inside the dock.
     paddingTop: 1,
     // Keep each equal-width active bubble optically inset from both capsule ends.
-    paddingHorizontal: 24,
+    paddingHorizontal: DOCK_HORIZONTAL_PADDING,
     // 導覽項目與膠囊底部採用相同 inset，避免圖示與標籤視覺偏上。
     paddingBottom: Math.max(insets.bottom - 14, 4),
     // 所有分頁的背景都延伸至膠囊後方；堆疊內容已預留導覽列高度。
@@ -318,6 +358,7 @@ export default function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.subtext,
+        tabBarLabelPosition: 'below-icon',
         tabBarStyle,
         tabBarBackground: () => <BottomNavigationDock />,
       })}
@@ -330,6 +371,7 @@ export default function MainTabs() {
           tabBarButton: TabBubbleButton,
           tabBarIcon: icon('home-outline'),
           tabBarLabel: tabLabel('首頁'),
+          tabBarAccessibilityLabel: '首頁',
         }}
         listeners={({ navigation, route }) => ({
           tabPress: () => resetTabStackToRoot(navigation, route.key, 'HomeOverview'),
@@ -342,10 +384,34 @@ export default function MainTabs() {
           tabBarButton: TabBubbleButton,
           tabBarIcon: icon('journal-outline'),
           tabBarLabel: tabLabel('紀錄'),
+          tabBarAccessibilityLabel: '紀錄',
         }}
         listeners={({ navigation, route }) => ({
           tabPress: () => resetTabStackToRoot(navigation, route.key, 'TimelineOverview'),
         })}
+      />
+      <Tabs.Screen
+        name="Photos"
+        component={PhotosStack}
+        options={{
+          tabBarButton: TabBubbleButton,
+          tabBarIcon: icon('images-outline'),
+          tabBarLabel: tabLabel('照片'),
+          tabBarAccessibilityLabel: '照護照片',
+        }}
+        listeners={({ navigation, route }) => ({
+          tabPress: () => resetTabStackToRoot(navigation, route.key, 'PhotosOverview'),
+        })}
+      />
+      <Tabs.Screen
+        name="Map"
+        component={MapStack}
+        options={{
+          tabBarButton: TabBubbleButton,
+          tabBarIcon: icon('map-outline'),
+          tabBarLabel: tabLabel('地圖'),
+          tabBarAccessibilityLabel: '就醫地圖',
+        }}
       />
       <Tabs.Screen
         name="Health"
@@ -355,6 +421,7 @@ export default function MainTabs() {
           tabBarButton: TabBubbleButton,
           tabBarIcon: icon('chatbubble-ellipses-outline'),
           tabBarLabel: tabLabel('MEGO AI'),
+          tabBarAccessibilityLabel: 'MEGO AI',
         }}
         listeners={({ navigation, route }) => ({
           tabPress: () => resetTabStackToRoot(navigation, route.key, 'HealthOverview'),
@@ -367,6 +434,7 @@ export default function MainTabs() {
           tabBarButton: TabBubbleButton,
           tabBarIcon: icon('settings-outline'),
           tabBarLabel: tabLabel('設定'),
+          tabBarAccessibilityLabel: '設定',
         }}
         listeners={({ navigation, route }) => ({
           tabPress: () => resetTabStackToRoot(navigation, route.key, 'ProfileOverview'),
