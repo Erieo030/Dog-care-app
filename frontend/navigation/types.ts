@@ -54,7 +54,13 @@ export type HomeStackParamList = {
   WeightList: { focusRecordId?: string } | undefined;
   WeightForm: { record?: WeightRecord; quickEntry?: boolean };
   MedicalVisitList: undefined;
-  MedicalVisitForm: { visit?: MedicalVisit; duplicate?: boolean; quickEntry?: boolean };
+  VetMap: { selectForVisit?: boolean } | undefined;
+  MedicalVisitForm: {
+    visit?: MedicalVisit;
+    duplicate?: boolean;
+    quickEntry?: boolean;
+    clinicName?: string;
+  };
   MedicalVisitDetail: { visitId: string };
 };
 export type ProfileStackParamList = {

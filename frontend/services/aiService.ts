@@ -258,7 +258,7 @@ export const getVetVisitBrief = (
   const selected = sections.length ? `&sections=${encodeURIComponent(sections.join(','))}` : '';
   const path = `/api/pets/${petId}/ai/vet-brief?userId=${encodeURIComponent(userId)}&range=${range}&includeNarrative=${includeNarrative}${selected}`;
   const timeout = includeNarrative ? AI_VET_BRIEF_TIMEOUT_MS : AI_REQUEST_TIMEOUT_MS;
-  return signal && !includeNarrative
+  return signal
     ? apiData<VetVisitBrief>(path, { signal }, timeout)
     : apiData<VetVisitBrief>(path, {}, timeout);
 };

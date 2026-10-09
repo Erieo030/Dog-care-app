@@ -12,6 +12,9 @@ from app.api.routes import stool_classifications
 from app.services import stool_classifier_service as svc
 
 MODEL_DIR = os.environ.get("STOOL_MODEL_DIR", "").strip()
+if MODEL_DIR:
+    # start.sh 在 backend 啟動 API；測試使用相同路徑基準，不受 pytest 執行位置影響。
+    MODEL_DIR = str((Path(__file__).resolve().parents[1] / MODEL_DIR).resolve())
 needs_model = pytest.mark.skipif(not MODEL_DIR, reason="未設定 STOOL_MODEL_DIR")
 URL = "/api/pets/pet-1/stool-classifications?userId=user-1"
 

@@ -8,6 +8,7 @@ import HealthObservationScreen from '../screens/HealthObservationScreen';
 import MedicalVisitDetailScreen from '../screens/MedicalVisitDetailScreen';
 import MedicalVisitFormScreen from '../screens/MedicalVisitFormScreen';
 import MedicalVisitListScreen from '../screens/MedicalVisitListScreen';
+import VetMapScreen from '../features/vet-map/VetMapScreen';
 import ObservationHealthEventScreen from '../screens/ObservationHealthEventScreen';
 import StoolHealthEventScreen from '../screens/StoolHealthEventScreen';
 import VomitingHealthEventScreen from '../screens/VomitingHealthEventScreen';
@@ -121,6 +122,11 @@ export function renderSharedHealthScreens(Screen: HomeStackNavigator) {
         name="MedicalVisitList"
         component={MedicalVisitListScreen}
         options={{ title: '' }}
+      />
+      <Screen.Screen
+        name="VetMap"
+        component={VetMapScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
       <Screen.Screen
         name="MedicalVisitForm"

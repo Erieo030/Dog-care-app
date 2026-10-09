@@ -44,10 +44,11 @@ def test_pdf_report_builds_with_daily_records_and_dynamic_contents(tmp_path):
     assert content.rstrip().endswith(b"%%EOF")
 
 
-def test_pdf_report_handles_multiple_pets_many_records_and_long_notes(tmp_path):
+def test_pdf_report_handles_multiple_pets_many_records_and_long_notes(tmp_path, monkeypatch):
     pets = [
         {"id": "pet-1", "name": "Kuro", "breed": "柴犬"},
         {"id": "pet-2", "name": "Mimi", "breed": "米克斯"},
+        {"id": "pet-3", "name": "第三隻毛孩", "breed": "米克斯"},
     ]
     long_note = "這是一段較長的照護補充說明，用來確認文字可以跨頁排版。" * 120
     data = {
@@ -62,6 +63,8 @@ def test_pdf_report_handles_multiple_pets_many_records_and_long_notes(tmp_path):
         "reminders": [],
     }
     for pet in pets:
+        pet["allergies"] = "雞肉、乳製品，" * 50 + "過敏最後標記"
+        pet["chronicDiseases"] = "慢性病史補充說明，" * 50 + "慢性病最後標記"
         pet_id = pet["id"]
         data["dailyLogs"].extend(
             {
@@ -113,12 +116,40 @@ def test_pdf_report_handles_multiple_pets_many_records_and_long_notes(tmp_path):
     }
     output = tmp_path / "multi-pet-stress-report.pdf"
 
+    pages = []
+    original = export_service.MegoReportTemplate.afterFlowable
+
+    def capture(self, flowable):
+        if hasattr(flowable, "getPlainText"):
+            pages.append((flowable.getPlainText(), self.page))
+        original(self, flowable)
+
+    monkeypatch.setattr(export_service.MegoReportTemplate, "afterFlowable", capture)
+
     _write_pdf(output, data, job)
 
     content = output.read_bytes()
     assert content.startswith(b"%PDF-")
     assert content.rstrip().endswith(b"%%EOF")
     assert len(content) > 10_000
+    assert {page for text, page in pages if text == "看診快速摘要"} == {1}
+    assert {page for text, page in pages if text == "報告目錄"} == {2}
+    assert any("過敏最後標記" in text for text, _page in pages)
+    assert any("慢性病最後標記" in text for text, _page in pages)
+
+
+def test_weight_chart_dates_match_the_20_points_actually_plotted():
+    from reportlab.graphics.shapes import String
+
+    weights = [
+        {"weightKg": 8 + day / 100, "measuredAt": f"2026-09-{day:02d}"}
+        for day in range(1, 26)
+    ]
+    chart = export_service._chart(weights, "Helvetica")
+    labels = [item.text for item in chart.contents if isinstance(item, String)]
+    assert "2026/09/06" in labels
+    assert "2026/09/25" in labels
+    assert "2026/09/01" not in labels
 
 
 class QueryCaptureCollection:

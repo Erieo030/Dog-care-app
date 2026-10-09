@@ -1,0 +1,215 @@
+{
+  "reviewedAt": "2026-10-08",
+  "service": "Nominatim / OpenStreetMap",
+  "policyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
+  "note": "一次性門牌查核的快取。北屯路32號查詢回傳266之32號，該結果不得作為院所座標。",
+  "clinicNameLookup": { "query": "永昌動物醫院", "results": [] },
+  "results": [
+    {
+      "name": "仁愛",
+      "lat": "24.1451679",
+      "lon": "120.6946419",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "122號",
+        "road": "進化路",
+        "neighbourhood": "東南里",
+        "suburb": "東區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "401",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "惠犬",
+      "lat": "24.1369770",
+      "lon": "120.6618296",
+      "category": "amenity",
+      "type": "veterinary",
+      "address": {
+        "amenity": "惠犬動物醫院",
+        "house_number": "631",
+        "road": "美村路一段",
+        "neighbourhood": "吉龍里",
+        "suburb": "西區",
+        "village": "田心",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "403011",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "全國",
+      "lat": "24.1341584",
+      "lon": "120.6622991",
+      "category": "amenity",
+      "type": "veterinary",
+      "address": {
+        "amenity": "全國動物醫院",
+        "house_number": "100",
+        "road": "五權八街",
+        "neighbourhood": "吉龍里",
+        "suburb": "西區",
+        "village": "田心",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "403030",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "羅大宇",
+      "lat": "24.1411076",
+      "lon": "120.6569646",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "153號",
+        "road": "存中街",
+        "neighbourhood": "大忠里",
+        "suburb": "西區",
+        "village": "田心",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "403",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "中台",
+      "lat": "24.1720419",
+      "lon": "120.6715882",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "693號",
+        "road": "中清路一段",
+        "neighbourhood": "立人里",
+        "suburb": "北區",
+        "village": "水湳經貿園區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "404",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "沐恩",
+      "lat": "24.1590434",
+      "lon": "120.6694535",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "865號",
+        "road": "健行路",
+        "neighbourhood": "淡溝里",
+        "suburb": "北區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "404",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "慈愛",
+      "lat": "24.1116845",
+      "lon": "120.6789053",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "539號",
+        "road": "國光路二段",
+        "neighbourhood": "永隆里",
+        "suburb": "大里區",
+        "village": "田寮",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "412019",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "濟生",
+      "lat": "24.1712753",
+      "lon": "120.6819876",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "75之12號",
+        "road": "北平路三段",
+        "neighbourhood": "平德里",
+        "suburb": "北屯區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "406",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "永昌",
+      "lat": "24.1719145",
+      "lon": "120.6993337",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "266之32號",
+        "road": "北屯路",
+        "neighbourhood": "東光里",
+        "suburb": "北屯區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "406",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "康德",
+      "lat": "24.1753364",
+      "lon": "120.6859442",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "270號",
+        "road": "崇德路二段",
+        "neighbourhood": "平福里",
+        "suburb": "北屯區",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "406",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    },
+    {
+      "name": "格林威治",
+      "lat": "24.1520261",
+      "lon": "120.6470341",
+      "category": "place",
+      "type": "house",
+      "address": {
+        "house_number": "486號",
+        "road": "文心路一段",
+        "neighbourhood": "溝墘里",
+        "suburb": "南屯區",
+        "village": "田心",
+        "city": "臺中市",
+        "ISO3166-2-lvl4": "TW-TXG",
+        "postcode": "40861",
+        "country": "臺灣",
+        "country_code": "tw"
+      }
+    }
+  ]
+}

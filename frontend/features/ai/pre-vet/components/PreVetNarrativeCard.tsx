@@ -32,13 +32,19 @@ export function PreVetNarrativeCard({ narrative, periodDays, generatedByAI }: Pr
         <NarrativeList title="近期紀錄脈絡" icon="time-outline" items={narrative.timeline} />
       )}
       {!!narrative.questions.length && (
-        <NarrativeList title="可向獸醫確認" icon="help-circle-outline" items={narrative.questions} />
+        <NarrativeList
+          title="可向獸醫確認"
+          icon="help-circle-outline"
+          items={narrative.questions}
+        />
       )}
       {!!narrative.dataGaps.length && (
         <View style={styles.gapNotice}>
           <Text style={styles.gapTitle}>可再補充的資訊</Text>
           {narrative.dataGaps.map((item, index) => (
-            <Text key={`${index}-${item}`} style={styles.gapText}>• {item}</Text>
+            <Text key={`${index}-${item}`} style={styles.gapText}>
+              • {item}
+            </Text>
           ))}
         </View>
       )}
@@ -99,7 +105,12 @@ const styles = StyleSheet.create({
   listItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingLeft: 2 },
   bullet: { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.primary, marginTop: 8 },
   listText: { flex: 1, color: Colors.text, fontSize: 14, lineHeight: 21 },
-  gapNotice: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border, paddingTop: 11, gap: 4 },
+  gapNotice: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    paddingTop: 11,
+    gap: 4,
+  },
   gapTitle: { color: Colors.subtext, fontSize: 12, fontWeight: '800', marginBottom: 2 },
   gapText: { color: Colors.subtext, fontSize: 13, lineHeight: 19 },
 });

@@ -21,6 +21,12 @@
         }
       ],
       "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "允許 MEGO 使用目前位置，協助你尋找附近的動物醫院。只有在你點選定位時才會詢問。"
+        }
+      ],
       "expo-status-bar",
       "expo-font",
       "expo-secure-store",

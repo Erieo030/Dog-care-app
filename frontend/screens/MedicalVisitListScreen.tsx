@@ -37,27 +37,30 @@ export default function MedicalVisitListScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const requestId = useRef(0);
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const current = ++requestId.current;
-    setItems([]);
-    if (!selectedPet || !session?.userId) {
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-    try {
-      setError('');
-      const result = await service.getMedicalVisits(session.userId, selectedPet.id, signal);
-      if (current === requestId.current) setItems(result);
-    } catch (e) {
-      if (current === requestId.current) setError((e as Error).message || '無法載入就醫紀錄');
-    } finally {
-      if (current === requestId.current) {
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      const current = ++requestId.current;
+      setItems([]);
+      if (!selectedPet || !session?.userId) {
         setLoading(false);
         setRefreshing(false);
+        return;
       }
-    }
-  }, [selectedPet, session?.userId]);
+      try {
+        setError('');
+        const result = await service.getMedicalVisits(session.userId, selectedPet.id, signal);
+        if (current === requestId.current) setItems(result);
+      } catch (e) {
+        if (current === requestId.current) setError((e as Error).message || '無法載入就醫紀錄');
+      } finally {
+        if (current === requestId.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [selectedPet, session?.userId],
+  );
   useFocusEffect(
     useCallback(() => {
       const controller = new AbortController();
@@ -111,6 +114,16 @@ export default function MedicalVisitListScreen({ navigation }: Props) {
               <Ionicons name="add" size={20} color="#FFF" />
               <Text style={s.primaryText}>新增就醫紀錄</Text>
             </AppButton>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="尋找附近動物醫院"
+              style={s.mapLink}
+              onPress={() => navigation.navigate('VetMap')}
+            >
+              <Ionicons name="map-outline" size={19} color={Colors.success} />
+              <Text style={s.mapLinkText}>尋找附近動物醫院</Text>
+              <Ionicons name="chevron-forward" size={17} color={Colors.subtext} />
+            </TouchableOpacity>
             {!!error && <Center text={error} action={load} />}
           </>
         }
@@ -217,6 +230,19 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   primaryText: { color: '#FFF', fontWeight: '800' },
+  mapLink: {
+    minHeight: 52,
+    marginBottom: 18,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  mapLinkText: { color: Colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
   emptyBox: { alignItems: 'center', paddingVertical: 28 },
   emptyArtwork: { width: 82, height: 76, marginBottom: 10 },
   emptyIcon: {

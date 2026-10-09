@@ -3,7 +3,7 @@ import { getTodayDailyLog, createDailyLog } from '../dailyLogService';
 import { createExport, cancelExport } from '../exportService';
 import { getLostProfile, rotateLostToken, saveLostProfile } from '../lostPetService';
 import { loadSettings, timeOnDate, DEFAULT_SETTINGS } from '../settingsService';
-import { sendAIChat } from '../aiService';
+import { sendAIChat, getVetVisitBrief } from '../aiService';
 
 jest.mock('../api', () => ({ apiData: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -25,6 +25,16 @@ jest.mock('expo-image-picker', () => ({}));
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
 const request = apiData as jest.MockedFunction<typeof apiData>;
 beforeEach(() => jest.clearAllMocks());
+
+test('both system and AI pre-vet requests forward the cancellation signal', async () => {
+  const controller = new AbortController();
+  request.mockResolvedValue({});
+  await getVetVisitBrief('u1', 'p1', 7, false, ['health'], controller.signal);
+  await getVetVisitBrief('u1', 'p1', 7, true, ['health'], controller.signal);
+  expect(request.mock.calls[0][1]?.signal).toBe(controller.signal);
+  expect(request.mock.calls[1][1]?.signal).toBe(controller.signal);
+  expect(request.mock.calls[1][0]).toContain('includeNarrative=true');
+});
 
 test('daily log service addresses today and create endpoints', async () => {
   request.mockResolvedValueOnce({ record: null });

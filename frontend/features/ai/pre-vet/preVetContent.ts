@@ -1,5 +1,6 @@
 /** 用途：就醫前摘要的篩選選項、中文資料標籤與顯示格式。 */
 import type { VetBriefSection } from '../../../services/aiService';
+import { formatTaipeiDate, taipeiDateKey } from '../../../utils/taipeiDate';
 
 export const PRE_VET_RANGES = [7, 15, 30] as const;
 export const PRE_VET_SECTION_OPTIONS: { key: VetBriefSection; label: string }[] = [
@@ -41,22 +42,26 @@ export const DAILY_LABELS: Record<string, Record<string, string>> = {
   energy: { slightly_low: '稍沒精神', normal: '正常' },
   stool: { hard: '偏硬', normal: '正常', soft: '偏軟', watery: '水狀' },
 };
-export const preVetDateLabel = (value?: string) =>
-  value
-    ? new Date(value).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
-    : '未填寫';
+export const preVetDateLabel = (value?: string, includeYear = false) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return '未填寫';
+  return formatTaipeiDate(value, {
+    ...(includeYear ? { year: 'numeric' as const } : {}),
+    month: 'numeric',
+    day: 'numeric',
+  });
+};
+export const preVetNeuteredLabel = (value?: boolean) =>
+  value === true ? '已結紮' : value === false ? '未結紮' : '結紮狀態未填寫';
 export const preVetSexLabel = (value?: string) =>
   value === 'male' ? '公' : value === 'female' ? '母' : '未填寫';
 export const preVetAgeLabel = (birthday?: string) => {
   if (!birthday) return '年齡未填寫';
-  const birth = new Date(birthday);
-  if (Number.isNaN(birth.getTime())) return '年齡未填寫';
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  if (
-    now.getMonth() < birth.getMonth() ||
-    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
-  )
-    age -= 1;
+  if (Number.isNaN(new Date(birthday).getTime())) return '年齡未填寫';
+  const [birthYear, birthMonth, birthDay] = taipeiDateKey(new Date(birthday))
+    .split('-')
+    .map(Number);
+  const [year, month, day] = taipeiDateKey().split('-').map(Number);
+  let age = year - birthYear;
+  if (month < birthMonth || (month === birthMonth && day < birthDay)) age -= 1;
   return `${Math.max(0, age)} 歲`;
 };

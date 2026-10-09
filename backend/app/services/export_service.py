@@ -13,7 +13,7 @@ from reportlab.graphics.shapes import Circle, Drawing, Line, String
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
@@ -21,6 +21,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 from reportlab.platypus.tableofcontents import TableOfContents
 from app.db import db
 from app.schemas.export import ExportCreateRequest
+from app.services.export_quick_summary import build_quick_summary
 
 ROOT = Path(__file__).resolve().parents[2] / "mego-exports"
 ROOT.mkdir(parents=True, exist_ok=True)
@@ -117,14 +118,15 @@ def _date(value):
     try: return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(TAIPEI).strftime("%Y/%m/%d")
     except (ValueError, TypeError): return str(value)[:10]
 def _chart(weights,font):
-    drawing=Drawing(470,105); values=[float(x["weightKg"]) for x in weights[-20:]]
+    chart_weights=weights[-20:]
+    drawing=Drawing(470,105); values=[float(x["weightKg"]) for x in chart_weights]
     if len(values)<2: return Paragraph("體重資料不足，暫不繪製趨勢圖。",ParagraphStyle("empty",fontName=font,fontSize=10))
     low,high=min(values),max(values); span=max(high-low,1); points=[]
     for i,v in enumerate(values): points.append((50+i*390/(len(values)-1),19+(v-low)*48/span))
     for a,b in zip(points,points[1:]): drawing.add(Line(a[0],a[1],b[0],b[1],strokeColor=colors.HexColor("#E07A5F"),strokeWidth=2))
     for x,y in points: drawing.add(Circle(x,y,3,fillColor=colors.HexColor("#E07A5F"),strokeColor=None))
     drawing.add(String(3,82,f"最高 {high:g} kg",fontName=font,fontSize=8)); drawing.add(String(3,17,f"最低 {low:g} kg",fontName=font,fontSize=8))
-    first_date = _date(weights[0].get("measuredAt")); last_date = _date(weights[-1].get("measuredAt"))
+    first_date = _date(chart_weights[0].get("measuredAt")); last_date = _date(chart_weights[-1].get("measuredAt"))
     drawing.add(String(50,3,first_date,fontName=font,fontSize=7,textAnchor="start"))
     drawing.add(String(440,3,last_date,fontName=font,fontSize=7,textAnchor="end")); return drawing
 
@@ -135,21 +137,22 @@ def _write_pdf(path,data,job):
         pdfmetrics.registerFont(UnicodeCIDFont(font))
     except KeyError:
         font = "Helvetica"
-    styles=getSampleStyleSheet();
-    title=ParagraphStyle("zh-title",fontName=font,fontSize=27,leading=38,alignment=TA_CENTER,textColor=colors.black,spaceAfter=8)
     h1=ParagraphStyle("zh-h1",fontName=font,fontSize=16,leading=23,textColor=colors.black,spaceBefore=10,spaceAfter=5,keepWithNext=True)
     section_style=ParagraphStyle("ReportSection",parent=h1,keepWithNext=True)
     daily_heading=ParagraphStyle("daily-heading",fontName=font,fontSize=11,leading=17,textColor=colors.black,spaceBefore=9,spaceAfter=3,keepWithNext=True)
     body=ParagraphStyle("zh-body",fontName=font,fontSize=10,leading=17,textColor=colors.black,wordWrap="CJK",spaceAfter=4)
     small=ParagraphStyle("zh-small",fontName=font,fontSize=9,leading=15,textColor=colors.black,wordWrap="CJK",spaceAfter=3)
     toc=ParagraphStyle("zh-toc", parent=h1, alignment=TA_CENTER, spaceBefore=6, spaceAfter=10)
-    pet_names = "、".join(str(p.get("name") or "毛孩") for p in data["pets"])
     export_time = _now().astimezone(TAIPEI).strftime("%Y/%m/%d %H:%M")
     range_start,range_end=_range(job["request"])
     report_period="全部紀錄" if range_start is None else f"{_date(range_start.isoformat())}－{_date(range_end.isoformat())}"
     toc_flowable=TableOfContents()
     toc_flowable.levelStyles=[ParagraphStyle("toc-level-0",fontName=font,fontSize=11,leading=20,textColor=colors.black,leftIndent=8,firstLineIndent=0)]
-    story=[Spacer(1,28*mm),Paragraph("MEGO",small),Spacer(1,3*mm),Paragraph("健康照護報告",title),Spacer(1,10*mm),Table([[Paragraph(f"<b>毛孩</b><br/>{_s(pet_names)}",body),Paragraph(f"<b>匯出時間</b><br/>{export_time}",body),Paragraph(f"<b>資料期間</b><br/>{_s(report_period)}",body)]],colWidths=[55*mm,55*mm,55*mm],style=TableStyle([["BACKGROUND",(0,0),(-1,-1),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.6,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.4,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),8],["RIGHTPADDING",(0,0),(-1,-1),8],["TOPPADDING",(0,0),(-1,-1),9],["BOTTOMPADDING",(0,0),(-1,-1),9]])),Spacer(1,9*mm),Paragraph("這份報告整理毛孩的健康與照護紀錄，方便日常查看，也能在就醫時提供獸醫參考。",body),Spacer(1,5*mm),Paragraph("內容來自飼主在 MEGO 中的紀錄；未填寫欄位會標示為「未填寫」。本報告是照護紀錄整理，不代表疾病診斷，也不能取代獸醫專業評估。",small),PageBreak(),Paragraph("報告目錄",toc),toc_flowable,PageBreak()]
+    story = build_quick_summary(
+        data, font=font, report_period=report_period, export_time=export_time,
+        date_fields=DATE_FIELDS, date_label=_date, escape_text=_s,
+    )
+    story += [PageBreak(),Paragraph("報告目錄",toc),toc_flowable,PageBreak()]
     def add_section_heading(label, pet_name):
         heading=Paragraph(_s(label),section_style)
         heading.toc_title=f"{_s(pet_name)}｜{_s(label)}"
@@ -167,7 +170,10 @@ def _write_pdf(path,data,job):
         ],colWidths=[22*mm,57*mm,25*mm,60*mm],style=TableStyle([["BACKGROUND",(0,0),(0,-1),colors.HexColor("#FFF4E8")],["BACKGROUND",(2,0),(2,-1),colors.HexColor("#FFF4E8")],["BOX",(0,0),(-1,-1),0.5,colors.HexColor("#E8D4C2")],["INNERGRID",(0,0),(-1,-1),0.35,colors.HexColor("#E8D4C2")],["VALIGN",(0,0),(-1,-1),"MIDDLE"],["LEFTPADDING",(0,0),(-1,-1),7],["RIGHTPADDING",(0,0),(-1,-1),7],["TOPPADDING",(0,0),(-1,-1),6],["BOTTOMPADDING",(0,0),(-1,-1),6]]))
         story += [Paragraph(_s(pet.get("name", "毛孩")),h1)]
         add_section_heading("毛孩基本資料", str(pet.get("name") or "毛孩"))
-        story += [pet_table,Spacer(1,5*mm)]
+        story += [pet_table,Spacer(1,3*mm)]
+        story.append(Paragraph(f"<b>過敏資訊：</b>{_s(pet.get('allergies'))}",body))
+        story.append(Paragraph(f"<b>慢性病：</b>{_s(pet.get('chronicDiseases'))}",body))
+        story.append(Spacer(1,5*mm))
         groups={k:[x for x in data[k] if x.get("petId")==pid] for k in COLLECTIONS}
         pet_name=str(pet.get("name") or "毛孩")
         if job["request"].include_ai_summary:
@@ -192,10 +198,10 @@ def _write_pdf(path,data,job):
             vet_points=[]
             if groups['healthEvents']:
                 latest=sorted(groups['healthEvents'], key=lambda x: str(x.get('occurredAt') or ''), reverse=True)[0]
-                vet_points.append(f"近期健康事件：{_date(latest.get('occurredAt'))}，{_s(latest.get('summary') or latest.get('type'))}")
+                vet_points.append(f"近期健康事件：{_date(latest.get('occurredAt'))}，{latest.get('summary') or latest.get('type') or '未填寫'}")
             if groups['medications']:
                 names='、'.join(str(x.get('name') or '未填寫藥品') for x in groups['medications'][:5])
-                vet_points.append(f"用藥紀錄：{_s(names)}")
+                vet_points.append(f"用藥紀錄：{names}")
             pending=sum(1 for x in groups['reminders'] if x.get('status') in ('pending','snoozed'))
             if pending:
                 vet_points.append(f"尚未完成提醒：{pending} 項")

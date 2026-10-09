@@ -1,14 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：設定資料範圍、追蹤匯出進度，並分享或儲存完成檔案。 */
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { AppButton } from '../components/AppButton';
@@ -124,7 +117,7 @@ export default function ExportCenterScreen() {
             </View>
             <Text style={styles.infoTitle}>PDF 健康照護報告</Text>
           </View>
-          <Text style={styles.muted}>適合日常查看、保存，或帶給獸醫參考。</Text>
+          <Text style={styles.muted}>第一頁先看毛孩病史與近期重點，後續保留完整紀錄明細。</Text>
         </View>
         <Text style={styles.label}>毛孩範圍</Text>
         <View style={styles.wrap}>
@@ -224,7 +217,9 @@ export default function ExportCenterScreen() {
             <Ionicons name="information-circle-outline" size={18} color={Colors.success} />
             <Text style={styles.noticeTitle}>報告內容</Text>
           </View>
-          <Text style={styles.noticeText}>整理毛孩資料、健康紀錄、提醒與就醫資訊；不包含圖片。</Text>
+          <Text style={styles.noticeText}>
+            第一頁為看診快速摘要，後續列出毛孩資料、健康紀錄、提醒與就醫資訊；不包含圖片。
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,16 +1,9 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 /** 用途：新增或編輯就醫紀錄，支援多筆藥物、附件與回診提醒同步。 */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AttachmentPicker from '../components/AttachmentPicker';
 import { ATTACHMENT_LIMITS } from '../constants/Attachments';
-import {
-  Alert,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '../components/AppButton';
@@ -47,7 +40,7 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   ).current;
   const [visitedAt, setVisitedAt] = useState(existing ? new Date(existing.visitedAt) : new Date());
   const [reason, setReason] = useState(existing?.reason || '');
-  const [clinic, setClinic] = useState(existing?.clinicName || '');
+  const [clinic, setClinic] = useState(route.params?.clinicName || existing?.clinicName || '');
   const [vet, setVet] = useState(existing?.veterinarianName || '');
   const [vetNotes, setVetNotes] = useState(existing?.veterinarianNotes || '');
   const [treatment, setTreatment] = useState(existing?.treatmentNotes || '');
@@ -60,6 +53,11 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
   const [attachments, setAttachments] = useState<Attachment[]>(existing?.attachments || []);
   const [medications, setMedications] = useState<Medication[]>(existing?.medications || []);
   const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (!route.params?.clinicName) return;
+    setClinic(route.params.clinicName);
+    navigation.setParams({ clinicName: undefined });
+  }, [navigation, route.params?.clinicName]);
   const updateMed = (i: number, key: keyof Medication, value: string | number) =>
     setMedications((v) => v.map((m, n) => (n === i ? { ...m, [key]: value } : m)));
   const removeMed = (i: number) =>
@@ -195,6 +193,16 @@ export default function MedicalVisitFormScreen({ route, navigation }: Props) {
           onChangeText={setClinic}
           maxLength={200}
         />
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="在地圖上尋找動物醫院"
+          style={s.findHospital}
+          onPress={() => navigation.navigate('VetMap', { selectForVisit: true })}
+        >
+          <Ionicons name="map-outline" size={17} color={Colors.success} />
+          <Text style={s.findHospitalText}>在地圖上尋找動物醫院</Text>
+          <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+        </TouchableOpacity>
         <MedicalVisitTextField
           label="獸醫姓名（選填）"
           value={vet}
@@ -342,6 +350,19 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
   outlineText: { color: Colors.primary, fontWeight: '700' },
+  findHospital: {
+    minHeight: 44,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: -5,
+    marginBottom: 12,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    backgroundColor: Colors.successSoft,
+  },
+  findHospitalText: { color: Colors.success, fontSize: 13, fontWeight: '700' },
   images: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   image: { width: 75, height: 75, borderRadius: 10 },
   removeImage: { color: '#C34D4D', fontSize: 12, textAlign: 'center', marginTop: 3 },
